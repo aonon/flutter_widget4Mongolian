@@ -2,10 +2,17 @@
 
 This library is a collection of Flutter widgets for displaying traditional Mongolian vertical text.
 
+要保持您的 fork 与原始项目同步，您需要执行以下步骤：
+
+在本地克隆您 fork 的项目。
+将原始项目添加为一个远程仓库。
+从原始项目的远程仓库中获取最新的更改。
+将这些更改合并到您的本地分支中。
+推送这些更改到您 fork 的远程仓库中。
 git remote add upstream https://github.com/suragch/mongol
 git fetch upstream
-
-
+git merge upstream/master
+git push origin master
 
 The primary widgets include:
 
