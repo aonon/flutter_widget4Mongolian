@@ -2,6 +2,11 @@
 
 This library is a collection of Flutter widgets for displaying traditional Mongolian vertical text.
 
+git remote add upstream https://github.com/suragch/mongol
+git fetch upstream
+
+
+
 The primary widgets include:
 
 - `MongolText`: vertical version of `Text`
