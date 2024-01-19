@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mongol/mongol.dart';
+import 'package:mongol_demo_app/demos/base_demo.dart';
 
 import 'demos/alert_dialog_demo.dart';
 import 'demos/button_demo.dart';
@@ -18,14 +19,14 @@ import 'demos/resizable_text_demo.dart';
 import 'demos/text_demo.dart';
 import 'demos/text_span_demo.dart';
 
-const versionTitle = 'Flutter mongol package 5.0.0';
+const versionTitle = 'Flutter mongol package 7.0.0';
 
 void main() {
   runApp(const DemoApp());
 }
 
 class DemoApp extends StatelessWidget {
-  const DemoApp({Key? key}) : super(key: key);
+  const DemoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +46,7 @@ class DemoApp extends StatelessWidget {
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +116,10 @@ class HomeScreen extends StatelessWidget {
           title: 'Buttons',
           destination: ButtonDemo(),
         ),
+        DemoTile(
+          title: 'MongolTextPainter',
+          destination: TextPainterDemo(),
+        ),
       ],
     );
   }
@@ -122,10 +127,10 @@ class HomeScreen extends StatelessWidget {
 
 class DemoTile extends StatelessWidget {
   const DemoTile({
-    Key? key,
+    super.key,
     required this.title,
     required this.destination,
-  }) : super(key: key);
+  });
 
   final String title;
   final Widget destination;

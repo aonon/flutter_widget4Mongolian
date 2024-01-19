@@ -1,3 +1,18 @@
+## [7.0.0] - 2023.12.27
+
+- Update APIs to match the Flutter 3.16 release. (#47) (with lots of help from @Satsrag)
+- It's unclear if this would be a breaking change for those still using a lower version of Flutter, but making a major version bump just in case.
+- Added `TextHeightBasis` (similar to `TextWidthBasis` for `Text`) at the lower levels (ex, `MongolTextPainter`) but not all the way up to `MongolText`. This affects whether the widget height is the height of the `parent` when line wrapping or the height of the `longestLine`. The default right now is `parent`. See #49 for progress.
+- One known issue is emojis and CJK characters are not correctly horizontally centered in some circumstances. (#48)
+
+## [6.0.1] - 2023.08.22
+
+- Fix images not displaying in pub.dev documentation.
+
+## [6.0.0] - 2023.08.22
+
+- Fixes for breaking changes in Flutter 2.13, mostly related to the text selection API.
+
 ## [5.0.0] - 2023.05.15
 
 - Update APIs to match the Flutter 3.10 and Dart 3.0 release. (#45) (@Satsrag)
