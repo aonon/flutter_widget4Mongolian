@@ -266,11 +266,19 @@ class MongolTextSelectionOverlay {
   }
 
   void _updateSelectionOverlay() {
+    // Use selection delegate's current value so we have the correct selection
+    // even when overlay was just created (update() not called yet).
+    final bool selectionCollapsed =
+        selectionDelegate.textEditingValue.selection.isCollapsed;
     _selectionOverlay
       // Update selection handle metrics.
-      ..startHandleType = TextSelectionHandleType.left
+      ..startHandleType = selectionCollapsed
+          ? TextSelectionHandleType.collapsed
+          : TextSelectionHandleType.left
       ..lineWidthAtStart = _getStartGlyphWidth()
-      ..endHandleType = TextSelectionHandleType.right
+      ..endHandleType = selectionCollapsed
+          ? TextSelectionHandleType.collapsed
+          : TextSelectionHandleType.right
       ..lineWidthAtEnd = _getEndGlyphWidth()
       // Update selection toolbar metrics.
       ..selectionEndpoints = renderObject.getEndpointsForSelection(_selection)
