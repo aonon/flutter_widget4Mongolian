@@ -1,7 +1,7 @@
 ## [9.2.1] - 2026.02.07
 
-- fixed: onTapOutside triggers when empty area tapped
-- fixed: cursor handle when selection collapsed
+- fixed: onTapOutside triggers when empty area tapped (@hubcin)
+- fixed: cursor handle when selection collapsed (@hubcin)
 
 ## [9.2.0] - 2026.01.26
 
