@@ -1,17 +1,22 @@
-## [9.2.0] = 2026.01.26
+## [9.2.1] - 2026.02.07
+
+- fixed: onTapOutside triggers when empty area tapped
+- fixed: cursor handle when selection collapsed
+
+## [9.2.0] - 2026.01.26
 
 - Fixed MongolTextField's width problem when text and hint are empty (#39) (@hubcin)
 - Added onTapOutside feature for MongolTextField (@hubcin)
 
-## [9.1.2] = 2026.01.22
+## [9.1.2] - 2026.01.22
 
 - Fixed cursor issue when hint text present (@hubcin)
 
-## [9.1.1] = 2026.01.19
+## [9.1.1] - 2026.01.19
 
 - Fix `rotateCJK: false` initialization bug.
 
-## [9.1.0] = 2026.01.19
+## [9.1.0] - 2026.01.19
 
 - Add `rotateCJK` parameter to allow disabling CJK rotation.
 - Fix alignment and spacing with rotated characters (#10, #48).
