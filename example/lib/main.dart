@@ -17,6 +17,7 @@ import 'demos/popup_menu_demo.dart';
 import 'demos/resizable_text_demo.dart';
 import 'demos/text_demo.dart';
 import 'demos/text_span_demo.dart';
+import 'demos/selectable_text_demo.dart';
 
 const versionTitle = 'Flutter mongol package 9.2.1';
 
@@ -51,6 +52,10 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: const <Widget>[
+        DemoTile(
+          title: 'Selectable MongolText',
+          destination: MongolSelectableTextExample(),
+        ),
         DemoTile(
           title: 'MongolText',
           destination: TextDemo(),

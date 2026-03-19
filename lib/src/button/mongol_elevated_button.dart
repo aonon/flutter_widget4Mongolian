@@ -29,32 +29,31 @@ import 'package:flutter/material.dart'
 
 import 'mongol_button_style_button.dart';
 
-/// A vertical Material Design "elevated button".
+/// 垂直方向的 Material Design "提升按钮"。
 ///
-/// Use elevated buttons to add dimension to otherwise mostly flat
-/// layouts, e.g.  in long busy lists of content, or in wide
-/// spaces. Avoid using elevated buttons on already-elevated content
-/// such as dialogs or cards.
+/// 使用提升按钮为原本大部分是平面的
+/// 布局添加维度，例如在长而繁忙的内容列表中，或在宽
+/// 空间中。避免在已经提升的内容上使用提升按钮，
+/// 例如对话框或卡片。
 ///
-/// An elevated button is a label [child] displayed on a [Material]
-/// widget whose [Material.elevation] increases when the button is
-/// pressed. The label's [MongolText] and [Icon] widgets are displayed in
-/// [style]'s [ButtonStyle.foregroundColor] and the button's filled
-/// background is the [ButtonStyle.backgroundColor].
+/// 提升按钮是一个显示在 [Material]
+/// 小部件上的标签 [child]，当按钮被
+/// 按下时，其 [Material.elevation] 会增加。标签的 [MongolText] 和 [Icon] 小部件以
+/// [style] 的 [ButtonStyle.foregroundColor] 显示，按钮的填充
+/// 背景是 [ButtonStyle.backgroundColor]。
 ///
-/// The elevated button's default style is defined by
-/// [defaultStyleOf].  The style of this elevated button can be
-/// overridden with its [style] parameter. The style of all elevated
-/// buttons in a subtree can be overridden with the
-/// [ElevatedButtonTheme], and the style of all of the elevated
-/// buttons in an app can be overridden with the [Theme]'s
-/// [ThemeData.elevatedButtonTheme] property.
+/// 提升按钮的默认样式由
+/// [defaultStyleOf] 定义。此提升按钮的样式可以
+/// 通过其 [style] 参数覆盖。子树中所有提升
+/// 按钮的样式可以通过
+/// [ElevatedButtonTheme] 覆盖，应用中所有提升
+/// 按钮的样式可以通过 [Theme] 的
+/// [ThemeData.elevatedButtonTheme] 属性覆盖。
 ///
-/// The static [styleFrom] method is a convenient way to create a
-/// elevated button [ButtonStyle] from simple values.
+/// 静态 [styleFrom] 方法是创建提升按钮
+/// [ButtonStyle] 的便捷方法，可从简单值创建。
 ///
-/// If [onPressed] and [onLongPress] callbacks are null, then the
-/// button will be disabled.
+/// 如果 [onPressed] 和 [onLongPress] 回调为 null，则按钮将被禁用。
 ///
 /// {@tool dartpad --template=stateful_widget_scaffold}
 ///
@@ -98,9 +97,9 @@ import 'mongol_button_style_button.dart';
 ///  * <https://material.io/design/components/buttons.html>
 ///  * <https://m3.material.io/components/buttons>
 class MongolElevatedButton extends MongolButtonStyleButton {
-  /// Create a MongolElevatedButton.
+  /// 创建一个 MongolElevatedButton。
   ///
-  /// The [autofocus] and [clipBehavior] arguments must not be null.
+  /// [autofocus] 和 [clipBehavior] 参数不能为空。
   const MongolElevatedButton({
     super.key,
     required super.onPressed,
@@ -115,13 +114,12 @@ class MongolElevatedButton extends MongolButtonStyleButton {
     required super.child,
   });
 
-  /// Create an elevated button from a pair of widgets that serve as the button's
-  /// [icon] and [label].
+  /// 从一对作为按钮的 [icon] 和 [label] 的小部件创建提升按钮。
   ///
-  /// The icon and label are arranged in a column and padded by 12 logical pixels
-  /// at the start, and 16 at the end, with an 8 pixel gap in between.
+  /// 图标和标签排列成一列，开头有 12 个逻辑像素的填充，
+  /// 末尾有 16 个逻辑像素的填充，中间有 8 个像素的间隙。
   ///
-  /// The [icon] and [label] arguments must not be null.
+  /// [icon] 和 [label] 参数不能为空。
   factory MongolElevatedButton.icon({
     Key? key,
     required VoidCallback? onPressed,
@@ -137,35 +135,31 @@ class MongolElevatedButton extends MongolButtonStyleButton {
     required Widget label,
   }) = _MongolElevatedButtonWithIcon;
 
-  /// A static convenience method that constructs an elevated button
-  /// [ButtonStyle] given simple values.
+  /// 一个静态便捷方法，根据简单值构造提升按钮的 [ButtonStyle]。
   ///
-  /// The [foregroundColor] and [disabledForegroundColor] colors are used
-  /// to create a [MaterialStateProperty] [ButtonStyle.foregroundColor], and
-  /// a derived [ButtonStyle.overlayColor].
+  /// [foregroundColor] 和 [disabledForegroundColor] 颜色用于
+  /// 创建 [MaterialStateProperty] [ButtonStyle.foregroundColor]，以及
+  /// 派生的 [ButtonStyle.overlayColor]。
   ///
-  /// The [backgroundColor] and [disabledBackgroundColor] colors are
-  /// used to create a [MaterialStateProperty] [ButtonStyle.backgroundColor].
+  /// [backgroundColor] 和 [disabledBackgroundColor] 颜色用于
+  /// 创建 [MaterialStateProperty] [ButtonStyle.backgroundColor]。
   ///
-  /// The button's elevations are defined relative to the [elevation]
-  /// parameter. The disabled elevation is the same as the parameter
-  /// value, [elevation] + 2 is used when the button is hovered
-  /// or focused, and elevation + 6 is used when the button is pressed.
+  /// 按钮的海拔高度是相对于 [elevation]
+  /// 参数定义的。禁用的海拔高度与参数值相同，
+  /// 当按钮被悬停或聚焦时使用 [elevation] + 2，当按钮被按下时使用 elevation + 6。
   ///
-  /// Similarly, the [enabledMouseCursor] and [disabledMouseCursor]
-  /// parameters are used to construct [ButtonStyle].mouseCursor.
+  /// 同样，[enabledMouseCursor] 和 [disabledMouseCursor]
+  /// 参数用于构造 [ButtonStyle].mouseCursor。
   ///
-  /// All of the other parameters are either used directly or used to
-  /// create a [WidgetStateProperty] with a single value for all
-  /// states.
+  /// 所有其他参数要么直接使用，要么用于
+  /// 为所有状态创建具有单一值的 [WidgetStateProperty]。
   ///
-  /// All parameters default to null, by default this method returns
-  /// a [ButtonStyle] that doesn't override anything.
+  /// 所有参数默认为 null，默认情况下此方法返回
+  /// 一个不覆盖任何内容的 [ButtonStyle]。
   ///
-  /// For example, to override the default text and icon colors for a
-  /// [MongolElevatedButton], as well as its overlay color, with all of the
-  /// standard opacity adjustments for the pressed, focused, and
-  /// hovered states, one could write:
+  /// 例如，要覆盖 [MongolElevatedButton] 的默认文本和图标颜色，
+  /// 以及其覆盖颜色，并为按下、聚焦和
+  /// 悬停状态提供所有标准不透明度调整，可以这样写：
   ///
   /// ```dart
   /// MongolElevatedButton(
@@ -177,7 +171,7 @@ class MongolElevatedButton extends MongolButtonStyleButton {
   /// ),
   /// ```
   ///
-  /// And to change the fill color:
+  /// 要更改填充颜色：
   ///
   /// ```dart
   /// MongolElevatedButton(
@@ -256,32 +250,27 @@ class MongolElevatedButton extends MongolButtonStyleButton {
     );
   }
 
-  /// Defines the button's default appearance.
+  /// 定义按钮的默认外观。
   ///
-  /// The button [child]'s [MongolText] and [Icon] widgets are rendered with
-  /// the [ButtonStyle]'s foreground color. The button's [InkWell] adds
-  /// the style's overlay color when the button is focused, hovered
-  /// or pressed. The button's background color becomes its [Material]
-  /// color.
+  /// 按钮 [child] 的 [MongolText] 和 [Icon] 小部件以
+  /// [ButtonStyle] 的前景色渲染。按钮的 [InkWell] 在按钮被聚焦、悬停
+  /// 或按下时添加样式的覆盖颜色。按钮的背景颜色成为其 [Material]
+  /// 颜色。
   ///
-  /// All of the ButtonStyle's defaults appear below. In this list
-  /// "Theme.foo" is shorthand for `Theme.of(context).foo`. Color
-  /// scheme values like "onSurface(0.38)" are shorthand for
-  /// `onSurface.withOpacity(0.38)`. [WidgetStateProperty] valued
-  /// properties that are not followed by a sublist have the same
-  /// value for all states, otherwise the values are as specified for
-  /// each state, and "others" means all other states.
+  /// 以下是 ButtonStyle 的所有默认值。在此列表中
+  /// "Theme.foo" 是 `Theme.of(context).foo` 的简写。颜色
+  /// 方案值如 "onSurface(0.38)" 是 `onSurface.withOpacity(0.38)` 的简写。
+  /// [WidgetStateProperty] 类型的属性如果后面没有子列表，则所有状态都具有相同
+  /// 的值，否则值按每个状态指定，"others" 表示所有其他状态。
   ///
-  /// The "default font size" below refers to the font size specified in the
-  /// [defaultStyleOf] method (or 14.0 if unspecified), scaled by the
-  /// `MediaQuery.textScalerOf(context).scale` method. The names of the
-  /// EdgeInsets constructors and `EdgeInsetsGeometry.lerp` have been abbreviated
-  /// for readability.
+  /// 下面的 "默认字体大小" 指的是 [defaultStyleOf] 方法中指定的字体大小
+  ///（或未指定时为 14.0），由 `MediaQuery.textScalerOf(context).scale` 方法缩放。
+  /// EdgeInsets 构造函数和 `EdgeInsetsGeometry.lerp` 的名称已缩写以提高可读性。
   ///
-  /// The color of the [ButtonStyle.textStyle] is not used, the
-  /// [ButtonStyle.foregroundColor] color is used instead.
+  /// [ButtonStyle.textStyle] 的颜色不使用，而是使用
+  /// [ButtonStyle.foregroundColor] 颜色。
   ///
-  /// ## Material 2 defaults
+  /// ## Material 2 默认值
   ///
   /// * `textStyle` - Theme.textTheme.button
   /// * `backgroundColor`
@@ -319,7 +308,7 @@ class MongolElevatedButton extends MongolButtonStyleButton {
   /// * `alignment` - Alignment.center
   /// * `splashFactory` - InkRipple.splashFactory
   ///
-  /// The default padding values for the [MongolElevatedButton.icon] factory are slightly different:
+  /// [MongolElevatedButton.icon] 工厂的默认填充值略有不同：
   ///
   /// * `padding`
   ///   * `default font size <= 14` - start(12) end(16)
@@ -327,15 +316,13 @@ class MongolElevatedButton extends MongolButtonStyleButton {
   ///   * `28 < default font size <= 36` - lerp(vertical(8), vertical(4))
   ///   * `36 < default font size` - vertical(4)
   ///
-  /// The default value for `side`, which defines the appearance of the button's
-  /// outline, is null. That means that the outline is defined by the button
-  /// shape's [OutlinedBorder.side]. Typically the default value of an
-  /// [OutlinedBorder]'s side is [BorderSide.none], so an outline is not drawn.
+  /// `side` 的默认值（定义按钮轮廓的外观）为 null。这意味着轮廓由按钮
+  /// 形状的 [OutlinedBorder.side] 定义。通常，[OutlinedBorder]
+  /// 的 side 的默认值是 [BorderSide.none]，因此不绘制轮廓。
   ///
-  /// ## Material 3 defaults
+  /// ## Material 3 默认值
   ///
-  /// If [ThemeData.useMaterial3] is set to true the following defaults will
-  /// be used:
+  /// 如果 [ThemeData.useMaterial3] 设置为 true，则将使用以下默认值：
   ///
   /// * `textStyle` - Theme.textTheme.labelLarge
   /// * `backgroundColor`
@@ -374,8 +361,8 @@ class MongolElevatedButton extends MongolButtonStyleButton {
   /// * `alignment` - Alignment.center
   /// * `splashFactory` - Theme.splashFactory
   ///
-  /// For the [MongolElevatedButton.icon] factory, the start (generally the top) value of
-  /// [padding] is reduced from 24 to 16.
+  /// 对于 [MongolElevatedButton.icon] 工厂，[padding] 的开始（通常是顶部）值
+  /// 从 24 减少到 16。
   @override
   ButtonStyle defaultStyleOf(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -410,8 +397,7 @@ class MongolElevatedButton extends MongolButtonStyleButton {
           );
   }
 
-  /// Returns the [ElevatedButtonThemeData.style] of the closest
-  /// [ElevatedButtonTheme] ancestor.
+  /// 返回最近的 [ElevatedButtonTheme] 祖先的 [ElevatedButtonThemeData.style]。
   @override
   ButtonStyle? themeStyleOf(BuildContext context) {
     return ElevatedButtonTheme.of(context).style;
@@ -564,16 +550,17 @@ class _MongolElevatedButtonWithIcon extends MongolElevatedButton {
 
 class _MongolElevatedButtonWithIconChild extends StatelessWidget {
   const _MongolElevatedButtonWithIconChild(
-      {Key? key, required this.label, required this.icon})
-      : super(key: key);
+      {required this.label, required this.icon});
 
   final Widget label;
   final Widget icon;
 
   @override
   Widget build(BuildContext context) {
-    final double scale = MediaQuery.textScalerOf(context).textScaleFactor;
-    final double gap =
+    final TextScaler textScaler = MediaQuery.textScalerOf(context);
+    // 使用 TextScaler.scale() 替代已弃用的 textScaleFactor
+    final double scale = textScaler.scale(1.0);
+    final double gap = 
         scale <= 1 ? 8 : lerpDouble(8, 4, math.min(scale - 1, 1))!;
     return Column(
       mainAxisSize: MainAxisSize.min,

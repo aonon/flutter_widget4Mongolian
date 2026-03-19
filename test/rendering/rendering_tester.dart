@@ -102,15 +102,15 @@ class TestRenderingFlutterBinding extends BindingBase
       _errors.add(details);
     };
     try {
-      pipelineOwner.flushLayout();
+      rootPipelineOwner.flushLayout();
       if (phase == EnginePhase.layout) return;
-      pipelineOwner.flushCompositingBits();
+      rootPipelineOwner.flushCompositingBits();
       if (phase == EnginePhase.compositingBits) return;
-      pipelineOwner.flushPaint();
+      rootPipelineOwner.flushPaint();
       if (phase == EnginePhase.paint) return;
-      renderView.compositeFrame();
+      renderViews.first.compositeFrame();
       if (phase == EnginePhase.composite) return;
-      pipelineOwner.flushSemantics();
+      rootPipelineOwner.flushSemantics();
       if (phase == EnginePhase.flushSemantics) return;
       assert(phase == EnginePhase.flushSemantics ||
           phase == EnginePhase.sendSemanticsUpdate);
@@ -161,7 +161,7 @@ void layout(
   assert(box.parent ==
       null); // We stick the box in another, so you can't reuse it easily, sorry.
 
-  renderer.renderView.child = null;
+  renderer.renderViews.first.child = null;
   if (constraints != null) {
     box = RenderPositionedBox(
       alignment: alignment,
@@ -171,7 +171,7 @@ void layout(
       ),
     );
   }
-  renderer.renderView.child = box;
+  renderer.renderViews.first.child = box;
 
   pumpFrame(phase: phase, onErrors: onErrors);
 }
@@ -296,6 +296,14 @@ class FakeTicker implements Ticker {
   DiagnosticsNode describeForError(String name) {
     return DiagnosticsProperty<Ticker>(name, this,
         style: DiagnosticsTreeStyle.errorProperty);
+  }
+
+  @override
+  bool get forceFrames => throw UnimplementedError();
+
+  @override
+  set forceFrames(bool value) {
+    throw UnimplementedError();
   }
 }
 

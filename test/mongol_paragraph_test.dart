@@ -377,6 +377,29 @@ void main() {
       expect(range.end, 7);
     });
 
+    test('getLineBoundary returns empty trailing line for ending newline', () {
+      const text = 'aaa\n';
+
+      final paragraph = getParagraph(text, 1000);
+      final range =
+          paragraph.getLineBoundary(const TextPosition(offset: text.length));
+
+      expect(range.start, text.length);
+      expect(range.end, text.length);
+      expect(range.textInside(text), isEmpty);
+    });
+
+    test('getLineBoundary handles empty content', () {
+      const text = '';
+
+      final paragraph = getParagraph(text, 1000);
+      final range = paragraph.getLineBoundary(const TextPosition(offset: 0));
+
+      expect(range.start, 0);
+      expect(range.end, 0);
+      expect(range.textInside(text), isEmpty);
+    });
+
 // https://github.com/flutter/flutter/issues/83392
 // test('getLineBoundary includes newline characters', () {
 //   const text = 'aaa\nbbb';
@@ -464,6 +487,42 @@ void main() {
     //     lineHeightWithoutEllipsis + ellipsisHeight,
     //   );
     // });
+  });
+
+  group('oversized runs -', () {
+    test('relayout recomputes longestLine for new constraints', () {
+      const text = 'AAA AAA AAA AAA AAA';
+      final paragraph = getParagraph(text, 300);
+      final initialLongestLine = paragraph.longestLine;
+
+      paragraph.layout(const MongolParagraphConstraints(height: 100));
+
+      final freshParagraph = getParagraph(text, 100);
+      expect(paragraph.longestLine, freshParagraph.longestLine);
+      expect(paragraph.longestLine, lessThan(initialLongestLine));
+    });
+
+    test('does not split long word without breaks', () {
+      // A long single word with no spaces should not be split into multiple
+      // boxes even when the available line length is small.
+      const text = 'AAAAAAAAAAAAAAAA'; // 16 chars
+      final paragraph =
+          getParagraph(text, 42); // small height to force wrapping
+
+      final boxes = paragraph.getBoxesForRange(0, text.length);
+      // Expect a single box covering the whole run (not split across lines).
+      expect(boxes.length, 1);
+    });
+
+    test('splits at spaces when height is insufficient', () {
+      const text = 'AAAA AAAA AAAA';
+      final paragraph = getParagraph(text, 42);
+
+      final boxes = paragraph.getBoxesForRange(0, text.length);
+      // Because the text contains spaces, it should be possible to split
+      // across multiple lines/columns, resulting in multiple boxes.
+      expect(boxes.length, greaterThan(1));
+    });
   });
 
   /// Keep this for testing Paragraph

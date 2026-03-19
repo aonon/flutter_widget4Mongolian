@@ -16,28 +16,27 @@ import 'mongol_text_selection_toolbar.dart';
 import 'mongol_text_selection_toolbar_button.dart';
 
 // https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/material/text_selection.dart
-// This file builds the Copy/Paste toolbar that pops up when you long click, etc.
-// If you want a different style you can replace this class with another one.
-// That's what Flutter does to give a different style for Material, Cupertino
-// and others.
+// 此文件构建长按等操作时弹出的复制/粘贴工具栏。
+// 如果您想要不同的样式，可以用另一个类替换此类。
+// Flutter 就是这样为 Material、Cupertino 等提供不同样式的。
 
 const double _kHandleSize = 22.0;
 
-// Padding between the toolbar and the anchor.
+// 工具栏和锚点之间的填充。
 const double _kToolbarContentDistanceRight = _kHandleSize - 2.0;
 const double _kToolbarContentDistance = 8.0;
 
-/// Mongol styled text selection controls. (Adapted from Android Material version)
+/// 蒙古文风格的文本选择控件。（改编自 Android Material 版本）
 ///
-/// In order to avoid Mongolian Unicode and font issues, the text editing
-/// controls use icons rather than text for the copy/cut/past/select buttons.
+/// 为了避免蒙古文 Unicode 和字体问题，文本编辑
+/// 控件使用图标而不是文本来表示复制/剪切/粘贴/选择按钮。
 class MongolTextSelectionControls extends TextSelectionControls {
-  /// Returns the size of the handle.
+  /// 返回手柄的大小。
   @override
   Size getHandleSize(double textLineWidth) =>
       const Size(_kHandleSize, _kHandleSize);
 
-  /// Builder for Mongol copy/paste text selection toolbar.
+  /// 蒙古文复制/粘贴文本选择工具栏的构建器。
   @override
   Widget buildToolbar(
     BuildContext context,
@@ -64,9 +63,9 @@ class MongolTextSelectionControls extends TextSelectionControls {
     );
   }
 
-  /// Builder for material-style text selection handles.
+  /// 材质风格文本选择手柄的构建器。
   ///
-  /// Width and height terms are in vertical text layout context
+  /// 宽度和高度术语在垂直文本布局上下文中
   @override
   Widget buildHandle(
       BuildContext context, TextSelectionHandleType type, double textLineWidth,
@@ -84,18 +83,18 @@ class MongolTextSelectionControls extends TextSelectionControls {
       ),
     );
 
-    // [handle] is a circle, with a rectangle in the top left quadrant of that
-    // circle (an onion pointing to 10:30). We rotate [handle] to point
-    // down-right, up-left, or left depending on the handle type.
+    // [handle] 是一个圆圈，在该圆圈的左上角象限中有一个矩形
+    // （一个指向 10:30 的洋葱）。我们旋转 [handle] 以指向
+    // 下右、左上或左，具体取决于手柄类型。
     switch (type) {
-      case TextSelectionHandleType.left: // points down-right
+      case TextSelectionHandleType.left: // 指向下右
         return Transform.rotate(
           angle: math.pi,
           child: handle,
         );
-      case TextSelectionHandleType.right: // points up-left
+      case TextSelectionHandleType.right: // 指向上左
         return handle;
-      case TextSelectionHandleType.collapsed: // points left
+      case TextSelectionHandleType.collapsed: // 指向左
         return Transform.rotate(
           angle: -math.pi / 4.0,
           child: handle,
@@ -103,11 +102,11 @@ class MongolTextSelectionControls extends TextSelectionControls {
     }
   }
 
-  /// Gets anchor for material-style text selection handles.
+  /// 获取材质风格文本选择手柄的锚点。
   ///
-  /// Width and height terms are in vertical text layout context.
+  /// 宽度和高度术语在垂直文本布局上下文中。
   ///
-  /// See [TextSelectionControls.getHandleAnchor].
+  /// 请参阅 [TextSelectionControls.getHandleAnchor]。
   @override
   Offset getHandleAnchor(TextSelectionHandleType type, double textLineWidth,
       [double? startGlyphWidth, double? endGlyphWidth]) {
@@ -123,8 +122,8 @@ class MongolTextSelectionControls extends TextSelectionControls {
 
   @override
   bool canSelectAll(TextSelectionDelegate delegate) {
-    // Android allows SelectAll when selection is not collapsed, unless
-    // everything has already been selected.
+    // Android 允许在选择未折叠时全选，除非
+    // 所有内容都已被选择。
     final value = delegate.textEditingValue;
     return delegate.selectAllEnabled &&
         value.text.isNotEmpty &&
@@ -133,7 +132,7 @@ class MongolTextSelectionControls extends TextSelectionControls {
   }
 }
 
-// The label and callback for the available default text selection menu buttons.
+// 可用的默认文本选择菜单按钮的标签和回调。
 class _TextSelectionToolbarItemData {
   const _TextSelectionToolbarItemData({
     required this.icon,
@@ -144,10 +143,9 @@ class _TextSelectionToolbarItemData {
   final VoidCallback onPressed;
 }
 
-// The highest level toolbar widget, built directly by buildToolbar.
+// 最高级别的工具栏小部件，由 buildToolbar 直接构建。
 class _TextSelectionControlsToolbar extends StatefulWidget {
   const _TextSelectionControlsToolbar({
-    Key? key,
     required this.clipboardStatus,
     required this.delegate,
     required this.endpoints,
@@ -158,7 +156,7 @@ class _TextSelectionControlsToolbar extends StatefulWidget {
     required this.handleSelectAll,
     required this.selectionMidpoint,
     required this.textLineWidth,
-  }) : super(key: key);
+  });
 
   final ValueListenable<ClipboardStatus>? clipboardStatus;
   final TextSelectionDelegate delegate;
@@ -180,7 +178,7 @@ class _TextSelectionControlsToolbarState
     extends State<_TextSelectionControlsToolbar> with TickerProviderStateMixin {
   void _onChangedClipboardStatus() {
     setState(() {
-      // Inform the widget that the value of clipboardStatus has changed.
+      // 通知小部件 clipboardStatus 的值已更改。
     });
   }
 
@@ -207,22 +205,22 @@ class _TextSelectionControlsToolbarState
 
   @override
   Widget build(BuildContext context) {
-    // If there are no buttons to be shown, don't render anything.
+    // 如果没有按钮要显示，不要渲染任何内容。
     if (widget.handleCut == null &&
         widget.handleCopy == null &&
         widget.handlePaste == null &&
         widget.handleSelectAll == null) {
       return const SizedBox.shrink();
     }
-    // If the paste button is desired, don't render anything until the state of
-    // the clipboard is known, since it's used to determine if paste is shown.
+    // 如果需要粘贴按钮，在知道剪贴板状态之前不要渲染任何内容，
+    // 因为它用于确定是否显示粘贴。
     if (widget.handlePaste != null &&
         widget.clipboardStatus?.value == ClipboardStatus.unknown) {
       return const SizedBox.shrink();
     }
 
-    // Calculate the positioning of the menu. It is placed to the left of the
-    // selection if there is enough room, or otherwise to the right.
+    // 计算菜单的位置。如果有足够的空间，它会放在选择的左侧，
+    // 否则放在右侧。
     final startTextSelectionPoint = widget.endpoints[0];
     final endTextSelectionPoint =
         widget.endpoints.length > 1 ? widget.endpoints[1] : widget.endpoints[0];
@@ -238,8 +236,7 @@ class _TextSelectionControlsToolbarState
             _kToolbarContentDistanceRight,
         widget.globalEditableRegion.top + widget.selectionMidpoint.dy);
 
-    // Determine which buttons will appear so that the order and total number is
-    // known.
+    // 确定哪些按钮会出现，以便知道顺序和总数。
     final itemData = <_TextSelectionToolbarItemData>[
       if (widget.handleCut != null)
         _TextSelectionToolbarItemData(
@@ -264,7 +261,7 @@ class _TextSelectionControlsToolbarState
         ),
     ];
 
-    // If there is no option available, build an empty widget.
+    // 如果没有可用选项，构建一个空小部件。
     if (itemData.isEmpty) {
       return const SizedBox(width: 0.0, height: 0.0);
     }
@@ -287,7 +284,7 @@ class _TextSelectionControlsToolbarState
   }
 }
 
-/// Draws a single text selection handle which points up and to the left.
+/// 绘制一个指向上左的文本选择手柄。
 class _TextSelectionHandlePainter extends CustomPainter {
   _TextSelectionHandlePainter({required this.color});
 
@@ -312,6 +309,6 @@ class _TextSelectionHandlePainter extends CustomPainter {
   }
 }
 
-/// Text selection controls that follow the Material Design specification.
+/// 遵循 Material 设计规范的文本选择控件。
 final TextSelectionControls mongolTextSelectionControls =
     MongolTextSelectionControls();

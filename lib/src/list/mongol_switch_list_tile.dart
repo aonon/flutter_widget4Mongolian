@@ -17,51 +17,47 @@ import 'mongol_radio_list_tile.dart';
 import '../text/mongol_text.dart';
 import '../text/mongol_rich_text.dart';
 
+/// 开关列表项的类型枚举
+///
+/// - material: 使用 Material 风格的开关
+/// - adaptive: 根据平台自动适配风格的开关（iOS/macOS 上使用 Cupertino 风格，其他平台使用 Material 风格）
 enum _SwitchListTileType { material, adaptive }
 
-/// A [MongolListTile] with a Rotated [Switch]. In other words, a switch with a label.
+/// 一个带有旋转开关的 [MongolListTile]，换句话说，就是一个带标签的开关。
 ///
-/// {@youtube 560 315 https://www.youtube.com/watch?v=0igIjvtEWNU}
+/// 整个列表项都是可交互的：点击列表项的任何地方都会切换开关状态。
+/// 点击并拖动 [Switch] 也会触发 [onChanged] 回调。
 ///
-/// The entire list tile is interactive: tapping anywhere in the tile toggles
-/// the switch. Tapping and dragging the [Switch] also triggers the [onChanged]
-/// callback.
+/// 为了确保 [onChanged] 正确触发，传递给 [value] 的状态必须被正确管理。
+/// 通常是通过在 [onChanged] 中调用 [State.setState] 来切换状态值。
 ///
-/// To ensure that [onChanged] correctly triggers, the state passed
-/// into [value] must be properly managed. This is typically done by invoking
-/// [State.setState] in [onChanged] to toggle the state value.
+/// 此小部件的 [value]、[onChanged]、[activeColor]、[activeThumbImage] 和
+/// [inactiveThumbImage] 属性与 [Switch] 小部件上的同名属性相同。
 ///
-/// The [value], [onChanged], [activeColor], [activeThumbImage], and
-/// [inactiveThumbImage] properties of this widget are identical to the
-/// similarly-named properties on the [Switch] widget.
+/// [title]、[subtitle]、[isThreeLine] 和 [dense] 属性与
+/// [MongolListTile] 上的同名属性类似。
 ///
-/// The [title], [subtitle], [isThreeLine], and [dense] properties are like
-/// those of the same name on [MongolListTile].
+/// 此小部件上的 [selected] 属性类似于 [MongolListTile.selected] 属性。
+/// 选中项的文本颜色使用此 tile 的 [activeColor]，如果 [activeColor] 为 null，则使用主题的
+/// [SwitchThemeData.overlayColor]。
 ///
-/// The [selected] property on this widget is similar to the [MongolListTile.selected]
-/// property. This tile's [activeColor] is used for the selected item's text color, or
-/// the theme's [SwitchThemeData.overlayColor] if [activeColor] is null.
+/// 此小部件不会协调 [selected] 状态和 [value] 状态；
+/// 要使列表项在开关打开时显示为选中状态，请为两者使用相同的值。
 ///
-/// This widget does not coordinate the [selected] state and the
-/// [value]; to have the list tile appear selected when the
-/// switch button is on, use the same value for both.
+/// 开关默认显示在底部（即 [MongolListTile.trailing] 位置），
+/// 可以使用 [controlAffinity] 更改。[secondary] 小部件放置在
+/// [MongolListTile.leading] 位置。
 ///
-/// The switch is shown on the bottom by default (i.e.
-/// in the [MongolListTile.trailing] slot) which can be changed using [controlAffinity].
-/// The [secondary] widget is placed in the [MongolListTile.leading] slot.
+/// 此小部件需要树中有 [Material] 小部件祖先来绘制自身，
+/// 这通常由应用程序的 [Scaffold] 提供。[tileColor] 和 [selectedTileColor]
+/// 不是由 [MongolSwitchListTile] 本身绘制的，而是由 [Material] 小部件祖先绘制的。
+/// 在这种情况下，可以在 [MongolSwitchListTile] 周围包装一个 [Material] 小部件，例如：
 ///
-/// This widget requires a [Material] widget ancestor in the tree to paint
-/// itself on, which is typically provided by the app's [Scaffold].
-/// The [tileColor], and [selectedTileColor] are not painted by the
-/// [MongolSwitchListTile] itself but by the [Material] widget ancestor. In this
-/// case, one can wrap a [Material] widget around the [MongolSwitchListTile], e.g.:
-///
-/// {@tool snippet}
 /// ```dart
 /// ColoredBox(
 ///   color: Colors.green,
 ///   child: Material(
-///     child: MongolSwitchListTilev(
+///     child: MongolSwitchListTile(
 ///       tileColor: Colors.red,
 ///       title: const MongolText('MongolSwitchListTile with red background'),
 ///       value: true,
@@ -70,406 +66,50 @@ enum _SwitchListTileType { material, adaptive }
 ///   ),
 /// )
 /// ```
-/// {@end-tool}
 ///
-/// ## Performance considerations when wrapping [MongolSwitchListTile] with [Material]
+/// ## 性能考虑
 ///
-/// Wrapping a large number of [MongolSwitchListTile]s individually with [Material]s
-/// is expensive. Consider only wrapping the [MongolSwitchListTile]s that require it
-/// or include a common [Material] ancestor where possible.
+/// 单独用 [Material] 包装大量 [MongolSwitchListTile] 是昂贵的。
+/// 考虑只包装需要它的 [MongolSwitchListTile]，或者在可能的情况下包含一个公共的 [Material] 祖先。
 ///
-/// To show the [MongolSwitchListTile] as disabled, pass null as the [onChanged]
-/// callback.
+/// 要显示禁用的 [MongolSwitchListTile]，请将 null 作为 [onChanged] 回调传递。
 ///
-/// {@tool dartpad}
+/// ## MongolSwitchListTile 中的语义
 ///
-/// This widget shows a switch that, when toggled, changes the state of a [bool]
-/// member field called `_lights`.
+/// 由于整个 MongolSwitchListTile 都是交互式的，它应该将自己表示为一个单一的交互实体。
 ///
-/// import 'package:flutter/material.dart';
+/// 为此，MongolSwitchListTile 小部件用 [MergeSemantics] 小部件包装其子女。
+/// [MergeSemantics] 将尝试将其后代 [Semantics] 节点合并到语义树中的一个节点中。
+/// 因此，如果其任何子女需要自己的 [Semantics] 节点，MongolSwitchListTile 将抛出错误。
 ///
-/// /// Flutter code sample for [SwitchListTile].
+/// 例如，不能将 [MongolRichText] 小部件嵌套为 MongolSwitchListTile 的后代。
+/// [MongolRichText] 有一个嵌入的手势识别器，需要自己的 [Semantics] 节点，
+/// 这直接与 MongolSwitchListTile 将所有后代语义节点合并为一个的愿望相冲突。
+/// 因此，可能需要创建一个自定义的单选 tile 小部件来适应类似的用例。
 ///
-/// void main() => runApp(const SwitchListTileApp());
+/// ## 自定义开关列表项
 ///
-/// class SwitchListTileApp extends StatelessWidget {
-///   const SwitchListTileApp({super.key});
+/// 如果 MongolSwitchListTile 填充和定位其元素的方式不完全符合您的要求，
+/// 您可以通过将 [Switch] 与其他小部件（如 [MongolText]、[Padding] 和 [InkWell]）
+/// 组合来创建自定义标签开关小部件。
 ///
-///   @override
-///   Widget build(BuildContext context) {
-///     return MaterialApp(
-///       theme: ThemeData(useMaterial3: true),
-///       home: Scaffold(
-///         appBar: AppBar(title: const Text('SwitchListTile Sample')),
-///         body: const Center(
-///           child: SwitchListTileExample(),
-///         ),
-///       ),
-///     );
-///   }
-/// }
+/// 另请参阅：
 ///
-/// class SwitchListTileExample extends StatefulWidget {
-///   const SwitchListTileExample({super.key});
-///
-///   @override
-///   State<SwitchListTileExample> createState() => _SwitchListTileExampleState();
-/// }
-///
-/// class _SwitchListTileExampleState extends State<SwitchListTileExample> {
-///   bool _lights = false;
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return MongolSwitchListTile(
-///       title: const MongolText('Lights'),
-///       value: _lights,
-///       onChanged: (bool value) {
-///         setState(() {
-///           _lights = value;
-///         });
-///       },
-///       secondary: const Icon(Icons.lightbulb_outline),
-///     );
-///   }
-/// }
-/// {@end-tool}
-///
-/// {@tool dartpad}
-/// This sample demonstrates how [MongolSwitchListTile] positions the switch widget
-/// relative to the text in different configurations.
-/// 
-/// ```dart
-/// import 'package:flutter/material.dart';
-///
-/// Flutter code sample for [SwitchListTile].
-///
-/// void main() => runApp(const SwitchListTileApp());
-///
-/// class SwitchListTileApp extends StatelessWidget {
-///   const SwitchListTileApp({super.key});
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return MaterialApp(
-///       theme: ThemeData(useMaterial3: true),
-///       home: Scaffold(
-///           appBar: AppBar(title: const Text('SwitchListTile Sample')),
-///           body: const SwitchListTileExample()),
-///     );
-///   }
-/// }
-///
-/// class SwitchListTileExample extends StatefulWidget {
-///   const SwitchListTileExample({super.key});
-///
-///   @override
-///   State<SwitchListTileExample> createState() => _SwitchListTileExampleState();
-/// }
-///
-/// class _SwitchListTileExampleState extends State<SwitchListTileExample> {
-///   bool switchValue1 = true;
-///   bool switchValue2 = true;
-///   bool switchValue3 = true;
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return Scaffold(
-///       body: Row(
-///         children: <Widget>[
-///           MongolSwitchListTile(
-///             value: switchValue1,
-///             onChanged: (bool? value) {
-///               setState(() {
-///                 switchValue1 = value!;
-///               });
-///             },
-///             title: const MongolText('Headline'),
-///             subtitle: const MongolText('Supporting text'),
-///           ),
-///           const Divider(height: 0),
-///           MongolSwitchListTile(
-///             value: switchValue2,
-///             onChanged: (bool? value) {
-///               setState(() {
-///                 switchValue2 = value!;
-///               });
-///             },
-///             title: const MongolText('Headline'),
-///             subtitle: const MongolText(
-///                 'Longer supporting text to demonstrate how the text wraps and the switch is centered vertically with the text.'),
-///           ),
-///           const Divider(height: 0),
-///           MongolSwitchListTile(
-///             value: switchValue3,
-///             onChanged: (bool? value) {
-///               setState(() {
-///                 switchValue3 = value!;
-///               });
-///             },
-///             title: const MongolText('Headline'),
-///             subtitle: const MongolText(
-///                 "Longer supporting text to demonstrate how the text wraps and how setting 'SwitchListTile.isThreeLine = true' aligns the switch to the top vertically with the text."),
-///             isThreeLine: true,
-///           ),
-///           const Divider(height: 0),
-///         ],
-///       ),
-///     );
-///   }
-/// }
-/// ```
-/// {@end-tool}
-///
-/// ## Semantics in MongolSwitchListTile
-///
-/// Since the entirety of the MongolSwitchListTile is interactive, it should represent
-/// itself as a single interactive entity.
-///
-/// To do so, a MongolSwitchListTile widget wraps its children with a [MergeSemantics]
-/// widget. [MergeSemantics] will attempt to merge its descendant [Semantics]
-/// nodes into one node in the semantics tree. Therefore, MongolSwitchListTile will
-/// throw an error if any of its children requires its own [Semantics] node.
-///
-/// For example, you cannot nest a [MongolRichText] widget as a descendant of
-/// MongolSwitchListTile. [MongolRichText] has an embedded gesture recognizer that
-/// requires its own [Semantics] node, which directly conflicts with
-/// MongolSwitchListTile's desire to merge all its descendants' semantic nodes
-/// into one. Therefore, it may be necessary to create a custom radio tile
-/// widget to accommodate similar use cases.
-///
-/// {@tool dartpad}
-///
-/// Here is an example of a custom labeled radio widget, called
-/// LinkedLabelRadio, that includes an interactive [MongolRichText] widget that
-/// handles tap gestures.
-///
-/// ```dart
-/// import 'package:flutter/gestures.dart';
-/// import 'package:flutter/material.dart';
-///
-/// /// Flutter code sample for custom labeled switch.
-///
-/// void main() => runApp(const LabeledSwitchApp());
-///
-/// class LabeledSwitchApp extends StatelessWidget {
-///   const LabeledSwitchApp({super.key});
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return MaterialApp(
-///       theme: ThemeData(useMaterial3: true),
-///       home: Scaffold(
-///         appBar: AppBar(title: const Text('Custom Labeled Switch Sample')),
-///         body: const Center(
-///           child: LabeledSwitchExample(),
-///         ),
-///       ),
-///     );
-///   }
-/// }
-///
-/// class LinkedLabelSwitch extends StatelessWidget {
-///   const LinkedLabelSwitch({
-///     super.key,
-///     required this.label,
-///     required this.padding,
-///     required this.value,
-///     required this.onChanged,
-///   });
-///
-///   final String label;
-///   final EdgeInsets padding;
-///   final bool value;
-///   final ValueChanged<bool> onChanged;
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return Padding(
-///       padding: padding,
-///       child: Column(
-///         children: <Widget>[
-///           Expanded(
-///             child: MongolRichText(
-///               text: TextSpan(
-///                 text: label,
-///                 style: TextStyle(
-///                   color: Theme.of(context).colorScheme.primary,
-///                   decoration: TextDecoration.underline,
-///                 ),
-///                 recognizer: TapGestureRecognizer()
-///                   ..onTap = () {
-///                     debugPrint('Label has been tapped.');
-///                   },
-///               ),
-///             ),
-///           ),
-///           RotatedBox(
-///             quarterTurns: 1, 
-///             child: Switch(
-///               value: value,
-///               onChanged: (bool newValue) {
-///                 onChanged(newValue);
-///               },
-///             ),
-///           ),
-///         ],
-///       ),
-///     );
-///   }
-/// }
-///
-/// class LabeledSwitchExample extends StatefulWidget {
-///   const LabeledSwitchExample({super.key});
-///
-///   @override
-///   State<LabeledSwitchExample> createState() => _LabeledSwitchExampleState();
-/// }
-///
-/// class _LabeledSwitchExampleState extends State<LabeledSwitchExample> {
-///   bool _isSelected = false;
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return LinkedLabelSwitch(
-///       label: 'Linked, tappable label text',
-///       padding: const EdgeInsets.symmetric(horizontal: 20.0),
-///       value: _isSelected,
-///       onChanged: (bool newValue) {
-///         setState(() {
-///           _isSelected = newValue;
-///         });
-///       },
-///     );
-///   }
-/// }
-/// ```
-/// {@end-tool}
-///
-/// ## MongolSwitchListTile isn't exactly what I want
-///
-/// If the way MongolSwitchListTile pads and positions its elements isn't 
-/// quite what you're looking for, you can create custom labeled switch 
-/// widgets by combining [Switch] with other widgets, such as [MongolText], [Padding]
-/// and [InkWell].
-///
-/// {@tool dartpad}
-///
-/// Here is an example of a custom LabeledSwitch widget, but you can easily
-/// make your own configurable widget.
-///
-/// ```dart
-/// import 'package:flutter/material.dart';
-///
-/// Flutter code sample for custom labeled switch.
-///
-/// void main() => runApp(const LabeledSwitchApp());
-///
-/// class LabeledSwitchApp extends StatelessWidget {
-///   const LabeledSwitchApp({super.key});
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return MaterialApp(
-///       theme: ThemeData(useMaterial3: true),
-///       home: Scaffold(
-///         appBar: AppBar(title: const Text('Custom Labeled Switch Sample')),
-///         body: const Center(
-///           child: LabeledSwitchExample(),
-///         ),
-///       ),
-///     );
-///   }
-/// }
-///
-/// class LabeledSwitch extends StatelessWidget {
-///   const LabeledSwitch({
-///     super.key,
-///     required this.label,
-///     required this.padding,
-///     required this.value,
-///     required this.onChanged,
-///   });
-///
-///   final String label;
-///   final EdgeInsets padding;
-///   final bool value;
-///   final ValueChanged<bool> onChanged;
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return InkWell(
-///       onTap: () {
-///         onChanged(!value);
-///       },
-///       child: Padding(
-///         padding: padding,
-///         child: Column(
-///           children: <Widget>[
-///             Expanded(child: MongolText(label)),
-///             RotatedBox(
-///               quarterTurns: 1, 
-///               child: Switch(
-///                 value: value,
-///                 onChanged: (bool newValue) {
-///                   onChanged(newValue);
-///                 },
-///               ),
-///             ),
-///           ],
-///         ),
-///       ),
-///     );
-///   }
-/// }
-///
-/// class LabeledSwitchExample extends StatefulWidget {
-///   const LabeledSwitchExample({super.key});
-///
-///   @override
-///   State<LabeledSwitchExample> createState() => _LabeledSwitchExampleState();
-/// }
-///
-/// class _LabeledSwitchExampleState extends State<LabeledSwitchExample> {
-///   bool _isSelected = false;
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return LabeledSwitch(
-///       label: 'This is the label text',
-///       padding: const EdgeInsets.symmetric(horizontal: 20.0),
-///       value: _isSelected,
-///       onChanged: (bool newValue) {
-///         setState(() {
-///           _isSelected = newValue;
-///         });
-///       },
-///     );
-///   }
-/// }
-/// ```
-/// {@end-tool}
-///
-/// See also:
-///
-///  * [MongolListTileTheme], which can be used to affect the style of list tiles,
-///    including switch list tiles.
-///  * [MongolCheckboxListTile], a similar widget for checkboxes.
-///  * [MongolRadioListTile], a similar widget for radio buttons.
-///  * [MongolListTile] and [Switch], the widgets from which this widget is made.
+///  * [MongolListTileTheme]，可用于影响列表项的样式，包括开关列表项。
+///  * [MongolCheckboxListTile]，用于复选框的类似小部件。
+///  * [MongolRadioListTile]，用于单选按钮的类似小部件。
+///  * [MongolListTile] 和 [Switch]，此小部件由这些小部件组成。
 class MongolSwitchListTile extends StatelessWidget {
-  /// Creates a combination of a list tile and a switch.
+  /// 创建一个列表项和开关的组合。
   ///
-  /// The switch tile itself does not maintain any state. Instead, when the
-  /// state of the switch changes, the widget calls the [onChanged] callback.
-  /// Most widgets that use a switch will listen for the [onChanged] callback
-  /// and rebuild the switch tile with a new [value] to update the visual
-  /// appearance of the switch.
+  /// 开关 tile 本身不维护任何状态。相反，当开关状态改变时，
+  /// 小部件会调用 [onChanged] 回调。大多数使用开关的小部件会监听 [onChanged] 回调，
+  /// 并使用新的 [value] 重建开关 tile 以更新开关的视觉外观。
   ///
-  /// The following arguments are required:
+  /// 以下参数是必需的：
   ///
-  /// * [value] determines whether this switch is on or off.
-  /// * [onChanged] is called when the user toggles the switch on or off.
+  /// * [value] 确定此开关是打开还是关闭。
+  /// * [onChanged] 在用户切换开关打开或关闭时调用。
   const MongolSwitchListTile({
     super.key,
     required this.value,
@@ -514,18 +154,15 @@ class MongolSwitchListTile extends StatelessWidget {
         assert(inactiveThumbImage != null || onInactiveThumbImageError == null),
         assert(!isThreeLine || subtitle != null);
 
-  /// Creates a Material [ListTile] with an adaptive [Switch], following
-  /// Material design's
-  /// [Cross-platform guidelines](https://material.io/design/platform-guidance/cross-platform-adaptation.html).
+  /// 创建一个带有自适应开关的 Material [ListTile]，遵循 Material 设计的
+  /// [跨平台指南](https://material.io/design/platform-guidance/cross-platform-adaptation.html)。
   ///
-  /// This widget uses [Switch.adaptive] to change the graphics of the switch
-  /// component based on the ambient [ThemeData.platform]. On iOS and macOS, a
-  /// [CupertinoSwitch] will be used. On other platforms a Material design
-  /// [Switch] will be used.
+  /// 此小部件使用 [Switch.adaptive] 根据环境 [ThemeData.platform] 更改开关组件的图形。
+  /// 在 iOS 和 macOS 上，将使用 [CupertinoSwitch]。在其他平台上，将使用 Material 设计的 [Switch]。
   ///
-  /// If a [CupertinoSwitch] is created, the following parameters are
-  /// ignored: [activeTrackColor], [inactiveThumbColor], [inactiveTrackColor],
-  /// [activeThumbImage], [inactiveThumbImage].
+  /// 如果创建了 [CupertinoSwitch]，则忽略以下参数：
+  /// [activeTrackColor]、[inactiveThumbColor]、[inactiveTrackColor]、
+  /// [activeThumbImage]、[inactiveThumbImage]。
   const MongolSwitchListTile.adaptive({
     super.key,
     required this.value,
@@ -570,22 +207,19 @@ class MongolSwitchListTile extends StatelessWidget {
         assert(activeThumbImage != null || onActiveThumbImageError == null),
         assert(inactiveThumbImage != null || onInactiveThumbImageError == null);
 
-  /// Whether this switch is checked.
+  /// 此开关是否被选中。
   final bool value;
 
-  /// Called when the user toggles the switch on or off.
+  /// 在用户切换开关打开或关闭时调用。
   ///
-  /// The switch passes the new value to the callback but does not actually
-  /// change state until the parent widget rebuilds the switch tile with the
-  /// new value.
+  /// 开关将新值传递给回调，但实际上不会改变状态，
+  /// 直到父小部件使用新值重建开关 tile。
   ///
-  /// If null, the switch will be displayed as disabled.
+  /// 如果为 null，开关将显示为禁用状态。
   ///
-  /// The callback provided to [onChanged] should update the state of the parent
-  /// [StatefulWidget] using the [State.setState] method, so that the parent
-  /// gets rebuilt; for example:
+  /// 提供给 [onChanged] 的回调应使用 [State.setState] 方法更新父 [StatefulWidget] 的状态，
+  /// 以便父小部件得到重建；例如：
   ///
-  /// {@tool snippet}
   /// ```dart
   /// SwitchListTile(
   ///   value: _isSelected,
@@ -597,225 +231,229 @@ class MongolSwitchListTile extends StatelessWidget {
   ///   title: const Text('Selection'),
   /// )
   /// ```
-  /// {@end-tool}
   final ValueChanged<bool>? onChanged;
 
-  /// {@macro flutter.material.switch.activeColor}
+  /// 开关激活状态的颜色。
   ///
-  /// Defaults to [ColorScheme.secondary] of the current [Theme].
+  /// 默认为当前 [Theme] 的 [ColorScheme.secondary]。
   final Color? activeColor;
 
-  /// {@macro flutter.material.switch.activeTrackColor}
+  /// 开关激活状态下滑道的颜色。
   ///
-  /// Defaults to [ThemeData.toggleableActiveColor] with the opacity set at 50%.
+  /// 默认为 [ThemeData.toggleableActiveColor]，不透明度设置为 50%。
   ///
-  /// Ignored if created with [SwitchListTile.adaptive].
+  /// 如果使用 [SwitchListTile.adaptive] 创建，则忽略此参数。
   final Color? activeTrackColor;
 
-  /// {@macro flutter.material.switch.inactiveThumbColor}
+  /// 开关非激活状态下thumb的颜色。
   ///
-  /// Defaults to the colors described in the Material design specification.
+  /// 默认为 Material 设计规范中描述的颜色。
   ///
-  /// Ignored if created with [SwitchListTile.adaptive].
+  /// 如果使用 [SwitchListTile.adaptive] 创建，则忽略此参数。
   final Color? inactiveThumbColor;
 
-  /// {@macro flutter.material.switch.inactiveTrackColor}
+  /// 开关非激活状态下滑道的颜色。
   ///
-  /// Defaults to the colors described in the Material design specification.
+  /// 默认为 Material 设计规范中描述的颜色。
   ///
-  /// Ignored if created with [SwitchListTile.adaptive].
+  /// 如果使用 [SwitchListTile.adaptive] 创建，则忽略此参数。
   final Color? inactiveTrackColor;
 
-  /// {@macro flutter.material.switch.activeThumbImage}
+  /// 开关激活状态下thumb的图像。
   final ImageProvider? activeThumbImage;
 
-  /// {@macro flutter.material.switch.onActiveThumbImageError}
+  /// 当激活状态下thumb图像加载失败时调用的回调。
   final ImageErrorListener? onActiveThumbImageError;
 
-  /// {@macro flutter.material.switch.inactiveThumbImage}
+  /// 开关非激活状态下thumb的图像。
   ///
-  /// Ignored if created with [SwitchListTile.adaptive].
+  /// 如果使用 [SwitchListTile.adaptive] 创建，则忽略此参数。
   final ImageProvider? inactiveThumbImage;
 
-  /// {@macro flutter.material.switch.onInactiveThumbImageError}
+  /// 当非激活状态下thumb图像加载失败时调用的回调。
   final ImageErrorListener? onInactiveThumbImageError;
 
-  /// The color of this switch's thumb.
+  /// 此开关thumb的颜色。
   ///
-  /// Resolved in the following states:
-  ///  * [WidgetState.selected].
-  ///  * [WidgetState.hovered].
-  ///  * [WidgetState.disabled].
+  /// 在以下状态中解析：
+  ///  * [WidgetState.selected]（选中状态）。
+  ///  * [WidgetState.hovered]（悬停状态）。
+  ///  * [WidgetState.disabled]（禁用状态）。
   ///
-  /// If null, then the value of [activeColor] is used in the selected state
-  /// and [inactiveThumbColor] in the default state. If that is also null, then
-  /// the value of [SwitchThemeData.thumbColor] is used. If that is also null,
-  /// The default value is used.
+  /// 如果为 null，则在选中状态下使用 [activeColor] 的值，
+  /// 在默认状态下使用 [inactiveThumbColor] 的值。如果这也是 null，
+  /// 则使用 [SwitchThemeData.thumbColor] 的值。如果这也是 null，
+  /// 则使用默认值。
   final WidgetStateProperty<Color?>? thumbColor;
 
-  /// The color of this switch's track.
+  /// 此开关滑道的颜色。
   ///
-  /// Resolved in the following states:
-  ///  * [WidgetState.selected].
-  ///  * [WidgetState.hovered].
-  ///  * [WidgetState.disabled].
+  /// 在以下状态中解析：
+  ///  * [WidgetState.selected]（选中状态）。
+  ///  * [WidgetState.hovered]（悬停状态）。
+  ///  * [WidgetState.disabled]（禁用状态）。
   ///
-  /// If null, then the value of [activeTrackColor] is used in the selected
-  /// state and [inactiveTrackColor] in the default state. If that is also null,
-  /// then the value of [SwitchThemeData.trackColor] is used. If that is also
-  /// null, then the default value is used.
+  /// 如果为 null，则在选中状态下使用 [activeTrackColor] 的值，
+  /// 在默认状态下使用 [inactiveTrackColor] 的值。如果这也是 null，
+  /// 则使用 [SwitchThemeData.trackColor] 的值。如果这也是 null，
+  /// 则使用默认值。
   final WidgetStateProperty<Color?>? trackColor;
 
-  /// {@macro flutter.material.switch.trackOutlineColor}
+  /// 此开关滑道轮廓的颜色。
   ///
-  /// The [ListTile] will be focused when this [SwitchListTile] requests focus,
-  /// so the focused outline color of the switch will be ignored.
+  /// 当此 [SwitchListTile] 请求焦点时，[ListTile] 将获得焦点，
+  /// 因此开关的焦点轮廓颜色将被忽略。
   ///
-  /// In Material 3, the outline color defaults to transparent in the selected
-  /// state and [ColorScheme.outline] in the unselected state. In Material 2,
-  /// the [Switch] track has no outline.
+  /// 在 Material 3 中，轮廓颜色在选中状态下默认为透明，
+  /// 在未选中状态下默认为 [ColorScheme.outline]。在 Material 2 中，
+  /// [Switch] 滑道没有轮廓。
   final WidgetStateProperty<Color?>? trackOutlineColor;
 
-  /// The icon to use on the thumb of this switch
+  /// 此开关thumb上使用的图标。
   ///
-  /// Resolved in the following states:
-  ///  * [WidgetState.selected].
-  ///  * [WidgetState.hovered].
-  ///  * [WidgetState.disabled].
+  /// 在以下状态中解析：
+  ///  * [WidgetState.selected]（选中状态）。
+  ///  * [WidgetState.hovered]（悬停状态）。
+  ///  * [WidgetState.disabled]（禁用状态）。
   ///
-  /// If null, then the value of [SwitchThemeData.thumbIcon] is used. If this is
-  /// also null, then the [Switch] does not have any icons on the thumb.
+  /// 如果为 null，则使用 [SwitchThemeData.thumbIcon] 的值。如果这也是 null，
+  /// 则 [Switch] 的thumb上没有任何图标。
   final WidgetStateProperty<Icon?>? thumbIcon;
 
-  /// {@macro flutter.material.switch.materialTapTargetSize}
+  /// 开关的点击目标大小。
   ///
-  /// defaults to [MaterialTapTargetSize.shrinkWrap].
+  /// 默认为 [MaterialTapTargetSize.shrinkWrap]。
   final MaterialTapTargetSize? materialTapTargetSize;
 
-  /// {@macro flutter.cupertino.CupertinoSwitch.dragStartBehavior}
+  /// 拖动开始的行为方式。
   final DragStartBehavior dragStartBehavior;
 
-  /// The cursor for a mouse pointer when it enters or is hovering over the
-  /// widget.
+  /// 鼠标指针进入或悬停在小部件上时的光标。
   ///
-  /// If [mouseCursor] is a [MaterialStateProperty<MouseCursor>],
-  /// [WidgetStateProperty.resolve] is used for the following [WidgetState]s:
+  /// 如果 [mouseCursor] 是 [MaterialStateProperty<MouseCursor>]，
+  /// 则 [WidgetStateProperty.resolve] 用于以下 [WidgetState]：
   ///
-  ///  * [WidgetState.selected].
-  ///  * [WidgetState.hovered].
-  ///  * [WidgetState.disabled].
+  ///  * [WidgetState.selected]（选中状态）。
+  ///  * [WidgetState.hovered]（悬停状态）。
+  ///  * [WidgetState.disabled]（禁用状态）。
   ///
-  /// If null, then the value of [SwitchThemeData.mouseCursor] is used. If that
-  /// is also null, then [WidgetStateMouseCursor.clickable] is used.
+  /// 如果为 null，则使用 [SwitchThemeData.mouseCursor] 的值。如果这也是 null，
+  /// 则使用 [WidgetStateMouseCursor.clickable]。
   final MouseCursor? mouseCursor;
 
-  /// The color for the switch's [Material].
+  /// 开关 [Material] 的颜色。
   ///
-  /// Resolves in the following states:
-  ///  * [WidgetState.pressed].
-  ///  * [WidgetState.selected].
-  ///  * [WidgetState.hovered].
+  /// 在以下状态中解析：
+  ///  * [WidgetState.pressed]（按下状态）。
+  ///  * [WidgetState.selected]（选中状态）。
+  ///  * [WidgetState.hovered]（悬停状态）。
   ///
-  /// If null, then the value of [activeColor] with alpha [kRadialReactionAlpha]
-  /// and [hoverColor] is used in the pressed and hovered state. If that is also
-  /// null, the value of [SwitchThemeData.overlayColor] is used. If that is
-  /// also null, then the default value is used in the pressed and hovered state.
+  /// 如果为 null，则在按下和悬停状态下使用带有 alpha [kRadialReactionAlpha] 的 [activeColor] 值
+  /// 和 [hoverColor]。如果这也是 null，则使用 [SwitchThemeData.overlayColor] 的值。
+  /// 如果这也是 null，则在按下和悬停状态下使用默认值。
   final WidgetStateProperty<Color?>? overlayColor;
 
-  /// {@macro flutter.material.switch.splashRadius}
+  /// 开关按下时水波纹效果的半径。
   ///
-  /// If null, then the value of [SwitchThemeData.splashRadius] is used. If that
-  /// is also null, then [kRadialReactionRadius] is used.
+  /// 如果为 null，则使用 [SwitchThemeData.splashRadius] 的值。如果这也是 null，
+  /// 则使用 [kRadialReactionRadius]。
   final double? splashRadius;
 
-  /// {@macro flutter.widgets.Focus.focusNode}
+  /// 用于控制此小部件的焦点状态的焦点节点。
   final FocusNode? focusNode;
 
-  /// {@macro flutter.material.inkwell.onFocusChange}
+  /// 当此小部件的焦点状态改变时调用的回调。
   final ValueChanged<bool>? onFocusChange;
 
-  /// {@macro flutter.widgets.Focus.autofocus}
+  /// 是否在首次构建时自动获取焦点。
   final bool autofocus;
 
-  /// {@macro flutter.material.ListTile.tileColor}
+  /// 列表项的背景颜色。
   final Color? tileColor;
 
-  /// The primary content of the list tile.
+  /// 列表项的主要内容。
   ///
-  /// Typically a [Text] widget.
+  /// 通常是一个 [Text] 小部件。
   final Widget? title;
 
-  /// Additional content displayed below the title.
+  /// 显示在标题下方的附加内容。
   ///
-  /// Typically a [Text] widget.
+  /// 通常是一个 [Text] 小部件。
   final Widget? subtitle;
 
-  /// A widget to display on the opposite side of the tile from the switch.
+  /// 显示在与开关相反一侧的小部件。
   ///
-  /// Typically an [Icon] widget.
+  /// 通常是一个 [Icon] 小部件。
   final Widget? secondary;
 
-  /// Whether this list tile is intended to display three lines of text.
+  /// 此列表项是否旨在显示三行文本。
   ///
-  /// If false, the list tile is treated as having one line if the subtitle is
-  /// null and treated as having two lines if the subtitle is non-null.
+  /// 如果为 false，则当 subtitle 为 null 时，列表项被视为有一行，
+  /// 当 subtitle 不为 null 时，列表项被视为有两行。
   final bool isThreeLine;
 
-  /// Whether this list tile is part of a vertically dense list.
+  /// 此列表项是否属于垂直密集列表的一部分。
   ///
-  /// If this property is null then its value is based on [ListTileThemeData.dense].
+  /// 如果此属性为 null，则其值基于 [ListTileThemeData.dense]。
   final bool? dense;
 
-  /// The tile's internal padding.
+  /// 列表项的内部边距。
   ///
-  /// Insets a [SwitchListTile]'s contents: its [title], [subtitle],
-  /// [secondary], and [Switch] widgets.
+  /// 为 [SwitchListTile] 的内容设置内边距：其 [title]、[subtitle]、
+  /// [secondary] 和 [Switch] 小部件。
   ///
-  /// If null, [ListTile]'s default of `EdgeInsets.symmetric(horizontal: 16.0)`
-  /// is used.
+  /// 如果为 null，则使用 [ListTile] 的默认值 `EdgeInsets.symmetric(horizontal: 16.0)`。
   final EdgeInsetsGeometry? contentPadding;
 
-  /// Whether to render icons and text in the [activeColor].
+  /// 是否以 [activeColor] 渲染图标和文本。
   ///
-  /// No effort is made to automatically coordinate the [selected] state and the
-  /// [value] state. To have the list tile appear selected when the switch is
-  /// on, pass the same value to both.
+  /// 不会自动协调 [selected] 状态和 [value] 状态。
+  /// 要使列表项在开关打开时显示为选中状态，请为两者传递相同的值。
   ///
-  /// Normally, this property is left to its default value, false.
+  /// 通常，此属性保持其默认值 false。
   final bool selected;
 
-  /// If adaptive, creates the switch with [Switch.adaptive].
+  /// 开关列表项的类型。
+  ///
+  /// 如果是 adaptive，则使用 [Switch.adaptive] 创建开关。
   final _SwitchListTileType _switchListTileType;
 
-  /// Defines the position of control and [secondary], relative to text.
+  /// 定义控件和 [secondary] 相对于文本的位置。
   ///
-  /// By default, the value of [controlAffinity] is [ListTileControlAffinity.platform].
+  /// 默认情况下，[controlAffinity] 的值为 [ListTileControlAffinity.platform]。
   final ListTileControlAffinity controlAffinity;
 
-  /// {@macro flutter.material.ListTile.shape}
+  /// 列表项的形状。
   final ShapeBorder? shape;
 
-  /// If non-null, defines the background color when [SwitchListTile.selected] is true.
+  /// 如果不为 null，则定义 [SwitchListTile.selected] 为 true 时的背景颜色。
   final Color? selectedTileColor;
 
-  /// Defines how compact the list tile's layout will be.
+  /// 定义列表项布局的紧凑程度。
   ///
-  /// {@macro flutter.material.themedata.visualDensity}
+  /// 控制列表项的垂直和水平间距。
   final VisualDensity? visualDensity;
 
-  /// {@macro flutter.material.ListTile.enableFeedback}
+  /// 是否为点击提供平台特定的反馈。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [Feedback] for providing platform-specific feedback to certain actions.
+  ///  * [Feedback] 用于为某些操作提供平台特定的反馈。
   final bool? enableFeedback;
 
-  /// The color for the tile's [Material] when a pointer is hovering over it.
+  /// 当指针悬停在列表项 [Material] 上时的颜色。
   final Color? hoverColor;
 
-  /// {@macro flutter.cupertino.CupertinoSwitch.applyTheme}
+  /// 是否应用 Cupertino 主题到 CupertinoSwitch。
   final bool? applyCupertinoTheme;
 
+  /// 构建此小部件的 UI。
+  ///
+  /// 根据 [_switchListTileType] 创建适当类型的开关，
+  /// 将开关旋转 90 度使其垂直显示，
+  /// 根据 [controlAffinity] 确定开关和 secondary 小部件的位置，
+  /// 计算有效的激活颜色，
+  /// 最后返回一个包含所有内容的 [MongolListTile]。
   @override
   Widget build(BuildContext context) {
     Widget control;
@@ -824,7 +462,7 @@ class MongolSwitchListTile extends StatelessWidget {
         control = Switch.adaptive(
           value: value,
           onChanged: onChanged,
-          activeColor: activeColor,
+          activeThumbColor: activeColor,
           activeThumbImage: activeThumbImage,
           inactiveThumbImage: inactiveThumbImage,
           materialTapTargetSize:
@@ -851,7 +489,7 @@ class MongolSwitchListTile extends StatelessWidget {
         control = Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: activeColor,
+          activeThumbColor: activeColor,
           activeThumbImage: activeThumbImage,
           inactiveThumbImage: inactiveThumbImage,
           materialTapTargetSize:

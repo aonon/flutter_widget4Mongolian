@@ -17,39 +17,39 @@ import '../text/mongol_rich_text.dart';
 // late bool? _throwShotAway;
 // void setState(VoidCallback fn) { }
 
+/// 复选框类型枚举
+///
+/// material：使用 Material 风格的复选框
+/// adaptive：使用平台自适应的复选框（iOS 上使用 CupertinoCheckbox）
 enum _CheckboxType { material, adaptive }
 
-/// A [MongolListTile] with a [Checkbox]. In other words, a checkbox with a label.
+/// 带有 [Checkbox] 的 [MongolListTile]。换句话说，就是带有标签的复选框。
 ///
-/// The entire list tile is interactive: tapping anywhere in the tile toggles
-/// the checkbox.
+/// 整个列表 tile 是可交互的：点击 tile 中的任何位置都会切换复选框状态。
 ///
 /// {@youtube 560 315 https://www.youtube.com/watch?v=RkSqPAn9szs}
 ///
-/// The [value], [onChanged], [activeColor] and [checkColor] properties of this widget are
-/// identical to the similarly-named properties on the [Checkbox] widget.
+/// 此小部件的 [value]、[onChanged]、[activeColor] 和 [checkColor] 属性与
+/// [Checkbox] 小部件上的同名属性相同。
 ///
-/// The [title], [subtitle], [isThreeLine], [dense], and [contentPadding] properties are like
-/// those of the same name on [MongolListTile].
+/// [title]、[subtitle]、[isThreeLine]、[dense] 和 [contentPadding] 属性与
+/// [MongolListTile] 上的同名属性类似。
 ///
-/// The [selected] property on this widget is similar to the [MongolListTile.selected]
-/// property. This tile's [activeColor] is used for the selected item's text color, or
-/// the theme's [CheckboxThemeData.overlayColor] if [activeColor] is null.
+/// 此小部件上的 [selected] 属性与 [MongolListTile.selected] 属性类似。
+/// 此 tile 的 [activeColor] 用于选中项的文本颜色，或者如果 [activeColor] 为 null，
+/// 则使用主题的 [CheckboxThemeData.overlayColor]。
 ///
-/// This widget does not coordinate the [selected] state and the [value] state; to have the list tile
-/// appear selected when the checkbox is checked, pass the same value to both.
+/// 此小部件不协调 [selected] 状态和 [value] 状态；要使列表 tile 在复选框选中时显示为选中状态，
+/// 请将相同的值传递给两者。
 ///
-/// The checkbox is shown on the bottom (i.e. the trailing edge). This can be 
-/// changed using [controlAffinity]. The [secondary] widget is placed on the 
-/// opposite side. This maps to the [MongolListTile.leading] and [MongolListTile.trailing] 
-/// properties of [MongolListTile].
+/// 复选框显示在底部（即 trailing 边缘）。这可以通过 [controlAffinity] 更改。
+/// [secondary] 小部件放置在相反的一侧。这映射到 [MongolListTile] 的
+/// [MongolListTile.leading] 和 [MongolListTile.trailing] 属性。
 ///
-/// This widget requires a [Material] widget ancestor in the tree to paint
-/// itself on, which is typically provided by the app's [Scaffold].
-/// The [tileColor], and [selectedTileColor] are not painted by the
-/// [MongolCheckboxListTile] itself but by the [Material] widget ancestor.
-/// In this case, one can wrap a [Material] widget around the [MongolCheckboxListTile],
-/// e.g.:
+/// 此小部件需要树中的 [Material] 小部件祖先来绘制自身，这通常由应用的 [Scaffold] 提供。
+/// [tileColor] 和 [selectedTileColor] 不是由 [MongolCheckboxListTile] 本身绘制的，
+/// 而是由 [Material] 小部件祖先绘制的。
+/// 在这种情况下，可以在 [MongolCheckboxListTile] 周围包装一个 [Material] 小部件，例如：
 ///
 /// {@tool snippet}
 /// ```dart
@@ -67,23 +67,19 @@ enum _CheckboxType { material, adaptive }
 /// ```
 /// {@end-tool}
 ///
-/// ## Performance considerations when wrapping [MongolCheckboxListTile] with [Material]
+/// ## 用 [Material] 包装 [MongolCheckboxListTile] 时的性能考虑
 ///
-/// Wrapping a large number of [MongolCheckboxListTile]s individually with [Material]s
-/// is expensive. Consider only wrapping the [MongolCheckboxListTile]s that require it
-/// or include a common [Material] ancestor where possible.
+/// 单独用 [Material] 包装大量 [MongolCheckboxListTile] 是昂贵的。
+/// 考虑只包装需要它的 [MongolCheckboxListTile]，或者在可能的情况下包含一个共同的 [Material] 祖先。
 ///
-/// To show the [CheckboxListTile] as disabled, pass null as the [onChanged]
-/// callback.
+/// 要将 [CheckboxListTile] 显示为禁用状态，请将 [onChanged] 回调传递为 null。
 ///
 /// {@tool dartpad}
 /// ![MongolCheckboxListTile sample](https://raw.githubusercontent.com/suragch/mongol/master/example/supplemental/checkbox_list_tile.png)
 ///
-/// This widget shows a checkbox that, when checked, slows down all animations
-/// (including the animation of the checkbox itself getting checked!).
+/// 此小部件显示一个复选框，当选中时，会减慢所有动画（包括复选框本身被选中的动画！）。
 ///
-/// This sample requires that you also import 'package:flutter/scheduler.dart',
-/// so that you can reference [timeDilation].
+/// 此示例要求您还导入 'package:flutter/scheduler.dart'，以便您可以引用 [timeDilation]。
 ///
 /// ```dart
 /// import 'package:flutter/material.dart';
@@ -221,29 +217,24 @@ enum _CheckboxType { material, adaptive }
 /// ```dart
 /// {@end-tool}
 ///
-/// ## Semantics in MongolCheckboxListTile
+/// ## MongolCheckboxListTile 中的语义
 ///
-/// Since the entirety of the MongolCheckboxListTile is interactive, it should represent
-/// itself as a single interactive entity.
+/// 由于整个 MongolCheckboxListTile 是可交互的，它应该将自己表示为单个交互实体。
 ///
-/// To do so, a MongolCheckboxListTile widget wraps its children with a [MergeSemantics]
-/// widget. [MergeSemantics] will attempt to merge its descendant [Semantics]
-/// nodes into one node in the semantics tree. Therefore, MongolCheckboxListTile will
-/// throw an error if any of its children requires its own [Semantics] node.
+/// 为此，MongolCheckboxListTile 小部件用 [MergeSemantics] 小部件包装其子级。
+/// [MergeSemantics] 将尝试将其后代 [Semantics] 节点合并到语义树中的一个节点中。
+/// 因此，如果任何子级需要自己的 [Semantics] 节点，MongolCheckboxListTile 会抛出错误。
 ///
-/// For example, you cannot nest a [RichText] widget as a descendant of
-/// MongolCheckboxListTile. [RichText] has an embedded gesture recognizer that
-/// requires its own [Semantics] node, which directly conflicts with
-/// MongolCheckboxListTile's desire to merge all its descendants' semantic nodes
-/// into one. Therefore, it may be necessary to create a custom radio tile
-/// widget to accommodate similar use cases.
+/// 例如，您不能将 [RichText] 小部件嵌套为 MongolCheckboxListTile 的后代。
+/// [RichText] 有一个嵌入的手势识别器，需要自己的 [Semantics] 节点，
+/// 这直接与 MongolCheckboxListTile 将所有后代语义节点合并为一个的愿望冲突。
+/// 因此，可能需要创建自定义单选 tile 小部件来适应类似的用例。
 ///
 /// {@tool dartpad}
 /// ![Checkbox list tile semantics sample](https://raw.githubusercontent.com/suragch/mongol/master/example/supplemental/checkbox_list_tile_semantics.png)
 ///
-/// Here is an example of a custom labeled checkbox widget, called
-/// LinkedLabelCheckbox, that includes an interactive [MongolRichText] widget that
-/// handles tap gestures.
+/// 这是一个自定义标签复选框小部件的示例，称为 LinkedLabelCheckbox，
+/// 它包含一个处理点击手势的交互式 [MongolRichText] 小部件。
 ///
 /// ```dart
 /// import 'package:flutter/gestures.dart';
@@ -344,18 +335,15 @@ enum _CheckboxType { material, adaptive }
 /// ```
 /// {@end-tool}
 ///
-/// ## MongolCheckboxListTile isn't exactly what I want
+/// ## MongolCheckboxListTile 不完全符合我的需求
 ///
-/// If the way MongolCheckboxListTile pads and positions its elements isn't quite
-/// what you're looking for, you can create custom labeled checkbox widgets by
-/// combining [Checkbox] with other widgets, such as [MongolText], [Padding] and
-/// [InkWell].
+/// 如果 MongolCheckboxListTile 填充和定位其元素的方式不完全符合您的要求，
+/// 您可以通过将 [Checkbox] 与其他小部件（如 [MongolText]、[Padding] 和 [InkWell]）组合来创建自定义标签复选框小部件。
 ///
 /// {@tool dartpad}
 /// ![Custom checkbox list tile sample](https://raw.githubusercontent.com/suragch/mongol/master/example/supplemental/checkbox_list_tile_custom.png)
 ///
-/// Here is an example of a custom LabeledCheckbox widget, but you can easily
-/// make your own configurable widget.
+/// 这是一个自定义 LabeledCheckbox 小部件的示例，但您可以轻松创建自己的可配置小部件。
 ///
 /// ```dart
 /// import 'package:flutter/material.dart';
@@ -446,28 +434,23 @@ enum _CheckboxType { material, adaptive }
 /// ```
 /// {@end-tool}
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolListTileTheme], which can be used to affect the style of list tiles,
-///    including checkbox list tiles.
-///  * [MongolRadioListTile], a similar widget for radio buttons.
-///  * [MongolSwitchListTile], a similar widget for switches.
-///  * [MongolListTile] and [Checkbox], the widgets from which this widget is made.
+///  * [MongolListTileTheme]，可用于影响列表 tile 的样式，包括复选框列表 tile。
+///  * [MongolRadioListTile]，用于单选按钮的类似小部件。
+///  * [MongolSwitchListTile]，用于开关的类似小部件。
+///  * [MongolListTile] 和 [Checkbox]，此小部件由这些小部件组成。
 class MongolCheckboxListTile extends StatelessWidget {
-  /// Creates a combination of a list tile and a checkbox.
+  /// 创建一个列表 tile 和复选框的组合。
   ///
-  /// The checkbox tile itself does not maintain any state. Instead, when the
-  /// state of the checkbox changes, the widget calls the [onChanged] callback.
-  /// Most widgets that use a checkbox will listen for the [onChanged] callback
-  /// and rebuild the checkbox tile with a new [value] to update the visual
-  /// appearance of the checkbox.
+  /// 复选框 tile 本身不维护任何状态。相反，当复选框的状态更改时，
+  /// 小部件会调用 [onChanged] 回调。大多数使用复选框的小部件会监听 [onChanged] 回调，
+  /// 并使用新的 [value] 重建复选框 tile 以更新复选框的视觉外观。
   ///
-  /// The following arguments are required:
+  /// 以下参数是必需的：
   ///
-  /// * [value], which determines whether the checkbox is checked. The [value]
-  ///   can only be null if [tristate] is true.
-  /// * [onChanged], which is called when the value of the checkbox should
-  ///   change. It can be set to null to disable the checkbox.
+  /// * [value]，确定复选框是否被选中。只有当 [tristate] 为 true 时，[value] 才能为 null。
+  /// * [onChanged]，当复选框的值应该更改时调用。可以将其设置为 null 以禁用复选框。
   const MongolCheckboxListTile({
     super.key,
     required this.value,
@@ -506,12 +489,12 @@ class MongolCheckboxListTile extends StatelessWidget {
         assert(tristate || value != null),
         assert(!isThreeLine || subtitle != null);
 
-  /// Creates a combination of a list tile and a platform adaptive checkbox.
+  /// 创建一个列表 tile 和平台自适应复选框的组合。
   ///
-  /// The checkbox uses [Checkbox.adaptive] to show a [CupertinoCheckbox] for
-  /// iOS platforms, or [Checkbox] for all others.
+  /// 复选框使用 [Checkbox.adaptive] 为 iOS 平台显示 [CupertinoCheckbox]，
+  /// 或为所有其他平台显示 [Checkbox]。
   ///
-  /// All other properties are the same as [CheckboxListTile].
+  /// 所有其他属性与 [CheckboxListTile] 相同。
   const MongolCheckboxListTile.adaptive({
     super.key,
     required this.value,
@@ -765,6 +748,9 @@ class MongolCheckboxListTile extends StatelessWidget {
 
   final _CheckboxType _checkboxType;
 
+  /// 处理值的更改
+  ///
+  /// 根据当前值和 tristate 设置计算新值并调用 onChanged 回调
   void _handleValueChange() {
     assert(onChanged != null);
     switch (value) {
@@ -777,6 +763,9 @@ class MongolCheckboxListTile extends StatelessWidget {
     }
   }
 
+  /// 构建小部件
+  ///
+  /// 根据 checkboxType 创建相应的复选框控件，并将其与 MongolListTile 组合
   @override
   Widget build(BuildContext context) {
     final Widget control;

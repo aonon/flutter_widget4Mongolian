@@ -13,17 +13,14 @@ import 'package:flutter/painting.dart';
 
 import 'mongol_text_align.dart';
 
-/// [MongolLineMetrics] stores the measurements and statistics of a single line in the
-/// paragraph.
+/// ---------------------------------------------------------------------------
+/// MongolLineMetrics：每一行文字的“体检报告”
 ///
-/// The measurements here are for the line as a whole, and represent the maximum
-/// extent of the line instead of per-run or per-glyph metrics. For more detailed
-/// metrics, [MongolParagraph.getBoxesForRange].
-///
-/// [MongolLineMetrics] should be obtained directly from the [MongolParagraph.computeLineMetrics]
-/// method.
+/// 当文字排版完成后，我们需要知道每一行到底占了多大地方、基线在哪里。
+/// 这个类就像一把尺子，记录了这一竖行文字的各项物理数据。
+/// ---------------------------------------------------------------------------
 class MongolLineMetrics {
-  /// Creates a [MongolLineMetrics] object with only the specified values.
+  /// 创建行度量信息
   MongolLineMetrics({
     required this.hardBreak,
     required this.ascent,
@@ -36,69 +33,31 @@ class MongolLineMetrics {
     required this.lineNumber,
   });
 
-  /// True if this line ends with an explicit line break (e.g. '\n') or is the end
-  /// of the paragraph. False otherwise.
+  /// 这一行是不是因为你敲了回车键才换行的？
   final bool hardBreak;
 
-  /// The rise from the [baseline] as calculated from the font and style for this line.
-  ///
-  /// This is the final computed ascent and can be impacted by the strut, width(horizontal layout height),
-  /// scaling, as well as outlying runs that are very tall.
-  ///
-  /// The [ascent] is provided as a positive value, even though it is typically defined
-  /// in fonts as negative. This is to ensure the signage of operations with these
-  /// metrics directly reflects the intended signage of the value. For example,
-  /// the x coordinate of the right edge of the line is `baseline + ascent`.
+  /// 基线以上的距离（文字的“额头”高度）
   final double ascent;
 
-  /// The drop from the [baseline] as calculated from the font and style for this line.
-  ///
-  /// This is the final computed ascent and can be impacted by the strut, width(horizontal layout height),
-  /// scaling, as well as outlying runs that are very tall.
-  ///
-  /// The x coordinate of the left edge of the line is `baseline - descent`.
+  /// 基线以下的距离（文字的“下巴”深度）
   final double descent;
 
-  /// The rise from the [baseline] as calculated from the font and style for this line
-  /// ignoring the [TextStyle.height].
-  ///
-  /// The [unscaledAscent] is provided as a positive value, even though it is typically
-  /// defined in fonts as negative. This is to ensure the signage of operations with
-  /// these metrics directly reflects the intended signage of the value.
+  /// 忽略行高的原始上升高度（未缩放）
   final double unscaledAscent;
 
-  /// Height of the line from the top edge of the topmost glyph to the bottom
-  /// edge of the bottommost glyph.
-  ///
-  /// This is not the same as the height of the paragraph.
-  ///
-  /// See also:
-  ///
-  ///  * [MongolParagraph.height], the max height passed in during layout.
+  /// 这一行的总高度（在竖排逻辑中，它代表这一列的“厚度”/宽度）
   final double height;
 
-  /// Total width of the line from the left edge to the right edge.
-  ///
-  /// This is equivalent to `round(ascent + descent)`. This value is provided
-  /// separately due to rounding causing sub-pixel differences from the unrounded
-  /// values.
+  /// 这一行的总宽度（在竖排逻辑中，它代表这一列从上到下的“长度”）
   final double width;
 
-  /// The y coordinate of top edge of the line.
-  ///
-  /// The bottom edge can be obtained with `top + height`.
+  /// 这一行顶部的坐标
   final double top;
 
-  /// The x coordinate of the baseline for this line from the left of the paragraph.
-  ///
-  /// The right edge of the paragraph up to and including this line may be obtained
-  /// through `baseline + ascent`.
+  /// 这一行基线的位置
   final double baseline;
 
-  /// The number of this line in the overall paragraph, with the first line being
-  /// index zero.
-  ///
-  /// For example, the first line is line 0, second line is line 1.
+  /// 这是第几行？（从 0 开始算）
   final int lineNumber;
 
   @override
@@ -136,23 +95,22 @@ class MongolLineMetrics {
   }
 }
 
-/// A paragraph of vertical Mongolian layout text.
+/// ---------------------------------------------------------------------------
+/// MongolParagraph：蒙古文垂直排版的“总指挥”
 ///
-/// This class is a replacement for the Paragraph class. Since Paragraph hands
-/// all it's work down to the Flutter engine, this class also does the work
-/// of line-wrapping and laying out the text.
+/// 蒙古文非常特殊：它是从上往下写，然后一列一列从左往右排。
 ///
-/// The text is divided into a list of [_runs] where each run is a short
-/// substring (usually a word or CJK/emoji character). Sometimes a run includes
-/// multiple styles in which case [_rawStyledTextRuns] are used temporarily
-/// before they can be combined into single [_runs] just based on words. The
-/// [_runs] are then measured and layed out in [_lines] based on the given
-/// constraints.
+/// 【核心设计思想】：
+/// 为了复用 Flutter 强大的排版引擎，我们采用了一个“旋转”策略：
+/// 1. 计算时：假装文字是普通的横排（Internal），计算好每一行多长、哪里该换行。
+/// 2. 显示时：通过 Canvas 旋转 90 度，把横排瞬间变成竖排（External）。
+///
+/// 【坐标转换口诀】：
+/// - 代码里的 width（宽） = 屏幕上看到的文字高度（列的长度）
+/// - 代码里的 height（高） = 屏幕上看到的文字行宽（列 of 厚度）
+/// ---------------------------------------------------------------------------
 class MongolParagraph {
-  /// This class is created by the library, and should not be instantiated
-  /// or extended directly.
-  ///
-  /// To create a [MongolParagraph] object, use a [MongolParagraphBuilder].
+  /// 由 [MongolParagraphBuilder] 创建，不应直接实例化
   MongolParagraph._(
     this._runs,
     this._text,
@@ -161,11 +119,36 @@ class MongolParagraph {
     this._textAlign,
   );
 
+  // 初始化原始文本和片段的特征哈希，用于检测内容是否变化
+  void _ensureSourceSignatureInitialized() {
+    if (_sourceTextHash != 0 && _sourceRunsSignatureHash != 0) return;
+    _sourceTextHash = _text.hashCode;
+    _sourceRunsSignatureHash = _computeRunsSignature(_runs);
+  }
+
+  int _computeRunsSignature(List<_TextRun> runs) {
+    final List<int> parts = <int>[];
+    for (final r in runs) {
+      parts.add(r.start);
+      parts.add(r.end);
+      parts.add(r.isRotated ? 1 : 0);
+      parts.add(r.textStyle?.hashCode ?? 0);
+      parts.add(r.paragraphStyle?.hashCode ?? 0);
+    }
+    return Object.hashAll(parts);
+  }
+
   final String _text;
   final List<_TextRun> _runs;
   final int? _maxLines;
   final _TextRun? _ellipsis;
   final MongolTextAlign _textAlign;
+
+  int _sourceTextHash = 0;
+  int _sourceRunsSignatureHash = 0;
+
+  // 上一次布局时的特征值，用于避免重复计算
+  int? _lastLayoutSignatureHash;
 
   double? _width;
   double? _height;
@@ -173,35 +156,22 @@ class MongolParagraph {
   double? _minIntrinsicHeight;
   double? _maxIntrinsicHeight;
 
-  /// The amount of horizontal space this paragraph occupies.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落占用的水平总宽度（所有列厚度的总和）
   double get width => _width ?? 0;
 
-  /// The amount of vertical space this paragraph occupies.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落占用的垂直总高度（通常等于 constraints 限制的高度）
   double get height => _height ?? 0;
 
-  /// The distance from the top edge of the topmost glyph to the bottom edge of
-  /// the bottommost glyph in the paragraph.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落中最长那一列的长度
   double get longestLine => _longestLine ?? 0;
 
-  /// The minimum height that this paragraph could be without failing to paint
-  /// its contents within itself.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落的最小固有高度（排版时至少需要这么长才能塞下最长的那个词）
   double get minIntrinsicHeight => _minIntrinsicHeight ?? 0;
 
-  /// Returns the smallest height beyond which increasing the height never
-  /// decreases the width.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落的最大固有高度（如果不限制高度，这段文字最长能排多长）
   double get maxIntrinsicHeight => _maxIntrinsicHeight ?? double.infinity;
 
-  /// The distance to the alphabetic baseline the same as for horizontal text.
+  /// 字母基线位置
   double get alphabeticBaseline {
     if (_runs.isEmpty) {
       return 0.0;
@@ -209,7 +179,7 @@ class MongolParagraph {
     return _runs.first.paragraph.alphabeticBaseline;
   }
 
-  /// The distance to the ideographic baseline the same as for horizontal text.
+  /// 表意文字基线位置
   double get ideographicBaseline {
     if (_runs.isEmpty) {
       return 0.0;
@@ -217,76 +187,100 @@ class MongolParagraph {
     return _runs.first.paragraph.ideographicBaseline;
   }
 
-  /// True if there is more horizontal content, but the text was truncated, either
-  /// because we reached `maxLines` lines of text or because the `maxLines` was
-  /// null, `ellipsis` was not null, and one of the lines exceeded the height
-  /// constraint.
-  ///
-  /// See the discussion of the `maxLines` and `ellipsis` arguments at
-  /// [ParagraphStyle].
+  /// 文本是否因为超过了最大行数限制而被截断
   bool get didExceedMaxLines {
     return _didExceedMaxLines;
   }
 
   bool _didExceedMaxLines = false;
 
-  /// Computes the size and position of each glyph in the paragraph.
-  ///
-  /// The [MongolParagraphConstraints] control how tall the text is allowed
-  /// to be.
+  /// 【布局总动员】
+  /// 根据给定的高度限制，决定文字如何摆放
   void layout(MongolParagraphConstraints constraints) =>
       _layout(constraints.height);
 
+  /// 执行核心布局计算
   void _layout(double height) {
-    if (height == _height) return;
+    _ensureSourceSignatureInitialized();
+
+    // 1. 看看内容和限制变了没？没变就直接收工。
+    final currentSignatureHash =
+        Object.hash(height, _sourceTextHash, _sourceRunsSignatureHash);
+    if (_lastLayoutSignatureHash != null &&
+        _lastLayoutSignatureHash == currentSignatureHash) {
+      return;
+    }
+
+    _resetComputedLayout();
+
+    // 2. 算断点：根据高度限制，决定在哪里把文字切断，换到下一列。
     _calculateLineBreaks(height);
-    _calculateWidth();
+
+    // 3. 记录高度并计算内在高度限制。
     _height = height;
     _calculateIntrinsicHeight();
+
+    _lastLayoutSignatureHash = currentSignatureHash;
   }
 
-  final List<_LineInfo> _lines = [];
+  void _resetComputedLayout() {
+    _columns.clear();
+    _columnOffsets.clear();
+    _didExceedMaxLines = false;
+    _width = 0.0;
+    _longestLine = 0.0;
+    _minIntrinsicHeight = 0.0;
+    _maxIntrinsicHeight = 0.0;
+  }
 
-  // Internally this method uses "width" and "height" naming with regard
-  // to a horizontal line of text. Rotation doesn't happen until drawing.
+  // 内部坐标系中的"列"信息列表（每一列对应屏幕上竖排中的一竖列文字）
+  final List<_ColumnLayout> _columns = [];
+  // 每一列在水平方向上的累积偏移量（用于快速定位点击位置）
+  final List<double> _columnOffsets = [];
+
+  /// 【换列计算器】
+  /// 遍历文字片段（run），根据约束条件计算换列点。
+  /// 在内部坐标系中，一"列"对应最终屏幕上蒙古文的一竖列。
   void _calculateLineBreaks(double maxLineLength) {
     if (_runs.isEmpty) {
       return;
     }
-    if (_lines.isNotEmpty) {
-      _lines.clear();
-      _didExceedMaxLines = false;
-    }
 
-    // add run lengths until exceeds length
-    var start = 0;
-    var end = 0;
-    var lineWidth = 0.0;
-    var lineHeight = 0.0;
-    var runEndsWithNewLine = false;
-    for (var i = 0; i < _runs.length; i++) {
-      end = i;
-      final run = _runs[i];
-      final runWidth = run.width;
-      final runHeight = run.height;
+    int startRunIndex = 0;
+    int endRunIndex = 0;
+    double currentColumnWidth = 0.0; // 当前列的总宽度（所有 run 宽度之和）
+    double currentColumnHeight = 0.0; // 当前列的高度（run 最大高度）
+    bool lastRunEndsWithNewline = false;
 
-      if (lineWidth + runWidth > maxLineLength) {
-        _addLine(start, end, lineWidth, lineHeight);
-        lineWidth = runWidth;
-        lineHeight = runHeight;
-        start = end;
+    for (int runIndex = 0; runIndex < _runs.length; runIndex++) {
+      endRunIndex = runIndex;
+      final _TextRun currentRun = _runs[runIndex];
+      final double runWidth = currentRun.width;
+      final double runHeight = currentRun.height;
+
+      // 检查当前列是否能容纳此 run
+      if (currentColumnWidth + runWidth > maxLineLength) {
+        // 不能容纳，保存当前列，新建一列
+        _addColumn(startRunIndex, endRunIndex, currentColumnWidth,
+            currentColumnHeight);
+        currentColumnWidth = runWidth;
+        currentColumnHeight = runHeight;
+        startRunIndex = endRunIndex;
       } else {
-        lineWidth += runWidth;
-        lineHeight = math.max(lineHeight, run.height);
+        // 能容纳，累加到当前列
+        currentColumnWidth += runWidth;
+        currentColumnHeight = math.max(currentColumnHeight, runHeight);
       }
 
-      runEndsWithNewLine = _runEndsWithNewLine(run);
-      if (runEndsWithNewLine) {
-        end = i + 1;
-        _addLine(start, end, lineWidth, lineHeight);
-        lineWidth = 0;
-        lineHeight = 0;
-        start = end;
+      // 检查是否遇到硬换行符 (\n)，强制换列
+      lastRunEndsWithNewline = _runEndsWithNewLine(currentRun);
+      if (lastRunEndsWithNewline) {
+        endRunIndex = runIndex + 1;
+        _addColumn(startRunIndex, endRunIndex, currentColumnWidth,
+            currentColumnHeight);
+        currentColumnWidth = 0;
+        currentColumnHeight = 0;
+        startRunIndex = endRunIndex;
       }
 
       if (_didExceedMaxLines) {
@@ -294,222 +288,268 @@ class MongolParagraph {
       }
     }
 
-    end = _runs.length;
-    if (start < end) {
-      _addLine(start, end, lineWidth, lineHeight);
+    // 处理剩余的 run
+    endRunIndex = _runs.length;
+    if (startRunIndex < endRunIndex) {
+      _addColumn(
+          startRunIndex, endRunIndex, currentColumnWidth, currentColumnHeight);
     }
 
-    // add empty line with invalid run indexes for final newline char
-    if (runEndsWithNewLine) {
-      final height = _lines.last.bounds.height;
-      _addLine(-1, -1, 0, height);
+    // 如果最后一个 run 以换行符结尾，添加空列
+    if (lastRunEndsWithNewline) {
+      final double lastColumnHeight =
+          _columns.isNotEmpty ? _columns.last.bounds.height : 0;
+      _addColumn(-1, -1, 0, lastColumnHeight);
     }
   }
 
-  bool _runEndsWithNewLine(_TextRun run) {
-    final index = run.end - 1;
+  bool _runEndsWithNewLine(_TextRun? run) {
+    if (run == null) return false;
+    final int end = run.end;
+    if (end <= 0 || end > _text.length || run.start >= run.end) return false;
+    final int index = end - 1;
     return _text[index] == '\n';
   }
 
-  void _addLine(int start, int end, double width, double height) {
-    if (_maxLines != null && _maxLines! <= _lines.length) {
+  /// 添加一列文字信息到列表
+  void _addColumn(int startRunIndex, int endRunIndex, double columnWidth,
+      double columnHeight) {
+    if (_maxLines != null && _maxLines! <= _columns.length) {
       _didExceedMaxLines = true;
       return;
     }
-    _didExceedMaxLines = false;
-    final bounds = Rect.fromLTRB(0, 0, width, height);
-    final lineInfo = _LineInfo(start, end, bounds);
-    _lines.add(lineInfo);
-    _longestLine = math.max(longestLine, lineInfo.bounds.width);
-  }
 
-  void _calculateWidth() {
-    var sum = 0.0;
-    for (final line in _lines) {
-      sum += line.bounds.height;
+    final Rect bounds = Rect.fromLTRB(0, 0, columnWidth, columnHeight);
+
+    // 计算每个 run 在列内的累积宽度（用于快速定位鼠标点击）
+    final List<double> runCumulativeWidths = <double>[];
+    if (startRunIndex >= 0 && endRunIndex > startRunIndex) {
+      double accumulatedWidth = 0.0;
+      for (int i = startRunIndex; i < endRunIndex; i++) {
+        accumulatedWidth += _runs[i].width;
+        runCumulativeWidths.add(accumulatedWidth);
+      }
     }
-    _width = sum;
+
+    final _ColumnLayout columnLayout =
+        _ColumnLayout(startRunIndex, endRunIndex, bounds, runCumulativeWidths);
+    _columns.add(columnLayout);
+    _longestLine = math.max(longestLine, columnLayout.bounds.width);
+    _width = width + bounds.height;
+
+    // 记录列的累积偏移（水平坐标）
+    final double lastOffset =
+        _columnOffsets.isEmpty ? 0.0 : _columnOffsets.last;
+    _columnOffsets.add(lastOffset + bounds.height);
   }
 
-  // Internally this translates a horizontal run width to the vertical name
-  // that it is known as externally.
+  /// 计算无高度限制时，段落的最小和最大可能高度
+  /// - minIntrinsicHeight：最宽单个 run 的宽度
+  /// - maxIntrinsicHeight：所有 run 不换列时的总宽度
   void _calculateIntrinsicHeight() {
-    var sum = 0.0;
-    var maxRunWidth = 0.0;
-    var maxLineEndsWithNewLine = 0.0;
-    var minLineEndsWithoutNewLine = double.infinity;
-    for (var index = 0; index < _lines.length; index++) {
-      final line = _lines[index];
-      _TextRun? lastRun;
-      for (var i = line.textRunStart; i < line.textRunEnd; i++) {
-        lastRun = _runs[i];
-        final width = lastRun.width;
-        maxRunWidth = math.max(width, maxRunWidth);
-        sum += width;
+    double currentColumnSum = 0.0;
+    double maxIndividualRunWidth = 0.0;
+    double maxHeightWithHardBreak = 0.0;
+    double minHeightWithoutHardBreak = double.infinity;
+
+    for (int columnIndex = 0; columnIndex < _columns.length; columnIndex++) {
+      final _ColumnLayout column = _columns[columnIndex];
+      _TextRun? lastRunInColumn;
+
+      for (int runIndex = column.textRunStart;
+          runIndex < column.textRunEnd;
+          runIndex++) {
+        lastRunInColumn = _runs[runIndex];
+        final double runWidth = lastRunInColumn.width;
+        maxIndividualRunWidth = math.max(runWidth, maxIndividualRunWidth);
+        currentColumnSum += runWidth;
       }
-      final bool endsWithNewLine;
-      if (lastRun != null) {
-        endsWithNewLine = _runEndsWithNewLine(lastRun);
+
+      final bool endsWithHardBreak =
+          lastRunInColumn != null && _runEndsWithNewLine(lastRunInColumn);
+      final bool hasNextColumn = columnIndex < _columns.length - 1;
+
+      if (hasNextColumn && !endsWithHardBreak) {
+        final _ColumnLayout nextColumn = _columns[columnIndex + 1];
+        currentColumnSum += _runs[nextColumn.textRunStart].width;
+        minHeightWithoutHardBreak =
+            math.min(minHeightWithoutHardBreak, currentColumnSum);
       } else {
-        endsWithNewLine = false;
+        maxHeightWithHardBreak =
+            math.max(maxHeightWithHardBreak, currentColumnSum);
       }
-      final hasNextLine = index < _lines.length - 1;
-      if (hasNextLine && !endsWithNewLine) {
-        final nextLine = _lines[index + 1];
-        sum += _runs[nextLine.textRunStart].width;
-        minLineEndsWithoutNewLine = math.min(minLineEndsWithoutNewLine, sum);
-      } else {
-        maxLineEndsWithNewLine = math.max(maxLineEndsWithNewLine, sum);
-      }
-      sum = 0;
+
+      currentColumnSum = 0;
     }
-    if (minLineEndsWithoutNewLine == double.infinity) {
-      minLineEndsWithoutNewLine = 0;
+
+    if (minHeightWithoutHardBreak == double.infinity) {
+      minHeightWithoutHardBreak = 0;
     }
-    _minIntrinsicHeight = maxRunWidth;
+
+    _minIntrinsicHeight = maxIndividualRunWidth;
     _maxIntrinsicHeight =
-        math.max(minLineEndsWithoutNewLine, maxLineEndsWithNewLine);
+        math.max(minHeightWithoutHardBreak, maxHeightWithHardBreak);
   }
 
-  /// Returns the text position closest to the given offset.
+  /// 【点击位置检测】
+  /// 当用户点了一下屏幕，我们需要知道他点在哪个字上。
+  /// 因为有旋转，我们需要把屏幕坐标 (dx, dy) 逆向转回内部坐标。
   TextPosition getPositionForOffset(Offset offset) {
     final encoded = _getPositionForOffset(offset.dx, offset.dy);
     return TextPosition(
         offset: encoded[0], affinity: TextAffinity.values[encoded[1]]);
   }
 
-  // Both the line info and the text run are in horizontal orientation,
-  // but the [dx] and [dy] offsets are in vertical orientation.
-  List<int> _getPositionForOffset(double dx, double dy) {
-    const upstream = 0;
-    const downstream = 1;
+  List<int> _getPositionForOffset(double externalX, double externalY) {
+    const int upstream = 0;
+    const int downstream = 1;
 
-    if (_lines.isEmpty) {
+    if (_columns.isEmpty) {
       return [0, downstream];
     }
 
-    // find the line
-    _LineInfo? matchedLine;
-    var rightEdgeAfterRotation = 0.0;
-    var rotatedRunDx = 0.0;
-    var rotatedRunDy = 0.0;
-    for (var line in _lines) {
-      rightEdgeAfterRotation += line.bounds.bottom;
-      // todo rotatedRunDx always = 0 ?
-      // maybe rotatedRunDx = rightEdgeAfterRotation; before the previous line code?
-      rotatedRunDx = line.bounds.top;
-      if (dx <= rightEdgeAfterRotation) {
-        matchedLine = line;
-        break;
+    // 1. 用二分查找法，快速定位点在了第几列（水平坐标）
+    _ColumnLayout matchedColumn;
+    if (_columnOffsets.isEmpty) {
+      matchedColumn = _columns.last;
+    } else {
+      int low = 0;
+      int high = _columnOffsets.length - 1;
+      while (low <= high) {
+        final int mid = (low + high) >> 1;
+        if (externalX <= _columnOffsets[mid]) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
       }
+      final int columnIndex = math.min(low, _columns.length - 1);
+      matchedColumn = _columns[columnIndex];
     }
-    matchedLine ??= _lines.last;
 
-    // find the run in the line
-    _TextRun? matchedRun;
-    var bottomEdgeAfterRotating = 0.0;
-    for (var i = matchedLine.textRunStart; i < matchedLine.textRunEnd; i++) {
-      final run = _runs[i];
-      rotatedRunDy = bottomEdgeAfterRotating;
-      bottomEdgeAfterRotating += run.width;
-      if (dy <= bottomEdgeAfterRotating) {
-        matchedRun = run;
-        break;
-      }
-    }
-    if (matchedRun == null) {
-      final matchedRunIndex = matchedLine.textRunEnd - 1;
-      if (matchedRunIndex.isNegative) {
+    // 2. 在该列内，用二分查找定位点在哪个 run 上（垂直坐标）
+    _TextRun matchedRun;
+    double runStartOffset = 0.0;
+    final double columnTopOffset = matchedColumn.bounds.top;
+
+    if (matchedColumn.runCumWidths.isEmpty) {
+      final int runIndex = matchedColumn.textRunEnd - 1;
+      if (runIndex.isNegative) {
         matchedRun = _runs.last;
       } else {
-        matchedRun = _runs[matchedRunIndex];
+        matchedRun = _runs[runIndex];
       }
+    } else {
+      int low = 0;
+      int high = matchedColumn.runCumWidths.length - 1;
+      while (low <= high) {
+        final int mid = (low + high) >> 1;
+        if (externalY <= matchedColumn.runCumWidths[mid]) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      final int runIndexInColumn =
+          math.min(low, matchedColumn.runCumWidths.length - 1);
+      final int runIndex = matchedColumn.textRunStart + runIndexInColumn;
+      matchedRun = _runs[math.min(runIndex, _runs.length - 1)];
+      runStartOffset = runIndexInColumn == 0
+          ? 0.0
+          : matchedColumn.runCumWidths[runIndexInColumn - 1];
     }
 
-    // find the offset
-    final paragraphDx = dy - rotatedRunDy;
-    final paragraphDy = dx - rotatedRunDx;
-    final offset = Offset(paragraphDx, paragraphDy);
-    final runPosition = matchedRun.paragraph.getPositionForOffset(offset);
-    final textOffset = matchedRun.start + runPosition.offset;
+    // 3. 计算在 run 内的相对位置
+    final double runLocalX = externalY - runStartOffset;
+    final double runLocalY = externalX - columnTopOffset;
+    final Offset runOffset = Offset(runLocalX, runLocalY);
+    final TextPosition runPosition =
+        matchedRun.paragraph.getPositionForOffset(runOffset);
+    final int textOffset = matchedRun.start + runPosition.offset;
 
-    // find the affinity
-    final lineEndCharOffset = matchedRun.end;
-    final textAffinity =
-        (textOffset == lineEndCharOffset) ? upstream : downstream;
+    final int columnEndOffset = matchedRun.end;
+    final int textAffinity =
+        (textOffset == columnEndOffset) ? upstream : downstream;
+
     return [textOffset, textAffinity];
   }
 
-  /// Draws the precomputed text on a [canvas] one line at a time in vertical
-  /// lines that wrap from left to right.
+  /// 【最终绘制】
+  /// 把文字真正画到屏幕上。
   void draw(Canvas canvas, Offset offset) {
     final shouldDrawEllipsis = _didExceedMaxLines && _ellipsis != null;
 
-    // translate for the offset
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
 
-    // rotate the canvas 90 degrees
+    // 【核心变换】：顺时针旋转画布 90 度，让横向排版的“列”变成纵向显示。
     canvas.rotate(math.pi / 2);
 
-    // loop through every line
-    for (var i = 0; i < _lines.length; i++) {
-      final line = _lines[i];
+    for (var i = 0; i < _columns.length; i++) {
+      final column = _columns[i];
 
-      // translate for the line height
-      final dy = -line.bounds.height;
-      canvas.translate(0, dy);
+      // 移动到下一列（旋转后沿负 y 轴）
+      final deltaY = -column.bounds.height;
+      canvas.translate(0, deltaY);
 
-      // draw line
-      final isLastLine = i == _lines.length - 1;
-      _drawEachRunInCurrentLine(canvas, line, shouldDrawEllipsis, isLastLine);
+      final isLastColumn = i == _columns.length - 1;
+      _drawRunsInColumn(canvas, column, shouldDrawEllipsis, isLastColumn);
     }
 
     canvas.restore();
   }
 
-  void _drawEachRunInCurrentLine(
-      Canvas canvas, _LineInfo line, bool shouldDrawEllipsis, bool isLastLine) {
+  void _drawRunsInColumn(Canvas canvas, _ColumnLayout column,
+      bool shouldDrawEllipsis, bool isLastColumn) {
     canvas.save();
 
+    // 根据文本对齐方式调整列的位置
     var runSpacing = 0.0;
     switch (_textAlign) {
       case MongolTextAlign.top:
+        // 靠顶对齐，无需调整
         break;
       case MongolTextAlign.center:
-        final offset = (_height! - line.bounds.width) / 2;
+        // 居中对齐
+        final offset = (_height! - column.bounds.width) / 2;
         canvas.translate(offset, 0);
         break;
       case MongolTextAlign.bottom:
-        final offset = _height! - line.bounds.width;
+        // 靠底对齐
+        final offset = _height! - column.bounds.width;
         canvas.translate(offset, 0);
         break;
       case MongolTextAlign.justify:
-        if (isLastLine) break;
-        final extraSpace = _height! - line.bounds.width;
-        final runsInLine = line.textRunEnd - line.textRunStart;
-        if (runsInLine <= 1) break;
-        runSpacing = extraSpace / (runsInLine - 1);
+        // 两端对齐（最后一列除外）
+        if (isLastColumn) break;
+        final extraSpace = _height! - column.bounds.width;
+        final runsInColumn = column.textRunEnd - column.textRunStart;
+        if (runsInColumn <= 1) break;
+        runSpacing = extraSpace / (runsInColumn - 1);
         break;
     }
 
-    final startIndex = line.textRunStart;
-    final endIndex = line.textRunEnd - 1;
+    final startIndex = column.textRunStart;
+    final endIndex = column.textRunEnd - 1;
     for (var j = startIndex; j <= endIndex; j++) {
       final run = _runs[j];
 
+      // 计算 run 的绘制偏移
       var alignmentOffset = 0.0;
       if (run.isRotated) {
-        alignmentOffset = (line.bounds.height - run.width) / 2;
+        // 需要旋转的文字在列内垂直居中
+        alignmentOffset = (column.bounds.height - run.width) / 2;
       }
       var verticalShift = 0.0;
       if (run.isRotated) {
+        // 调整基线以获得更好的视觉效果
         final descent = run.paragraph.height - run.paragraph.alphabeticBaseline;
         verticalShift = -descent / 2;
       }
       final offset = Offset(verticalShift, alignmentOffset);
 
-      if (shouldDrawEllipsis && isLastLine && j == endIndex) {
+      // 处理省略号
+      if (shouldDrawEllipsis && isLastColumn && j == endIndex) {
         if (maxIntrinsicHeight + _ellipsis!.height < height) {
           run.draw(canvas, offset);
           canvas.translate(run.width, 0);
@@ -525,157 +565,114 @@ class MongolParagraph {
     canvas.restore();
   }
 
-  /// Returns a list of rects that enclose the given text range.
-  ///
-  /// Coordinates of the Rect are relative to the upper-left corner of the
-  /// paragraph, where positive y values indicate down. Orientation is as
-  /// vertical Mongolian text with left to right line wrapping.
-  ///
-  /// Note that this method behaves slightly differently than
-  /// Paragraph.getBoxesForRange. The Paragraph version returns List<TextBox>,
-  /// but TextBox doesn't accurately describe vertical text so Rect is used.
+  /// 获取给定文本范围的包围矩形列表（用于文本选中或光标显示）
   List<Rect> getBoxesForRange(int start, int end) {
     final boxes = <Rect>[];
-
-    // The [start] index must be within the text range
     final textLength = _text.length;
     if (start < 0 || start > _text.length) {
       return boxes;
     }
 
-    // Allow the [end] index to be larger than the text length but don't use it
     final effectiveEnd = math.min(textLength, end);
+    var columnPosition = 0.0; // 当前列的水平位置
 
-    // Horizontal offset for the left side of the vertical rect
-    var dx = 0.0;
+    for (var i = 0; i < _columns.length; i++) {
+      final column = _columns[i];
+      final lastRunIndex = column.textRunEnd - 1;
 
-    // loop through each line
-    for (var i = 0; i < _lines.length; i++) {
-      final line = _lines[i];
-      final lastRunIndex = line.textRunEnd - 1;
-
-      // return empty line for invalid run indexes
-      // (This happens when text ends with newline char.)
       if (lastRunIndex < 0) {
         if (end > textLength) {
-          boxes.add(_lineBoundsAsBox(line, dx));
+          boxes.add(_getColumnBoundsAsBox(column, columnPosition));
         }
         continue;
       }
 
-      final lineLastCharIndex = _runs[lastRunIndex].end - 1;
-
-      // skip empty lines before the selected range
-      if (lineLastCharIndex < start) {
-        // The line is horizontal but dx is for vertical orientation
-        dx += line.bounds.height;
+      final columnLastCharIndex = _runs[lastRunIndex].end - 1;
+      if (columnLastCharIndex < start) {
+        columnPosition += column.bounds.height;
         continue;
       }
 
-      final firstRunIndex = line.textRunStart;
-      final lineFirstCharIndex = _runs[firstRunIndex].start;
+      final firstRunIndex = column.textRunStart;
+      final columnFirstCharIndex = _runs[firstRunIndex].start;
 
-      // If this is a full line then skip looping over the runs
-      // because the line size has already been cached.
-      if (lineFirstCharIndex >= start && lineLastCharIndex < effectiveEnd) {
-        boxes.add(_lineBoundsAsBox(line, dx));
+      if (columnFirstCharIndex >= start && columnLastCharIndex < effectiveEnd) {
+        boxes.add(_getColumnBoundsAsBox(column, columnPosition));
       } else {
-        // check the runs one at a time
-        final lineBox = _getBoxFromLine(line, start, effectiveEnd, dx);
-
-        // partial selections of grapheme clusters should return no boxes
-        if (lineBox != Rect.zero) {
-          boxes.add(lineBox);
+        final columnBox =
+            _getBoxFromColumn(column, start, effectiveEnd, columnPosition);
+        if (columnBox != Rect.zero) {
+          boxes.add(columnBox);
         }
-
-        // If this is the last line there we're finished
-        if (lineLastCharIndex >= effectiveEnd - 1) {
+        if (columnLastCharIndex >= effectiveEnd - 1) {
           return boxes;
         }
       }
-      dx += line.bounds.height;
+      columnPosition += column.bounds.height;
     }
     return boxes;
   }
 
-  Rect _lineBoundsAsBox(_LineInfo line, double dx) {
-    final lineBounds = line.bounds;
-    return Rect.fromLTWH(dx, 0, lineBounds.height, lineBounds.width);
+  /// 获取一整列的包围矩形
+  Rect _getColumnBoundsAsBox(_ColumnLayout column, double columnPosition) {
+    final bounds = column.bounds;
+    return Rect.fromLTWH(columnPosition, 0, bounds.height, bounds.width);
   }
 
-  // Takes a single line and finds the box that includes the selected range
-  Rect _getBoxFromLine(_LineInfo line, int start, int end, double dx) {
+  /// 获取列中指定范围的包围矩形
+  Rect _getBoxFromColumn(
+      _ColumnLayout column, int start, int end, double columnPosition) {
     var boxWidth = 0.0;
     var boxHeight = 0.0;
+    var positionInColumn = 0.0; // 在列内的垂直位置
 
-    // This is the vertical offset for the box in vertical line orientation
-    // It will only be non-zero if this is the first box.
-    var dy = 0.0;
-
-    // loop though every run in the line
-    for (var j = line.textRunStart; j < line.textRunEnd; j++) {
+    for (var j = column.textRunStart; j < column.textRunEnd; j++) {
       final run = _runs[j];
-
-      // skips runs that are after selected range
-      if (run.start >= end) {
-        break;
-      }
-
-      // skip runs that are before the selected range
+      if (run.start >= end) break;
       if (run.end <= start) {
-        dy += run.width;
+        positionInColumn += run.width; // 跳过此 run
         continue;
       }
 
-      // The size of full intermediate runs has already been cached
       if (run.start >= start && run.end <= end) {
+        // run 完全在范围内
         boxWidth = math.max(boxWidth, run.height);
         boxHeight += run.width;
-        if (run.end == end) {
-          break;
-        }
+        if (run.end == end) break;
         continue;
       }
 
-      // The range selection is in middle of a run
+      // run 部分在范围内
       final localStart = math.max(start, run.start) - run.start;
       final localEnd = math.min(end, run.end) - run.start;
       final textBoxes = run.paragraph.getBoxesForRange(localStart, localEnd);
 
-      // empty boxes occur for partial selections of a grapheme cluster
       if (textBoxes.isEmpty) {
         if (end <= run.end) {
           break;
         } else {
-          dy += run.width;
+          positionInColumn += run.width;
           continue;
         }
       }
 
-      // handle orientation differences for emoji and CJK characters
       final box = textBoxes.first;
-      dy += box.left;
+      positionInColumn += box.left;
       double verticalWidth = box.bottom;
       double verticalHeight = box.right - box.left;
       boxWidth = math.max(boxWidth, verticalWidth);
       boxHeight += verticalHeight;
 
-      // if this is the last run then we're finished
-      if (end <= run.end) {
-        break;
-      }
+      if (end <= run.end) break;
     }
 
     if (boxWidth == 0.0 || boxHeight == 0.0) {
       return Rect.zero;
     }
-    return Rect.fromLTWH(dx, dy, boxWidth, boxHeight);
+    return Rect.fromLTWH(columnPosition, positionInColumn, boxWidth, boxHeight);
   }
 
-  /// Returns the [TextRange] of the word at the given [TextPosition].
-  ///
-  /// The current implementation just returns the correct text run, which is
-  /// generally a word.
+  /// 获取给定文本位置处的单词边界
   TextRange getWordBoundary(TextPosition position) {
     final offset = position.offset;
     if (offset >= _text.length) {
@@ -688,8 +685,6 @@ class MongolParagraph {
     return _splitBreakCharactersFromRun(run, offset);
   }
 
-  // runs can include break characters currently so split them from the returned
-  // range
   TextRange _splitBreakCharactersFromRun(_TextRun run, int offset) {
     var start = run.start;
     var end = run.end;
@@ -705,51 +700,48 @@ class MongolParagraph {
   }
 
   _TextRun? _getRunFromOffset(int offset) {
-    if (offset >= _text.length) {
+    if (_runs.isEmpty || offset < 0 || offset >= _text.length) {
       return null;
     }
-    var min = 0;
-    var max = _runs.length - 1;
-    // do a binary search
+    int min = 0;
+    int max = _runs.length - 1;
     while (min <= max) {
-      final guess = (max + min) ~/ 2;
-      if (offset >= _runs[guess].end) {
+      final int guess = (max + min) ~/ 2;
+      final _TextRun currentRun = _runs[guess];
+      if (offset >= currentRun.end) {
         min = guess + 1;
-        continue;
-      } else if (offset < _runs[guess].start) {
+      } else if (offset < currentRun.start) {
         max = guess - 1;
-        continue;
       } else {
-        return _runs[guess];
+        return currentRun;
       }
     }
     return null;
   }
 
-  /// Returns the [TextRange] of the line at the given [TextPosition].
-  ///
-  /// The newline (if any) is NOT returned as part of the range.
-  /// https://github.com/flutter/flutter/issues/83392
-  ///
-  /// Not valid until after layout.
-  ///
-  /// This can potentially be expensive, since it needs to compute the line
-  /// metrics, so use it sparingly.
+  /// 获取给定文本位置所在列的起始和结束位置
   TextRange getLineBoundary(TextPosition position) {
     final offset = position.offset;
     if (offset > _text.length) {
       return TextRange.empty;
     }
+    if (_columns.isEmpty) {
+      return const TextRange(start: 0, end: 0);
+    }
     var min = 0;
-    var max = _lines.length - 1;
-    var start = -1;
-    var end = -1;
-    // do a binary search
+    var max = _columns.length - 1;
     while (min <= max) {
       final guess = (max + min) ~/ 2;
-      final line = _lines[guess];
-      start = _runs[line.textRunStart].start;
-      end = _runs[line.textRunEnd - 1].end;
+      final column = _columns[guess];
+      if (column.isEmpty) {
+        if (offset == _text.length) {
+          return TextRange(start: _text.length, end: _text.length);
+        }
+        max = guess - 1;
+        continue;
+      }
+      final int start = _runs[column.textRunStart].start;
+      int end = _runs[column.textRunEnd - 1].end;
       if (offset >= end) {
         min = guess + 1;
         continue;
@@ -757,113 +749,141 @@ class MongolParagraph {
         max = guess - 1;
         continue;
       } else {
-        break;
-      }
-    }
-    // exclude newline character
-    if (end > start && _text[end - 1] == '\n') {
-      end--;
-    }
-    return TextRange(start: start, end: end);
-  }
-
-  /// Returns the full list of [MongolLineMetrics] that describe in detail the various
-  /// metrics of each laid out line.
-  ///
-  /// Not valid until after layout.
-  ///
-  /// This can potentially return a large amount of data, so it is not recommended
-  /// to repeatedly call this. Instead, cache the results.
-  List<MongolLineMetrics> computeLineMetrics() {
-    final List<MongolLineMetrics> metrics = <MongolLineMetrics>[];
-    for (int index = 0; index < _lines.length; index += 1) {
-      final line = _lines[index];
-      bool hardBreak = false;
-      double ascent = 0;
-      double descent = 0;
-      double unscaledAscent = 0;
-      double height = 0;
-      double width = 0;
-      double baseline = 0;
-      for (int j = line.textRunStart; j < line.textRunEnd; j += 1) {
-        final textRun = _runs[j];
-        final metricsList = textRun.paragraph.computeLineMetrics();
-        final runMetrics = metricsList.isEmpty ? null : metricsList.first;
-
-        // last textRun of this line
-        if (j == line.textRunEnd - 1) {
-          hardBreak = _runEndsWithNewLine(textRun);
+        if (end > start && _text[end - 1] == '\n') {
+          end--; // 排除硬换行符
         }
-        ascent = math.max(runMetrics?.ascent ?? 0, ascent);
-        descent = math.max(runMetrics?.descent ?? 0, descent);
-        unscaledAscent =
-            math.max(runMetrics?.unscaledAscent ?? 0, unscaledAscent);
-        width = math.max(runMetrics?.height ?? 0, width);
-        height += runMetrics?.width ?? textRun.width;
-        final previousMetrics = index > 0 ? metrics[index - 1] : null;
-        final previousLineAscent = previousMetrics?.ascent ?? 0.0;
-        final previousLineBaseline = previousMetrics?.baseline ?? 0.0;
-        baseline = previousLineBaseline + previousLineAscent + descent;
+        return TextRange(start: start, end: end);
       }
-
-      // ends with new line
-      if (line.textRunStart == -1 && line.textRunEnd == -1) {
-        final previousMetrics = metrics[index - 1];
-        hardBreak = true;
-        ascent = previousMetrics.ascent;
-        descent = previousMetrics.descent;
-        unscaledAscent = previousMetrics.unscaledAscent;
-        height = previousMetrics.height;
-        width = previousMetrics.width;
-        baseline = previousMetrics.baseline + previousMetrics.ascent + descent;
-      }
-
-      double top = 0;
-      if (_textAlign == MongolTextAlign.center) {
-        top = (this.height - height) / 2;
-      } else if (_textAlign == MongolTextAlign.bottom) {
-        top = this.height - height;
-      }
-
-      final lineMetrics = MongolLineMetrics(
-        hardBreak: hardBreak,
-        ascent: ascent,
-        descent: descent,
-        unscaledAscent: unscaledAscent,
-        height: height,
-        width: width,
-        top: top,
-        baseline: baseline,
-        lineNumber: index,
-      );
-      metrics.add(lineMetrics);
     }
-    return metrics;
+    if (offset == _text.length) {
+      if (_columns.last.isEmpty) {
+        return TextRange(start: _text.length, end: _text.length);
+      }
+      for (int i = _columns.length - 1; i >= 0; i--) {
+        final _ColumnLayout column = _columns[i];
+        if (column.isEmpty) {
+          continue;
+        }
+        final int start = _runs[column.textRunStart].start;
+        int end = _runs[column.textRunEnd - 1].end;
+        if (end > start && _text[end - 1] == '\n') {
+          end--;
+        }
+        return TextRange(start: start, end: end);
+      }
+    }
+    return TextRange.empty;
   }
 
-  /// Release the resources used by this object. The object is no longer usable
-  /// after this method is called.
+  /// 获取所有列的详细度量信息列表
+  List<MongolLineMetrics> computeLineMetrics() {
+    final List<MongolLineMetrics> lineMetricsList = <MongolLineMetrics>[];
+
+    for (int columnIndex = 0; columnIndex < _columns.length; columnIndex++) {
+      final _ColumnLayout column = _columns[columnIndex];
+
+      bool isHardBreak = false;
+      double maxAscent = 0;
+      double maxDescent = 0;
+      double maxUnscaledAscent = 0;
+      double totalHeight = 0;
+      double maxLineWidth = 0;
+      double lineBaseline = 0;
+
+      if (column.textRunStart != -1 && column.textRunEnd != -1) {
+        for (int runIndex = column.textRunStart;
+            runIndex < column.textRunEnd;
+            runIndex++) {
+          if (runIndex < 0 || runIndex >= _runs.length) continue;
+
+          final _TextRun textRun = _runs[runIndex];
+          final List<LineMetrics> runLineMetrics =
+              textRun.paragraph.computeLineMetrics();
+          final LineMetrics? runMetrics =
+              runLineMetrics.isNotEmpty ? runLineMetrics.first : null;
+
+          if (runIndex == column.textRunEnd - 1) {
+            isHardBreak = _runEndsWithNewLine(textRun);
+          }
+
+          final double runAscent = runMetrics?.ascent ?? 0;
+          final double runDescent = runMetrics?.descent ?? 0;
+          final double runUnscaledAscent = runMetrics?.unscaledAscent ?? 0;
+          final double runHeight = runMetrics?.height ?? 0;
+          final double runWidth = runMetrics?.width ?? textRun.width;
+
+          maxAscent = math.max(runAscent, maxAscent);
+          maxDescent = math.max(runDescent, maxDescent);
+          maxUnscaledAscent = math.max(runUnscaledAscent, maxUnscaledAscent);
+          maxLineWidth = math.max(runHeight, maxLineWidth);
+          totalHeight += runWidth;
+        }
+      }
+
+      MongolLineMetrics? previousLineMetrics =
+          (columnIndex > 0 && lineMetricsList.isNotEmpty)
+              ? lineMetricsList[columnIndex - 1]
+              : null;
+      if (previousLineMetrics != null) {
+        lineBaseline = previousLineMetrics.baseline +
+            previousLineMetrics.ascent +
+            maxDescent;
+      }
+
+      if (column.textRunStart == -1 && column.textRunEnd == -1) {
+        isHardBreak = true;
+        if (previousLineMetrics != null) {
+          maxAscent = previousLineMetrics.ascent;
+          maxDescent = previousLineMetrics.descent;
+          maxUnscaledAscent = previousLineMetrics.unscaledAscent;
+          totalHeight = previousLineMetrics.height;
+          maxLineWidth = previousLineMetrics.width;
+          lineBaseline = previousLineMetrics.baseline +
+              previousLineMetrics.ascent +
+              maxDescent;
+        }
+      }
+
+      double lineTopOffset = 0;
+      if (_textAlign == MongolTextAlign.center) {
+        lineTopOffset = (height - totalHeight) / 2;
+      } else if (_textAlign == MongolTextAlign.bottom) {
+        lineTopOffset = height - totalHeight;
+      }
+
+      final MongolLineMetrics lineMetrics = MongolLineMetrics(
+        hardBreak: isHardBreak,
+        ascent: maxAscent,
+        descent: maxDescent,
+        unscaledAscent: maxUnscaledAscent,
+        height: totalHeight,
+        width: maxLineWidth,
+        top: lineTopOffset,
+        baseline: lineBaseline,
+        lineNumber: columnIndex,
+      );
+
+      lineMetricsList.add(lineMetrics);
+    }
+
+    return lineMetricsList;
+  }
+
+  /// 释放资源
   void dispose() {
     assert(!_disposed);
-    assert(() {
-      _disposed = true;
-      return true;
-    }());
+    _disposed = true;
 
-    // Is this slow? Is it necessary?
-    // Do we need to dispose anything else?
     for (final run in _runs) {
-      run.paragraph.dispose();
+      try {
+        run.paragraph.dispose();
+      } catch (_) {}
     }
     _runs.clear();
   }
 
   bool _disposed = false;
 
-  /// Whether this reference to the underlying picture is [dispose]d.
-  ///
-  /// This only returns a valid value if asserts are enabled, and must not be
-  /// used otherwise.
   bool get debugDisposed {
     bool? disposed;
     assert(() {
@@ -876,17 +896,12 @@ class MongolParagraph {
   }
 }
 
-/// Layout constraints for [MongolParagraph] objects.
-///
-/// Instances of this class are typically used with [MongolParagraph.layout].
-///
-/// The only constraint that can be specified is the [height].
+/// [MongolParagraph] 的布局约束（目前主要限制高度）
 class MongolParagraphConstraints {
   const MongolParagraphConstraints({
     required this.height,
   });
 
-  /// The height the paragraph should use when computing the positions of glyphs.
   final double height;
 
   @override
@@ -902,30 +917,12 @@ class MongolParagraphConstraints {
   String toString() => '$runtimeType(height: $height)';
 }
 
-/// Builds a [MongolParagraph] containing text with the given styling
-/// information.
-///
-/// To set the paragraph's style, pass an appropriately-configured
-/// [ParagraphStyle] object to the [MongolParagraphBuilder] constructor.
-///
-/// Then, call combinations of [pushStyle], [addText], and [pop] to add styled
-/// text to the object.
-///
-/// Finally, call [build] to obtain the constructed [MongolParagraph] object.
-/// After this point, the builder is no longer usable.
-///
-/// After constructing a [MongolParagraph], call [MongolParagraph.layout] on
-/// it and then paint it with [MongolParagraph.draw].
+/// 蒙古文段落构造器：一步步把文字和样式塞进去，最后 build 出 MongolParagraph
 class MongolParagraphBuilder {
   MongolParagraphBuilder(
     ui.ParagraphStyle style, {
     MongolTextAlign textAlign = MongolTextAlign.top,
-    @Deprecated(
-      'Use textScaler instead. '
-      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
-      'This feature was deprecated after v3.12.0-2.0.pre.',
-    )
-    double textScaleFactor = 1.0,
+    @Deprecated('Use textScaler instead.') double textScaleFactor = 1.0,
     TextScaler textScaler = TextScaler.noScaling,
     int? maxLines,
     String? ellipsis,
@@ -946,7 +943,6 @@ class MongolParagraphBuilder {
   final String? _ellipsis;
   final bool _rotateCJK;
 
-  //_TextRun? _ellipsisRun;
   final _styleStack = _Stack<TextStyle>();
   final _rawStyledTextRuns = <_RawStyledTextRun>[];
 
@@ -960,9 +956,7 @@ class MongolParagraphBuilder {
     textBaseline: TextBaseline.alphabetic,
   );
 
-  /// Applies the given style to the added text until [pop] is called.
-  ///
-  /// See [pop] for details.
+  /// 给接下来的文字添加某种样式
   void pushStyle(TextStyle style) {
     if (_styleStack.isEmpty) {
       _styleStack.push(style);
@@ -972,21 +966,14 @@ class MongolParagraphBuilder {
     _styleStack.push(lastStyle.merge(style));
   }
 
-  /// Ends the effect of the most recent call to [pushStyle].
-  ///
-  /// Internally, the paragraph builder maintains a stack of text styles. Text
-  /// added to the paragraph is affected by all the styles in the stack. Calling
-  /// [pop] removes the topmost style in the stack, leaving the remaining styles
-  /// in effect.
+  /// 移除最近添加的一个样式
   void pop() {
     _styleStack.pop();
   }
 
   final _plainText = StringBuffer();
 
-  /// Adds the given text to the paragraph.
-  ///
-  /// The text will be styled according to the current stack of text styles.
+  /// 添加纯文本，会应用当前栈顶的样式
   void addText(String text) {
     _plainText.write(text);
     final style = _styleStack.isEmpty ? null : _styleStack.top;
@@ -996,11 +983,7 @@ class MongolParagraphBuilder {
     }
   }
 
-  /// Applies the given paragraph style and returns a [MongolParagraph]
-  /// containing the added text and associated styling.
-  ///
-  /// After calling this function, the paragraph builder object is invalid and
-  /// cannot be used further.
+  /// 构建出最终的 MongolParagraph 对象
   MongolParagraph build() {
     _paragraphStyle ??= _defaultParagraphStyle;
     final runs = <_TextRun>[];
@@ -1027,17 +1010,15 @@ class MongolParagraphBuilder {
       final paragraph = builder.build();
       paragraph.layout(const ui.ParagraphConstraints(width: double.infinity));
 
-      // Determine final rotation logic here
       bool isRotated = segment.isRotatable;
       if (isRotated && !_rotateCJK) {
-        // If config says don't rotate, we un-flag it, BUT...
-        // ...we must ensure Emojis stay rotated.
         if (!LineBreaker.isEmoji(segment.text.runes.first)) {
           isRotated = false;
         }
       }
 
-      final run = _TextRun(startIndex, endIndex, isRotated, paragraph);
+      final run = _TextRun(startIndex, endIndex, isRotated, paragraph,
+          textStyle: style, paragraphStyle: _paragraphStyle);
       runs.add(run);
       builder = null;
       startIndex = endIndex;
@@ -1095,12 +1076,12 @@ class MongolParagraphBuilder {
     builder.addText(_ellipsis!);
     final paragraph = builder.build();
     paragraph.layout(const ui.ParagraphConstraints(width: double.infinity));
-    return _TextRun(-1, -1, false, paragraph);
+    return _TextRun(-1, -1, false, paragraph,
+        textStyle: style, paragraphStyle: _paragraphStyle);
   }
 }
 
-/// An iterable that iterates over the substrings of [text] between locations
-/// that line breaks are allowed.
+/// 将文本分割成可旋转或不可旋转的片段的迭代器
 class BreakSegments extends Iterable<RotatableString> {
   BreakSegments(this.text);
 
@@ -1117,25 +1098,20 @@ class RotatableString {
   final bool isRotatable;
 }
 
-/// Finds all the locations in a string of text where line breaks are allowed.
-///
-/// LineBreaker gives the strings between the breaks upon iteration.
+/// 负责将字符串切分成一个个小的“逻辑片段”
 class LineBreaker implements Iterator<RotatableString> {
   LineBreaker(this.text) {
     _characterIterator = text.characters.iterator;
   }
 
   final String text;
-
   late CharacterRange _characterIterator;
-
   RotatableString? _currentTextRun;
 
   @override
   RotatableString get current {
     if (_currentTextRun == null) {
-      throw StateError(
-          'Current is undefined before moveNext is called or after last element.');
+      throw StateError('Current is undefined.');
     }
     return _currentTextRun!;
   }
@@ -1207,20 +1183,16 @@ class LineBreaker implements Iterator<RotatableString> {
   bool _isRotatable(String character) {
     final codePoint = character.runes.first;
 
-    // Quick return: most Mongol chars should be in this range
     if (codePoint >= _mongolQuickCheckStart &&
         codePoint < _mongolQuickCheckEnd) {
       return false;
     }
 
-    // Korean Jamo
-    if (codePoint < _koreanJamoStart) return false; // latin, etc
+    if (codePoint < _koreanJamoStart) return false;
     if (codePoint <= _koreanJamoEnd) return true;
 
-    // Chinese and Japanese
     if (codePoint >= _cjkRadicalSupplementStart &&
         codePoint <= _cjkUnifiedIdeographsEnd) {
-      // exceptions for font handled punctuation
       if (codePoint >= _cjkSymbolsAndPunctuationStart &&
           codePoint <= _cjkSymbolsAndPunctuationMenksoftEnd) {
         return false;
@@ -1228,29 +1200,23 @@ class LineBreaker implements Iterator<RotatableString> {
       if (codePoint >= _circleNumber21 && codePoint <= _circleNumber35) {
         return false;
       }
-
       if (codePoint >= _circleNumber36 && codePoint <= _circleNumber50) {
         return false;
       }
       return true;
     }
 
-    // Korean Hangul
     if (codePoint >= _hangulSyllablesStart &&
         codePoint <= _hangulJamoExtendedBEnd) {
       return true;
     }
 
-    // More Chinese
     if (codePoint >= _cjkCompatibilityIdeographsStart &&
         codePoint <= _cjkCompatibilityIdeographsEnd) {
       return true;
     }
 
-    // Emoji
     if (isEmoji(codePoint)) return true;
-
-    // all other code points
     return false;
   }
 
@@ -1259,58 +1225,38 @@ class LineBreaker implements Iterator<RotatableString> {
   }
 }
 
-// A data object to associate a text run with its style
 class _RawStyledTextRun {
   _RawStyledTextRun(this.style, this.text);
-
   final TextStyle? style;
   final RotatableString text;
 }
 
-/// A [_TextRun] describes the smallest unit of text that is printed on the
-/// canvas. It may be a word, CJK character, emoji or particular style.
-///
-/// The [start] and [end] values are the indexes of the text range that
-/// forms the run. The [paragraph] is the precomputed Paragraph object that
-/// contains the text run.
+/// [_TextRun] 文字片段：文字排版中最小的绘制单元（如一个单词、一个汉字、一个表情）。
 class _TextRun {
-  _TextRun(this.start, this.end, this.isRotated, this.paragraph);
+  _TextRun(this.start, this.end, this.isRotated, this.paragraph,
+      {this.textStyle, this.paragraphStyle});
 
-  /// The UTF-16 code unit index where this run starts within the entire text
-  /// range. The value in inclusive (that is, this is the actual start index).
   final int start;
-
-  /// The UTF-16 code unit index where this run ends within the entire text
-  /// range. The value is exclusive (that is, one unit beyond the last code
-  /// unit).
   final int end;
 
-  /// Whether this text run should be rotated 90 degrees counterclockwise in
-  /// relation to the rest of the text.
-  ///
-  /// This would normally be for emoji and  CJK characters so that they will
-  /// appear in the correct orientation in a vertical line of text.
+  /// 片段是否需要旋转（蒙古文、CJK 字符、表情通常需要旋转）
   final bool isRotated;
 
-  /// The pre-computed text layout for this run.
-  ///
-  /// It includes the size but should never be more than one line.
+  /// 该片段对应的预计算段落对象（包含尺寸等信息）
   final ui.Paragraph paragraph;
 
-  /// Returns the width of the run (in horizontal orientation).
-  double get width {
-    return paragraph.maxIntrinsicWidth;
-  }
+  final ui.TextStyle? textStyle;
+  final ui.ParagraphStyle? paragraphStyle;
 
-  /// Returns the height of the run (in horizontal orientation).
-  double get height {
-    return paragraph.height;
-  }
+  double get width => paragraph.maxIntrinsicWidth;
+  double get height => paragraph.height;
 
+  /// 绘制片段：如果需要旋转，就在这里施展“逆时针旋转 90 度”的魔法。
   void draw(ui.Canvas canvas, ui.Offset offset) {
     if (isRotated) {
       canvas.save();
       canvas.translate(offset.dx, offset.dy);
+      // 逆时针旋转 90 度，配合 Canvas 的 90 度顺时针旋转，让蒙古文字体方向转正。
       canvas.rotate(-math.pi / 2);
       canvas.translate(-paragraph.maxIntrinsicWidth, 0);
       canvas.drawParagraph(paragraph, const ui.Offset(0, 0));
@@ -1321,41 +1267,39 @@ class _TextRun {
   }
 }
 
-/// LineInfo stores information about each line in the paragraph.
+/// 【内部坐标系】列布局信息
 ///
-/// [textRunStart] is the index of the first text run in the line (out of all the
-/// text runs in the paragraph). [textRunEnd] is the index of the last run.
-///
-/// The [bounds] is the size of the unrotated text line.
-class _LineInfo {
-  _LineInfo(this.textRunStart, this.textRunEnd, this.bounds);
+/// 在蒙古文排版中，内部将竖排视为"列"。此类记录一列的详细布局数据。
+/// 每一列最终在屏幕上显示为竖排的一竖列文字。
+class _ColumnLayout {
+  /// 创建列布局信息
+  ///
+  /// [textRunStart] - 此列包含的第一个 run 的索引
+  /// [textRunEnd] - 此列包含的最后一个 run 的下一个索引
+  /// [bounds] - 列的包围矩形（width:列宽，height:列高）
+  /// [runCumWidths] - 每个 run 在列内的累积宽度（用于鼠标点击定位）
+  _ColumnLayout(
+      this.textRunStart, this.textRunEnd, this.bounds, this.runCumWidths);
 
-  /// The index of the run in [_runs] where this line starts
+  bool get isEmpty => textRunStart < 0 || textRunEnd <= textRunStart;
+
+  /// 此列包含的第一个 run 的索引
   final int textRunStart;
 
-  /// The index (exclusive) of the run in [_runs] where this line end
+  /// 此列包含的最后一个 run 的下一个索引
   final int textRunEnd;
 
-  /// The measured size of this unrotated line (horizontal orientation).
-  ///
-  /// There is no offset so [left] and [top] are `0`. Just use [width] and
-  /// [height].
+  /// 列的包围矩形（内部坐标系）
   final Rect bounds;
+
+  /// 列内每个 run 的累积宽度，用于快速定位鼠标点击位置
+  final List<double> runCumWidths;
 }
 
-// This is for keeping track of the text style stack.
 class _Stack<T> {
   final _stack = Queue<T>();
-
-  void push(T element) {
-    _stack.addLast(element);
-  }
-
-  void pop() {
-    _stack.removeLast();
-  }
-
+  void push(T element) => _stack.addLast(element);
+  void pop() => _stack.removeLast();
   bool get isEmpty => _stack.isEmpty;
-
   T get top => _stack.last;
 }

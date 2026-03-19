@@ -41,24 +41,28 @@ import '../text/mongol_text.dart';
 import 'alignment.dart';
 import 'input_border.dart';
 
+// 过渡动画持续时间
 const Duration _kTransitionDuration = Duration(milliseconds: 200);
+// 过渡动画曲线
 const Curve _kTransitionCurve = Curves.fastOutSlowIn;
+// 浮动标签的最终缩放比例
 const double _kFinalLabelScale = 0.75;
 
-// The default duration for hint fade in/out transitions.
+// 提示文本淡入淡出过渡的默认持续时间
 //
-// Animating hint is not mentioned in the Material specification.
-// The animation is kept for backward compatibility and a short duration
-// is used to mitigate the UX impact.
+// 动画提示在 Material 规范中未提及。
+// 该动画保留用于向后兼容，并使用较短的持续时间
+// 以减轻用户体验的影响。
 const Duration _kHintFadeTransitionDuration = Duration(milliseconds: 20);
 
-// Defines the gap in the MongolInputDecorator's outline border where the
-// floating label will appear.
+/// 定义 MongolInputDecorator 轮廓边框中浮动标签出现的间隙
 class _InputBorderGap extends ChangeNotifier {
-  double? _start;
+  double? _start; // 间隙的起始位置
 
+  /// 获取间隙的起始位置
   double? get start => _start;
 
+  /// 设置间隙的起始位置，并通知监听器
   set start(double? value) {
     if (value != _start) {
       _start = value;
@@ -66,10 +70,12 @@ class _InputBorderGap extends ChangeNotifier {
     }
   }
 
-  double _extent = 0.0;
+  double _extent = 0.0; // 间隙的长度
 
+  /// 获取间隙的长度
   double get extent => _extent;
 
+  /// 设置间隙的长度，并通知监听器
   set extent(double value) {
     if (value != _extent) {
       _extent = value;
@@ -96,17 +102,27 @@ class _InputBorderGap extends ChangeNotifier {
   int get hashCode => Object.hash(start, extent);
 }
 
-// Used to interpolate between two InputBorders.
+/// 用于在两个 InputBorder 之间进行插值
 class _InputBorderTween extends Tween<InputBorder> {
-  _InputBorderTween({InputBorder? begin, InputBorder? end})
-      : super(begin: begin, end: end);
+  /// 创建一个 _InputBorderTween，指定起始和结束边框
+  _InputBorderTween({super.begin, super.end});
 
   @override
+  /// 在指定的进度值 t 处插值两个边框
   InputBorder lerp(double t) => ShapeBorder.lerp(begin, end, t)! as InputBorder;
 }
 
-// Passes the _InputBorderGap parameters along to an InputBorder's paint method.
+/// 将 _InputBorderGap 参数传递给 InputBorder 的 paint 方法
 class _InputBorderPainter extends CustomPainter {
+  /// 创建一个 _InputBorderPainter
+  /// [repaint] - 用于触发重绘的可听对象
+  /// [borderAnimation] - 边框动画
+  /// [border] - 边框插值器
+  /// [gapAnimation] - 间隙动画
+  /// [gap] - 边框间隙信息
+  /// [fillColor] - 填充颜色
+  /// [hoverAnimation] - 悬停动画
+  /// [hoverColorTween] - 悬停颜色插值器
   _InputBorderPainter({
     required Listenable repaint,
     required this.borderAnimation,
@@ -118,18 +134,20 @@ class _InputBorderPainter extends CustomPainter {
     required this.hoverColorTween,
   }) : super(repaint: repaint);
 
-  final Animation<double> borderAnimation;
-  final _InputBorderTween border;
-  final Animation<double> gapAnimation;
-  final _InputBorderGap gap;
-  final Color fillColor;
-  final ColorTween hoverColorTween;
-  final Animation<double> hoverAnimation;
+  final Animation<double> borderAnimation; // 边框动画
+  final _InputBorderTween border; // 边框插值器
+  final Animation<double> gapAnimation; // 间隙动画
+  final _InputBorderGap gap; // 边框间隙信息
+  final Color fillColor; // 填充颜色
+  final ColorTween hoverColorTween; // 悬停颜色插值器
+  final Animation<double> hoverAnimation; // 悬停动画
 
+  /// 获取混合后的颜色（填充颜色与悬停颜色的混合）
   Color get blendedColor =>
       Color.alphaBlend(hoverColorTween.evaluate(hoverAnimation)!, fillColor);
 
   @override
+  /// 绘制边框
   void paint(Canvas canvas, Size size) {
     final borderValue = border.evaluate(borderAnimation);
     final canvasRect = Offset.zero & size;
@@ -154,6 +172,7 @@ class _InputBorderPainter extends CustomPainter {
   }
 
   @override
+  /// 确定是否需要重绘
   bool shouldRepaint(_InputBorderPainter oldPainter) {
     return borderAnimation != oldPainter.borderAnimation ||
         hoverAnimation != oldPainter.hoverAnimation ||
@@ -163,13 +182,19 @@ class _InputBorderPainter extends CustomPainter {
   }
 }
 
-// An analog of AnimatedContainer, which can animate its shaped border, for
-// _InputBorder. This specialized animated container is needed because the
-// _InputBorderGap, which is computed at layout time, is required by the
-// _InputBorder's paint method.
+/// 类似于 AnimatedContainer 的组件，用于为 _InputBorder 动画化其形状边框
+/// 这个专门的动画容器是必需的，因为在布局时计算的 _InputBorderGap
+/// 是 _InputBorder 的 paint 方法所必需的
 class _BorderContainer extends StatefulWidget {
+  /// 创建一个 _BorderContainer
+  /// [border] - 输入边框
+  /// [gap] - 边框间隙信息
+  /// [gapAnimation] - 间隙动画
+  /// [fillColor] - 填充颜色
+  /// [hoverColor] - 悬停颜色
+  /// [isHovering] - 是否处于悬停状态
+  /// [child] - 子组件
   const _BorderContainer({
-    Key? key,
     required this.border,
     required this.gap,
     required this.gapAnimation,
@@ -178,15 +203,15 @@ class _BorderContainer extends StatefulWidget {
     required this.isHovering,
     // ignore: unused_element_parameter
     this.child,
-  }) : super(key: key);
+  });
 
-  final InputBorder border;
-  final _InputBorderGap gap;
-  final Animation<double> gapAnimation;
-  final Color fillColor;
-  final Color hoverColor;
-  final bool isHovering;
-  final Widget? child;
+  final InputBorder border; // 输入边框
+  final _InputBorderGap gap; // 边框间隙信息
+  final Animation<double> gapAnimation; // 间隙动画
+  final Color fillColor; // 填充颜色
+  final Color hoverColor; // 悬停颜色
+  final bool isHovering; // 是否处于悬停状态
+  final Widget? child; // 子组件
 
   @override
   _BorderContainerState createState() => _BorderContainerState();
@@ -194,39 +219,45 @@ class _BorderContainer extends StatefulWidget {
 
 class _BorderContainerState extends State<_BorderContainer>
     with TickerProviderStateMixin {
-  static const Duration _kHoverDuration = Duration(milliseconds: 15);
+  static const Duration _kHoverDuration = Duration(milliseconds: 15); // 悬停动画持续时间
 
-  late AnimationController _controller;
-  late AnimationController _hoverColorController;
-  late Animation<double> _borderAnimation;
-  late _InputBorderTween _border;
-  late Animation<double> _hoverAnimation;
-  late ColorTween _hoverColorTween;
+  late AnimationController _controller; // 边框动画控制器
+  late AnimationController _hoverColorController; // 悬停颜色动画控制器
+  late Animation<double> _borderAnimation; // 边框动画
+  late _InputBorderTween _border; // 边框插值器
+  late Animation<double> _hoverAnimation; // 悬停动画
+  late ColorTween _hoverColorTween; // 悬停颜色插值器
 
   @override
   void initState() {
     super.initState();
+    // 初始化悬停颜色动画控制器
     _hoverColorController = AnimationController(
       duration: _kHoverDuration,
       value: widget.isHovering ? 1.0 : 0.0,
       vsync: this,
     );
+    // 初始化边框动画控制器
     _controller = AnimationController(
       duration: _kTransitionDuration,
       vsync: this,
     );
+    // 创建边框动画
     _borderAnimation = CurvedAnimation(
       parent: _controller,
       curve: _kTransitionCurve,
     );
+    // 创建边框插值器
     _border = _InputBorderTween(
       begin: widget.border,
       end: widget.border,
     );
+    // 创建悬停动画
     _hoverAnimation = CurvedAnimation(
       parent: _hoverColorController,
       curve: Curves.linear,
     );
+    // 创建悬停颜色插值器
     _hoverColorTween =
         ColorTween(begin: Colors.transparent, end: widget.hoverColor);
   }
@@ -241,6 +272,7 @@ class _BorderContainerState extends State<_BorderContainer>
   @override
   void didUpdateWidget(_BorderContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // 处理边框变化
     if (widget.border != oldWidget.border) {
       _border = _InputBorderTween(
         begin: oldWidget.border,
@@ -250,10 +282,12 @@ class _BorderContainerState extends State<_BorderContainer>
         ..value = 0.0
         ..forward();
     }
+    // 处理悬停颜色变化
     if (widget.hoverColor != oldWidget.hoverColor) {
       _hoverColorTween =
           ColorTween(begin: Colors.transparent, end: widget.hoverColor);
     }
+    // 处理悬停状态变化
     if (widget.isHovering != oldWidget.isHovering) {
       if (widget.isHovering) {
         _hoverColorController.forward();
@@ -285,32 +319,36 @@ class _BorderContainerState extends State<_BorderContainer>
   }
 }
 
-// Used to "shake" the floating label to the up and down
-// when the errorText first appears.
+/// 用于当 errorText 首次出现时，使浮动标签上下“摇晃”
 class _Shaker extends AnimatedWidget {
+  /// 创建一个 _Shaker
+  /// [animation] - 动画控制器
+  /// [child] - 要摇晃的子组件
   const _Shaker({
-    Key? key,
     required Animation<double> animation,
     this.child,
-  }) : super(key: key, listenable: animation);
+  }) : super(listenable: animation);
 
-  final Widget? child;
+  final Widget? child; // 要摇晃的子组件
 
+  /// 获取动画对象
   Animation<double> get animation => listenable as Animation<double>;
 
+  /// 计算 Y 轴方向的偏移量，实现摇晃效果
   double get translateY {
-    const shakeDelta = 4.0;
-    final t = animation.value;
+    const shakeDelta = 4.0; // 摇晃幅度
+    final t = animation.value; // 动画进度
     if (t <= 0.25) {
-      return -t * shakeDelta;
+      return -t * shakeDelta; // 向上移动
     } else if (t < 0.75) {
-      return (t - 0.5) * shakeDelta;
+      return (t - 0.5) * shakeDelta; // 向下移动
     } else {
-      return (1.0 - t) * 4.0 * shakeDelta;
+      return (1.0 - t) * 4.0 * shakeDelta; // 快速回到原位
     }
   }
 
   @override
+  /// 构建摇晃效果的组件
   Widget build(BuildContext context) {
     return Transform(
       transform: Matrix4.translationValues(0.0, translateY, 0.0),
@@ -319,10 +357,19 @@ class _Shaker extends AnimatedWidget {
   }
 }
 
-// Display the helper and error text. When the error text appears
-// it fades and the helper text fades out. The error text also
-// slides leftwards a little when it first appears.
+/// 显示辅助文本和错误文本。当错误文本出现时
+/// 它会淡入，而辅助文本会淡出。错误文本首次出现时还会
+/// 向左滑动一点
 class _HelperError extends StatefulWidget {
+  /// 创建一个 _HelperError
+  /// [textAlign] - 文本对齐方式
+  /// [helperText] - 辅助文本
+  /// [helperStyle] - 辅助文本样式
+  /// [helperMaxLines] - 辅助文本最大行数
+  /// [error] - 错误组件
+  /// [errorText] - 错误文本
+  /// [errorStyle] - 错误文本样式
+  /// [errorMaxLines] - 错误文本最大行数
   const _HelperError({
     this.textAlign,
     this.helperText,
@@ -334,14 +381,14 @@ class _HelperError extends StatefulWidget {
     this.errorMaxLines,
   });
 
-  final MongolTextAlign? textAlign;
-  final String? helperText;
-  final TextStyle? helperStyle;
-  final int? helperMaxLines;
-  final Widget? error;
-  final String? errorText;
-  final TextStyle? errorStyle;
-  final int? errorMaxLines;
+  final MongolTextAlign? textAlign; // 文本对齐方式
+  final String? helperText; // 辅助文本
+  final TextStyle? helperStyle; // 辅助文本样式
+  final int? helperMaxLines; // 辅助文本最大行数
+  final Widget? error; // 错误组件
+  final String? errorText; // 错误文本
+  final TextStyle? errorStyle; // 错误文本样式
+  final int? errorMaxLines; // 错误文本最大行数
 
   @override
   _HelperErrorState createState() => _HelperErrorState();
@@ -349,13 +396,12 @@ class _HelperError extends StatefulWidget {
 
 class _HelperErrorState extends State<_HelperError>
     with SingleTickerProviderStateMixin {
-  // If the width of this widget and the counter are zero ("empty") at
-  // layout time, no space is allocated for the subtext.
+  // 如果在布局时此 widget 和计数器的宽度为零（"空"），则不为子文本分配空间
   static const Widget empty = SizedBox();
 
-  late AnimationController _controller;
-  Widget? _helper;
-  Widget? _error;
+  late AnimationController _controller; // 动画控制器
+  Widget? _helper; // 辅助文本组件
+  Widget? _error; // 错误文本组件
 
   @override
   void initState() {
@@ -364,6 +410,7 @@ class _HelperErrorState extends State<_HelperError>
       duration: _kTransitionDuration,
       vsync: this,
     );
+    // 初始化显示错误文本或辅助文本
     if (widget.errorText != null) {
       _error = _buildError();
       _controller.value = 1.0;
@@ -379,9 +426,10 @@ class _HelperErrorState extends State<_HelperError>
     super.dispose();
   }
 
+  /// 处理动画值变化
   void _handleChange() {
     setState(() {
-      // The _controller's value has changed.
+      // _controller 的值已更改
     });
   }
 
@@ -394,30 +442,34 @@ class _HelperErrorState extends State<_HelperError>
     final oldErrorText = old.errorText;
     final oldHelperText = old.helperText;
 
+    // 检查错误文本状态是否变化
     final errorTextStateChanged =
         (newErrorText != null) != (oldErrorText != null);
+    // 检查辅助文本状态是否变化（仅当没有错误文本时）
     final helperTextStateChanged = newErrorText == null &&
         (newHelperText != null) != (oldHelperText != null);
 
+    // 根据状态变化处理动画
     if (errorTextStateChanged || helperTextStateChanged) {
       if (newErrorText != null) {
         _error = _buildError();
-        _controller.forward();
+        _controller.forward(); // 显示错误文本
       } else if (newHelperText != null) {
         _helper = _buildHelper();
-        _controller.reverse();
+        _controller.reverse(); // 显示辅助文本
       } else {
-        _controller.reverse();
+        _controller.reverse(); // 隐藏所有文本
       }
     }
   }
 
+  /// 构建辅助文本组件
   Widget _buildHelper() {
     assert(widget.helperText != null);
     return Semantics(
       container: true,
       child: Opacity(
-        opacity: 1.0 - _controller.value,
+        opacity: 1.0 - _controller.value, // 随动画逐渐显示/隐藏
         child: MongolText(
           widget.helperText!,
           style: widget.helperStyle,
@@ -429,17 +481,18 @@ class _HelperErrorState extends State<_HelperError>
     );
   }
 
+  /// 构建错误文本组件
   Widget _buildError() {
     assert(widget.errorText != null);
     return Semantics(
       container: true,
-      liveRegion: true,
+      liveRegion: true, // 使屏幕阅读器能够读取错误信息
       child: Opacity(
-        opacity: _controller.value,
+        opacity: _controller.value, // 随动画逐渐显示/隐藏
         child: FractionalTranslation(
           translation: Tween<Offset>(
-            begin: const Offset(-0.25, 0.0),
-            end: const Offset(0.0, 0.0),
+            begin: const Offset(-0.25, 0.0), // 起始位置（向左偏移）
+            end: const Offset(0.0, 0.0), // 结束位置（正常位置）
           ).evaluate(_controller.view),
           child: MongolText(
             widget.errorText!,
@@ -507,29 +560,58 @@ class _HelperErrorState extends State<_HelperError>
   }
 }
 
-// private getter to mirror the _x in the FloatingLabelAlignment source code
+/// 为 FloatingLabelAlignment 添加垂直方向的对齐值
+/// 类似于 FloatingLabelAlignment 源码中的 _x 属性
+/// 用于控制浮动标签的垂直位置
 extension MongolFloatingLabelAlignment on FloatingLabelAlignment {
+  /// 获取垂直方向的对齐值
+  /// start: -1.0（顶部）
+  /// center: 0.0（居中）
   double get _y => (this == FloatingLabelAlignment.start) ? -1.0 : 0.0;
 }
 
-// Identifies the children of a _RenderDecorationElement.
+/// 标识 _RenderDecorationElement 的子组件
+/// 用于在布局和绘制过程中引用不同的子组件
 enum _DecorationSlot {
-  icon,
-  input,
-  label,
-  hint,
-  prefix,
-  suffix,
-  prefixIcon,
-  suffixIcon,
-  helperError,
-  counter,
-  container,
+  icon, // 图标
+  input, // 输入框
+  label, // 标签
+  hint, // 提示文本
+  prefix, // 前缀
+  suffix, // 后缀
+  prefixIcon, // 前缀图标
+  suffixIcon, // 后缀图标
+  helperError, // 辅助/错误文本
+  counter, // 计数器
+  container, // 容器
 }
 
-// An analog of InputDecoration for the _Decorator widget.
+/// _Decorator 组件的 InputDecoration 类似物
+/// 用于存储输入框装饰相关的所有属性
 @immutable
 class _Decoration {
+  /// 创建一个 _Decoration
+  /// [contentPadding] - 内容内边距
+  /// [isCollapsed] - 是否折叠
+  /// [floatingLabelWidth] - 浮动标签宽度
+  /// [floatingLabelProgress] - 浮动标签动画进度
+  /// [floatingLabelAlignment] - 浮动标签对齐方式
+  /// [border] - 边框
+  /// [borderGap] - 边框间隙
+  /// [alignLabelWithHint] - 是否将标签与提示文本对齐
+  /// [isDense] - 是否使用紧凑布局
+  /// [visualDensity] - 视觉密度
+  /// [icon] - 图标
+  /// [input] - 输入框
+  /// [label] - 标签
+  /// [hint] - 提示文本
+  /// [prefix] - 前缀
+  /// [suffix] - 后缀
+  /// [prefixIcon] - 前缀图标
+  /// [suffixIcon] - 后缀图标
+  /// [helperError] - 辅助/错误文本
+  /// [counter] - 计数器
+  /// [container] - 容器
   const _Decoration({
     required this.contentPadding,
     required this.isCollapsed,
@@ -554,27 +636,27 @@ class _Decoration {
     this.container,
   });
 
-  final EdgeInsetsGeometry contentPadding;
-  final bool isCollapsed;
-  final double floatingLabelWidth;
-  final double floatingLabelProgress;
-  final FloatingLabelAlignment floatingLabelAlignment;
-  final InputBorder? border;
-  final _InputBorderGap? borderGap;
-  final bool alignLabelWithHint;
-  final bool? isDense;
-  final VisualDensity? visualDensity;
-  final Widget? icon;
-  final Widget? input;
-  final Widget? label;
-  final Widget? hint;
-  final Widget? prefix;
-  final Widget? suffix;
-  final Widget? prefixIcon;
-  final Widget? suffixIcon;
-  final Widget? helperError;
-  final Widget? counter;
-  final Widget? container;
+  final EdgeInsetsGeometry contentPadding; // 内容内边距
+  final bool isCollapsed; // 是否折叠
+  final double floatingLabelWidth; // 浮动标签宽度
+  final double floatingLabelProgress; // 浮动标签动画进度
+  final FloatingLabelAlignment floatingLabelAlignment; // 浮动标签对齐方式
+  final InputBorder? border; // 边框
+  final _InputBorderGap? borderGap; // 边框间隙
+  final bool alignLabelWithHint; // 是否将标签与提示文本对齐
+  final bool? isDense; // 是否使用紧凑布局
+  final VisualDensity? visualDensity; // 视觉密度
+  final Widget? icon; // 图标
+  final Widget? input; // 输入框
+  final Widget? label; // 标签
+  final Widget? hint; // 提示文本
+  final Widget? prefix; // 前缀
+  final Widget? suffix; // 后缀
+  final Widget? prefixIcon; // 前缀图标
+  final Widget? suffixIcon; // 后缀图标
+  final Widget? helperError; // 辅助/错误文本
+  final Widget? counter; // 计数器
+  final Widget? container; // 容器
 
   @override
   bool operator ==(Object other) {
@@ -633,10 +715,17 @@ class _Decoration {
       );
 }
 
-// A container for the layout values computed by _RenderDecoration._layout.
-// These values are used by _RenderDecoration.performLayout to position
-// all of the renderer children of a _RenderDecoration.
+/// 存储 _RenderDecoration._layout 计算的布局值的容器
+/// 这些值被 _RenderDecoration.performLayout 用于定位
+/// _RenderDecoration 的所有渲染子项
 class _RenderDecorationLayout {
+  /// 创建一个 _RenderDecorationLayout
+  /// [boxToBaseline] - 存储每个渲染框与其基线偏移的映射
+  /// [inputBaseline] - 输入框的基线位置
+  /// [outlineBaseline] - 轮廓边框的基线位置
+  /// [subtextBaseline] - 子文本（辅助/错误/计数器）的基线位置
+  /// [containerWidth] - 容器宽度
+  /// [subtextWidth] - 子文本宽度
   const _RenderDecorationLayout({
     required this.boxToBaseline,
     required this.inputBaseline,
@@ -646,17 +735,24 @@ class _RenderDecorationLayout {
     required this.subtextWidth,
   });
 
-  final Map<RenderBox?, double> boxToBaseline;
-  final double inputBaseline;
-  final double outlineBaseline;
-  final double subtextBaseline; // helper/error counter
-  final double containerWidth;
-  final double subtextWidth;
+  final Map<RenderBox?, double> boxToBaseline; // 存储每个渲染框与其基线偏移的映射
+  final double inputBaseline; // 输入框的基线位置
+  final double outlineBaseline; // 轮廓边框的基线位置
+  final double subtextBaseline; // 子文本（辅助/错误/计数器）的基线位置
+  final double containerWidth; // 容器宽度
+  final double subtextWidth; // 子文本宽度
 }
 
-// The workhorse: layout and paint a _Decorator widget's _Decoration.
+/// 核心类：负责布局和绘制 _Decorator 组件的 _Decoration
 class _RenderDecoration extends RenderBox
     with SlottedContainerRenderObjectMixin<_DecorationSlot, RenderBox> {
+  /// 创建一个 _RenderDecoration
+  /// [decoration] - 装饰信息
+  /// [textBaseline] - 文本基线
+  /// [isFocused] - 是否聚焦
+  /// [expands] - 是否展开
+  /// [isEmpty] - 是否为空
+  /// [textAlignHorizontal] - 水平文本对齐方式
   _RenderDecoration({
     required _Decoration decoration,
     required TextBaseline textBaseline,
@@ -671,31 +767,42 @@ class _RenderDecoration extends RenderBox
         _expands = expands,
         _isEmpty = isEmpty;
 
-  static const double subtextGap = 8.0;
+  static const double subtextGap = 8.0; // 子文本（辅助/错误/计数器）之间的间隙
 
+  /// 获取图标子组件
   RenderBox? get icon => childForSlot(_DecorationSlot.icon);
 
+  /// 获取输入框子组件
   RenderBox? get input => childForSlot(_DecorationSlot.input);
 
+  /// 获取标签子组件
   RenderBox? get label => childForSlot(_DecorationSlot.label);
 
+  /// 获取提示文本子组件
   RenderBox? get hint => childForSlot(_DecorationSlot.hint);
 
+  /// 获取前缀子组件
   RenderBox? get prefix => childForSlot(_DecorationSlot.prefix);
 
+  /// 获取后缀子组件
   RenderBox? get suffix => childForSlot(_DecorationSlot.suffix);
 
+  /// 获取前缀图标子组件
   RenderBox? get prefixIcon => childForSlot(_DecorationSlot.prefixIcon);
 
+  /// 获取后缀图标子组件
   RenderBox? get suffixIcon => childForSlot(_DecorationSlot.suffixIcon);
 
+  /// 获取辅助/错误文本子组件
   RenderBox? get helperError => childForSlot(_DecorationSlot.helperError);
 
+  /// 获取计数器子组件
   RenderBox? get counter => childForSlot(_DecorationSlot.counter);
 
+  /// 获取容器子组件
   RenderBox? get container => childForSlot(_DecorationSlot.container);
 
-  // The returned list is ordered for hit testing.
+  /// 返回用于命中测试的子组件列表（按顺序）
   @override
   Iterable<RenderBox> get children {
     return <RenderBox>[
@@ -713,9 +820,11 @@ class _RenderDecoration extends RenderBox
     ];
   }
 
+  /// 获取装饰信息
   _Decoration get decoration => _decoration;
-  _Decoration _decoration;
+  _Decoration _decoration; // 装饰信息
 
+  /// 设置装饰信息
   set decoration(_Decoration value) {
     if (_decoration == value) {
       return;
@@ -724,9 +833,11 @@ class _RenderDecoration extends RenderBox
     markNeedsLayout();
   }
 
+  /// 获取文本基线
   TextBaseline get textBaseline => _textBaseline;
-  TextBaseline _textBaseline;
+  TextBaseline _textBaseline; // 文本基线
 
+  /// 设置文本基线
   set textBaseline(TextBaseline value) {
     if (_textBaseline == value) {
       return;
@@ -735,18 +846,22 @@ class _RenderDecoration extends RenderBox
     markNeedsLayout();
   }
 
+  /// 获取默认的水平文本对齐方式
+  /// 当使用轮廓边框时居中对齐，否则左对齐
   TextAlignHorizontal get _defaultTextAlignHorizontal =>
       _isOutlineAligned ? TextAlignHorizontal.center : TextAlignHorizontal.left;
 
+  /// 获取水平文本对齐方式
   TextAlignHorizontal? get textAlignHorizontal =>
       _textAlignHorizontal ?? _defaultTextAlignHorizontal;
-  TextAlignHorizontal? _textAlignHorizontal;
+  TextAlignHorizontal? _textAlignHorizontal; // 水平文本对齐方式
 
+  /// 设置水平文本对齐方式
   set textAlignHorizontal(TextAlignHorizontal? value) {
     if (_textAlignHorizontal == value) {
       return;
     }
-    // No need to relayout if the effective value is still the same.
+    // 如果有效值仍然相同，则不需要重新布局
     if (textAlignHorizontal!.x == (value?.x ?? _defaultTextAlignHorizontal.x)) {
       _textAlignHorizontal = value;
       return;
@@ -755,9 +870,11 @@ class _RenderDecoration extends RenderBox
     markNeedsLayout();
   }
 
+  /// 获取是否聚焦
   bool get isFocused => _isFocused;
-  bool _isFocused;
+  bool _isFocused; // 是否聚焦
 
+  /// 设置是否聚焦
   set isFocused(bool value) {
     if (_isFocused == value) {
       return;
@@ -766,9 +883,11 @@ class _RenderDecoration extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
+  /// 获取是否展开
   bool get expands => _expands;
-  bool _expands = false;
+  bool _expands = false; // 是否展开
 
+  /// 设置是否展开
   set expands(bool value) {
     if (_expands == value) {
       return;
@@ -777,9 +896,11 @@ class _RenderDecoration extends RenderBox
     markNeedsLayout();
   }
 
+  /// 获取是否为空
   bool get isEmpty => _isEmpty;
-  bool _isEmpty = false;
+  bool _isEmpty = false; // 是否为空
 
+  /// 设置是否为空
   set isEmpty(bool value) {
     if (_isEmpty == value) {
       return;
@@ -788,13 +909,13 @@ class _RenderDecoration extends RenderBox
     markNeedsLayout();
   }
 
-  // Indicates that the decoration should be aligned to accommodate an outline
-  // border.
+  /// 指示装饰是否应对齐以适应轮廓边框
   bool get _isOutlineAligned {
     return !decoration.isCollapsed && decoration.border!.isOutline;
   }
 
   @override
+  /// 访问语义子节点
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     if (icon != null) {
       visitor(icon!);
@@ -838,39 +959,44 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+  /// 布局是否由父节点决定
   bool get sizedByParent => false;
 
+  /// 获取渲染框的最小高度
   static double _minHeight(RenderBox? box, double width) {
     return box == null ? 0.0 : box.getMinIntrinsicHeight(width);
   }
 
+  /// 获取渲染框的最大高度
   static double _maxHeight(RenderBox? box, double width) {
     return box == null ? 0.0 : box.getMaxIntrinsicHeight(width);
   }
 
+  /// 获取渲染框的最小宽度
   static double _minWidth(RenderBox? box, double height) {
     return box == null ? 0.0 : box.getMinIntrinsicWidth(height);
   }
 
+  /// 获取渲染框的大小
   static Size _boxSize(RenderBox? box) => box == null ? Size.zero : box.size;
 
+  /// 获取渲染框的父数据
   static BoxParentData _boxParentData(RenderBox box) =>
       box.parentData! as BoxParentData;
 
+  /// 获取内容内边距
   EdgeInsets get contentPadding => decoration.contentPadding as EdgeInsets;
 
-  // Lay out the given box if needed, and return its baseline.
+  /// 布局给定的渲染框（如果需要），并返回其基线
   double _layoutLineBox(RenderBox? box, BoxConstraints constraints) {
     if (box == null) {
       return 0.0;
     }
     box.layout(constraints, parentUsesSize: true);
-    // Since internally, all layout is performed against the alphabetic baseline,
-    // (eg, ascents/descents are all relative to alphabetic, even if the font is
-    // an ideographic or hanging font), we should always obtain the reference
-    // baseline from the alphabetic baseline. The ideographic baseline is for
-    // use post-layout and is derived from the alphabetic baseline combined with
-    // the font metrics.
+    // 由于内部所有布局都是相对于字母基线执行的，
+    // （例如，上升/下降都相对于字母基线，即使字体是表意文字或悬挂字体），
+    // 我们应该始终从字母基线获取参考基线。表意文字基线用于
+    // 布局后，是从字母基线结合字体度量派生的。
     final double baseline = box.getDistanceToBaseline(TextBaseline.alphabetic)!;
 
     assert(() {
@@ -879,41 +1005,39 @@ class _RenderDecoration extends RenderBox
       }
       throw FlutterError.fromParts(<DiagnosticsNode>[
         ErrorSummary(
-            "One of MongolInputDecorator's children reported a negative baseline offset."),
+            "MongolInputDecorator 的一个子项报告了负基线偏移。"),
         ErrorDescription(
-          '${box.runtimeType}, of size ${box.size}, reported a negative '
-          'alphabetic baseline of $baseline.',
+          '${box.runtimeType}，大小为 ${box.size}，报告了负的 '
+          '字母基线 $baseline。',
         ),
       ]);
     }());
     return baseline;
   }
 
+  /// 获取空列的宽度
+  /// 这等于一个垂直列的前进量
   double _emptyColumnWidth(RenderBox input) {
-    // This equals one vertical column advance
     return input.getMaxIntrinsicHeight(double.infinity);
   }
 
-  // Returns a value used by performLayout to position all of the renderers.
-  // This method applies layout to all of the renderers except the container.
-  // For convenience, the container is laid out in performLayout().
+  /// 返回 performLayout 用于定位所有渲染器的值
+  /// 此方法对除容器之外的所有渲染器应用布局
+  /// 为方便起见，容器在 performLayout() 中布局
   _RenderDecorationLayout _layout(BoxConstraints layoutConstraints) {
     assert(
       layoutConstraints.maxHeight < double.infinity,
-      'A MongolInputDecorator, which is typically created by a MongolTextField, cannot '
-      'have an unbounded height.\n'
-      'This happens when the parent widget does not provide a finite height '
-      'constraint. For example, if the MongolInputDecorator is contained by a Column, '
-      'then its height must be constrained. An Expanded widget or a SizedBox '
-      'can be used to constrain the height of the MongolInputDecorator or the '
-      'MongolTextField that contains it.',
+      'MongolInputDecorator（通常由 MongolTextField 创建）不能有无限高度。\n'
+      '当父组件没有提供有限的高度约束时会发生这种情况。例如，如果 MongolInputDecorator 包含在 Column 中，\n'
+      '则其高度必须受到约束。可以使用 Expanded 组件或 SizedBox\n'
+      '来约束 MongolInputDecorator 或包含它的 MongolTextField 的高度。',
     );
 
-    // Margin on each side of subtext (counter and helperError)
+    // 子文本（计数器和辅助/错误文本）每侧的边距
     final Map<RenderBox?, double> boxToBaseline = <RenderBox?, double>{};
     final BoxConstraints boxConstraints = layoutConstraints.loosen();
 
-    // Layout all the widgets used by MongolInputDecorator
+    // 布局 MongolInputDecorator 使用的所有组件
     boxToBaseline[icon] = _layoutLineBox(icon, boxConstraints);
     final BoxConstraints containerConstraints = boxConstraints.copyWith(
       maxHeight: boxConstraints.maxHeight - _boxSize(icon).height,
@@ -928,6 +1052,7 @@ class _RenderDecoration extends RenderBox
     boxToBaseline[prefix] = _layoutLineBox(prefix, contentConstraints);
     boxToBaseline[suffix] = _layoutLineBox(suffix, contentConstraints);
 
+    // 计算输入框高度
     final double inputHeight = math.max(
       0.0,
       constraints.maxHeight -
@@ -939,7 +1064,7 @@ class _RenderDecoration extends RenderBox
               _boxSize(suffixIcon).height +
               contentPadding.bottom),
     );
-    // Increase the available height for the label when it is scaled down.
+    // 当标签缩小时，增加可用高度
     final double invertedLabelScale = lerpDouble(
         1.00, 1 / _kFinalLabelScale, decoration.floatingLabelProgress)!;
     double suffixIconHeight = _boxSize(suffixIcon).height;
@@ -947,6 +1072,7 @@ class _RenderDecoration extends RenderBox
       suffixIconHeight =
           lerpDouble(suffixIconHeight, 0.0, decoration.floatingLabelProgress)!;
     }
+    // 计算标签高度
     final double labelHeight = math.max(
       0.0,
       constraints.maxHeight -
@@ -962,8 +1088,7 @@ class _RenderDecoration extends RenderBox
     );
     boxToBaseline[counter] = _layoutLineBox(counter, contentConstraints);
 
-    // The helper or error text can occupy the full height less the space
-    // occupied by the icon and counter.
+    // 辅助或错误文本可以占据除图标和计数器占用空间之外的全部高度
     boxToBaseline[helperError] = _layoutLineBox(
       helperError,
       contentConstraints.copyWith(
@@ -972,8 +1097,7 @@ class _RenderDecoration extends RenderBox
       ),
     );
 
-    // The width of the input needs to accommodate label to the left and counter and
-    // helperError to the right, when they exist.
+    // 输入框的宽度需要容纳左侧的标签和右侧的计数器及辅助/错误文本（如果存在）
     final double labelWidth = label == null ? 0 : decoration.floatingLabelWidth;
     final double leftWidth = decoration.border!.isOutline
         ? math.max(labelWidth - boxToBaseline[label]!, 0)
@@ -990,6 +1114,7 @@ class _RenderDecoration extends RenderBox
     );
     final Offset densityOffset = decoration.visualDensity!.baseSizeAdjustment;
 
+    // 布局提示文本
     boxToBaseline[hint] = _layoutLineBox(
       hint,
       boxConstraints
@@ -1003,6 +1128,7 @@ class _RenderDecoration extends RenderBox
           ),
     );
 
+    // 布局输入框
     boxToBaseline[input] = _layoutLineBox(
       input,
       boxConstraints
@@ -1016,7 +1142,7 @@ class _RenderDecoration extends RenderBox
           ),
     );
 
-    // The field can be occupied by a hint or by the input itself
+    // 字段可以被提示文本或输入框本身占用
     final double hintWidth = hint == null ? 0 : hint!.size.width;
     final double inputDirectWidth = input == null ? 0 : input!.size.width;
 
@@ -1031,8 +1157,7 @@ class _RenderDecoration extends RenderBox
       boxToBaseline[hint]!,
     );
 
-    // Calculate the amount that prefix/suffix affects height above and below
-    // the input.
+    // 计算前缀/后缀对输入框上下高度的影响
     final double prefixWidth = prefix?.size.width ?? 0;
     final double suffixWidth = suffix?.size.width ?? 0;
     final double fixWidth = math.max(
@@ -1049,7 +1174,7 @@ class _RenderDecoration extends RenderBox
       fixRightOfBaseline - (inputWidth - inputInternalBaseline),
     );
 
-    // Calculate the width of the input text container.
+    // 计算输入文本容器的宽度
     final double prefixIconWidth =
         prefixIcon == null ? 0 : prefixIcon!.size.width;
     final double suffixIconWidth =
@@ -1075,27 +1200,23 @@ class _RenderDecoration extends RenderBox
         : math.min(
             math.max(contentWidth, minContainerWidth), maxContainerWidth);
 
-    // Ensure the text is horizontally centered in cases where the content is
-    // shorter than kMinInteractiveDimension.
+    // 确保在内容短于 kMinInteractiveDimension 的情况下文本水平居中
     final double interactiveAdjustment = minContainerWidth > contentWidth
         ? (minContainerWidth - contentWidth) / 2.0
         : 0.0;
 
-    // Try to consider the prefix/suffix as part of the text when aligning it.
-    // If the prefix/suffix overflows however, allow it to extend outside of the
-    // input and align the remaining part of the text and prefix/suffix.
+    // 尝试在对齐时将前缀/后缀视为文本的一部分
+    // 但是，如果前缀/后缀溢出，允许其延伸到输入框外部，并对齐文本和前缀/后缀的其余部分
     final double overflow = math.max(0, contentWidth - maxContainerWidth);
-    // Map textAlignHorizontal from -1:1 to 0:1 so that it can be used to scale
-    // the baseline from its minimum to maximum values.
+    // 将 textAlignHorizontal 从 -1:1 映射到 0:1，以便可以用于将基线从最小值缩放到最大值
     final double textAlignHorizontalFactor =
         (textAlignHorizontal!.x + 1.0) / 2.0;
-    // Adjust to try to fit left overflow inside the input on an inverse scale of
-    // textAlignHorizontal, so that left aligned text adjusts the most and right
-    // aligned text doesn't adjust at all.
+    // 调整以尝试在 textAlignHorizontal 的反向上适应输入框内的左侧溢出，
+    // 以便左对齐文本调整最多，右对齐文本完全不调整
     final double baselineAdjustment =
         fixLeftOfInput - overflow * (1 - textAlignHorizontalFactor);
 
-    // The baselines that will be used to draw the actual input text content.
+    // 将用于绘制实际输入文本内容的基线
     final double leftInputBaseline = contentPadding.left +
         leftWidth +
         inputInternalBaseline +
@@ -1110,16 +1231,14 @@ class _RenderDecoration extends RenderBox
     final double inputBaseline =
         leftInputBaseline + textAlignHorizontalOffset + densityOffset.dx / 2.0;
 
-    // The three main alignments for the baseline when an outline is present are
+    // 当存在轮廓时，基线的三个主要对齐方式是：
     //
-    //  * left (-1.0): leftmost point considering padding.
-    //  * center (0.0): the absolute center of the input ignoring padding but
-    //      accommodating the border and floating label.
-    //  * right (1.0): rightmost point considering padding.
+    //  * left (-1.0)：考虑内边距的最左侧点
+    //  * center (0.0)：输入框的绝对中心，忽略内边距但适应边框和浮动标签
+    //  * right (1.0)：考虑内边距的最右侧点
     //
-    // That means that if the padding is uneven, center is not the exact
-    // midpoint of left and right. To account for this, the left of center and
-    // right of center alignments are interpolated independently.
+    // 这意味着如果内边距不均匀，中心不是左右的精确中点
+    // 为了解决这个问题，中心左侧和右侧的对齐是独立插值的
     final double outlineCenterBaseline = inputInternalBaseline +
         baselineAdjustment / 2.0 +
         (containerWidth - (2.0 + inputWidth)) / 2.0;
@@ -1132,7 +1251,7 @@ class _RenderDecoration extends RenderBox
       textAlignHorizontal!,
     );
 
-    // Find the positions of the text below the input when it exists.
+    // 找到输入框下方文本的位置（如果存在）
     double subtextCounterBaseline = 0;
     double subtextHelperBaseline = 0;
     double subtextCounterWidth = 0;
@@ -1166,23 +1285,19 @@ class _RenderDecoration extends RenderBox
     );
   }
 
-  // Interpolate between three stops using textAlignHorizontal. This is used to
-  // calculate the outline baseline, which ignores padding when the alignment is
-  // middle. When the alignment is less than zero, it interpolates between the
-  // centered text box's left and the left of the content padding. When the
-  // alignment is greater than zero, it interpolates between the centered box's
-  // left and the position that would align the right of the box with the right
-  // padding.
+  /// 使用 textAlignHorizontal 在三个停止点之间进行插值
+  /// 这用于计算轮廓基线，当对齐方式为中间时忽略内边距
+  /// 当对齐方式小于零时，在居中文本框的左侧和内容内边距的左侧之间进行插值
+  /// 当对齐方式大于零时，在居中框的左侧和使框的右侧与右侧内边距对齐的位置之间进行插值
   double _interpolateThree(double begin, double middle, double end,
       TextAlignHorizontal textAlignHorizontal) {
     if (textAlignHorizontal.x <= 0) {
-      // It's possible for begin, middle, and end to not be in order because of
-      // excessive padding. Those cases are handled by using middle.
+      // 由于过度内边距，begin、middle 和 end 可能不按顺序排列
+      // 这些情况通过使用 middle 来处理
       if (begin >= middle) {
         return middle;
       }
-      // Do a standard linear interpolation on the first half, between begin and
-      // middle.
+      // 在第一半（begin 和 middle 之间）进行标准线性插值
       final double t = textAlignHorizontal.x + 1;
       return begin + (middle - begin) * t;
     }
@@ -1190,13 +1305,13 @@ class _RenderDecoration extends RenderBox
     if (middle >= end) {
       return middle;
     }
-    // Do a standard linear interpolation on the second half, between middle and
-    // end.
+    // 在第二半（middle 和 end 之间）进行标准线性插值
     final double t = textAlignHorizontal.x;
     return middle + (end - middle) * t;
   }
 
   @override
+  /// 计算最小内在高度
   double computeMinIntrinsicHeight(double width) {
     return _minHeight(icon, width) +
         contentPadding.top +
@@ -1209,6 +1324,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+  /// 计算最大内在高度
   double computeMaxIntrinsicHeight(double width) {
     return _maxHeight(icon, width) +
         contentPadding.top +
@@ -1220,6 +1336,7 @@ class _RenderDecoration extends RenderBox
         contentPadding.bottom;
   }
 
+  /// 计算给定高度下，多个渲染框的最大宽度
   double _lineWidth(double height, List<RenderBox?> boxes) {
     double width = 0.0;
     for (final RenderBox? box in boxes) {
@@ -1232,6 +1349,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+  /// 计算最小内在宽度
   double computeMinIntrinsicWidth(double height) {
     final double iconWidth = _minWidth(icon, height);
     final double iconHeight = _minHeight(icon, iconWidth);
@@ -1294,29 +1412,36 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+  /// 计算最大内在宽度
+  /// 对于输入装饰器，最大内在宽度与最小内在宽度相同
   double computeMaxIntrinsicWidth(double height) {
     return computeMinIntrinsicWidth(height);
   }
 
   @override
+  /// 计算到实际基线的距离
   double computeDistanceToActualBaseline(TextBaseline baseline) {
     return _boxParentData(input!).offset.dx +
         input!.computeDistanceToActualBaseline(baseline)!;
   }
 
-  // Records where the label was painted.
+  // 记录标签绘制的位置
   Matrix4? _labelTransform;
 
   @override
+  /// 计算干布局大小
+  /// 由于布局需要基线度量，而基线度量只有在完整布局后才能获得，
+  /// 因此此方法返回 Size.zero
   Size computeDryLayout(BoxConstraints constraints) {
     assert(debugCannotComputeDryLayout(
       reason:
-          'Layout requires baseline metrics, which are only available after a full layout.',
+          '布局需要基线度量，而基线度量只有在完整布局后才能获得。',
     ));
     return Size.zero;
   }
 
   @override
+  /// 执行布局
   void performLayout() {
     final BoxConstraints constraints = this.constraints;
     _labelTransform = null;
@@ -1336,12 +1461,14 @@ class _RenderDecoration extends RenderBox
     }
 
     double? width;
+    // 居中布局函数
     double centerLayout(RenderBox box, double y) {
       _boxParentData(box).offset = Offset((width! - box.size.width) / 2.0, y);
       return box.size.height;
     }
 
     double? baseline;
+    // 基线布局函数
     double baselineLayout(RenderBox box, double y) {
       _boxParentData(box).offset =
           Offset(baseline! - layout.boxToBaseline[box]!, y);
@@ -1376,16 +1503,16 @@ class _RenderDecoration extends RenderBox
     if (prefix != null) {
       start += baselineLayout(prefix!, start);
     }
-    // When hint text is shown (field is empty), position input to match hint's position
-    // so the cursor aligns correctly with the hint text
+    // 当显示提示文本（字段为空）时，定位输入框以匹配提示的位置
+    // 以便光标与提示文本正确对齐
     if (input != null && hint != null && isEmpty) {
-      // Position hint first to get its horizontal offset
+      // 首先定位提示以获取其水平偏移
       final double hintHorizontalOffset =
           baseline - layout.boxToBaseline[hint]!;
       _boxParentData(hint!).offset = Offset(hintHorizontalOffset, start);
-      // Position input at the same horizontal offset as hint
+      // 将输入框定位在与提示相同的水平偏移处
       _boxParentData(input!).offset = Offset(hintHorizontalOffset, start);
-      // Don't advance start since both are at the same position
+      // 不推进 start，因为两者都在同一位置
     } else {
       if (input != null) {
         baselineLayout(input!, start);
@@ -1415,15 +1542,13 @@ class _RenderDecoration extends RenderBox
 
     if (label != null) {
       final double labelY = _boxParentData(label!).offset.dy;
-      // +1 shifts the range of y from (-1.0, 1.0) to (0.0, 2.0).
+      // +1 将 y 的范围从 (-1.0, 1.0) 移到 (0.0, 2.0)
       final double floatAlign = decoration.floatingLabelAlignment._y + 1;
       final double floatHeight = _boxSize(label).height * _kFinalLabelScale;
-      // When floating label is centered, its y is relative to
-      // _BorderContainer's y and is independent of label's y.
+      // 当浮动标签居中时，其 y 相对于 _BorderContainer 的 y，与标签的 y 无关
 
-      // The value of _InputBorderGap.start is relative to the origin of the
-      // _BorderContainer which is inset by the icon's height. Although, when
-      // floating label is centered, it's already relative to _BorderContainer.
+      // _InputBorderGap.start 的值相对于 _BorderContainer 的原点，该原点由图标的高度偏移
+      // 虽然，当浮动标签居中时，它已经相对于 _BorderContainer
       decoration.borderGap!.start = lerpDouble(labelY - _boxSize(icon).height,
           _boxSize(container).height / 2.0 - floatHeight / 2.0, floatAlign);
 
@@ -1438,11 +1563,13 @@ class _RenderDecoration extends RenderBox
     assert(size.height == constraints.constrainHeight(overallHeight));
   }
 
+  /// 绘制标签
   void _paintLabel(PaintingContext context, Offset offset) {
     context.paintChild(label!, offset);
   }
 
   @override
+  /// 绘制装饰器
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
       if (child != null) {
@@ -1504,12 +1631,15 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+  /// 自身命中测试
+  /// 始终返回 true，表示装饰器区域内的任何位置都被视为命中
   bool hitTestSelf(Offset position) => true;
 
   @override
+  /// 子组件命中测试
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     for (final RenderBox child in children) {
-      // The label must be handled specially since we've transformed it.
+      // 标签必须特殊处理，因为我们已经对其进行了变换
       final Offset offset = _boxParentData(child).offset;
       final bool isHit = result.addWithPaintOffset(
         offset: offset,
@@ -1527,7 +1657,9 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+  /// 应用绘制变换
   void applyPaintTransform(RenderObject child, Matrix4 transform) {
+    // 对标签应用特殊变换
     if (child == label && _labelTransform != null) {
       final Offset labelOffset = _boxParentData(label!).offset;
       transform
@@ -1538,8 +1670,16 @@ class _RenderDecoration extends RenderBox
   }
 }
 
+/// 装饰器组件，用于创建和管理 _RenderDecoration
 class _Decorator
     extends SlottedMultiChildRenderObjectWidget<_DecorationSlot, RenderBox> {
+  /// 创建一个 _Decorator
+  /// [textAlignHorizontal] - 水平文本对齐方式
+  /// [decoration] - 装饰信息
+  /// [textBaseline] - 文本基线
+  /// [isFocused] - 是否聚焦
+  /// [expands] - 是否展开
+  /// [isEmpty] - 是否为空
   const _Decorator({
     required this.textAlignHorizontal,
     required this.decoration,
@@ -1549,17 +1689,19 @@ class _Decorator
     required this.isEmpty,
   });
 
-  final _Decoration decoration;
-  final TextBaseline textBaseline;
-  final TextAlignHorizontal? textAlignHorizontal;
-  final bool isFocused;
-  final bool expands;
-  final bool isEmpty;
+  final _Decoration decoration; // 装饰信息
+  final TextBaseline textBaseline; // 文本基线
+  final TextAlignHorizontal? textAlignHorizontal; // 水平文本对齐方式
+  final bool isFocused; // 是否聚焦
+  final bool expands; // 是否展开
+  final bool isEmpty; // 是否为空
 
   @override
+  /// 获取所有插槽
   Iterable<_DecorationSlot> get slots => _DecorationSlot.values;
 
   @override
+  /// 根据插槽获取子组件
   Widget? childForSlot(_DecorationSlot slot) {
     switch (slot) {
       case _DecorationSlot.icon:
@@ -1588,6 +1730,7 @@ class _Decorator
   }
 
   @override
+  /// 创建渲染对象
   _RenderDecoration createRenderObject(BuildContext context) {
     return _RenderDecoration(
       decoration: decoration,
@@ -1600,6 +1743,7 @@ class _Decorator
   }
 
   @override
+  /// 更新渲染对象
   void updateRenderObject(
       BuildContext context, _RenderDecoration renderObject) {
     renderObject
@@ -1612,6 +1756,7 @@ class _Decorator
   }
 }
 
+/// 用于显示前缀和后缀文本的 widget。
 class _AffixText extends StatelessWidget {
   const _AffixText({
     required this.labelIsFloating,
@@ -1622,12 +1767,12 @@ class _AffixText extends StatelessWidget {
     required this.semanticsTag,
   });
 
-  final bool labelIsFloating;
-  final String? text;
-  final TextStyle? style;
-  final Widget? child;
-  final SemanticsSortKey? semanticsSortKey;
-  final SemanticsTag semanticsTag;
+  final bool labelIsFloating; // 标签是否浮动
+  final String? text; // 显示的文本
+  final TextStyle? style; // 文本样式
+  final Widget? child; // 子 widget
+  final SemanticsSortKey? semanticsSortKey; // 语义排序键
+  final SemanticsTag semanticsTag; // 语义标签
 
   @override
   Widget build(BuildContext context) {

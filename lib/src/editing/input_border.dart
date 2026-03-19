@@ -18,46 +18,38 @@ import 'package:flutter/material.dart'
         EdgeInsets,
         ShapeBorder;
 
-/// Draws a vertical line at the right side of a [MongolInputDecorator]'s
-/// container and defines the container's shape.
+/// 为 [MongolInputDecorator] 的容器右侧绘制一条垂直线，并定义容器的形状。
 ///
-/// The input decorator's "container" is the optionally filled area to the left
-/// of the decorator's helper, error, and counter.
+/// 输入装饰器的"容器"是装饰器的辅助文本、错误文本和计数器左侧的可选填充区域。
 ///
-/// See also:
+/// 另请参见：
 ///
-///  * [OutlineInputBorder], an [InputDecorator] border which draws a
-///    rounded rectangle around the input decorator's container.
-///  * [InputDecoration], which is used to configure a
-///    [MongolInputDecorator].
+///  * [OutlineInputBorder]，一个 [InputDecorator] 边框，它在输入装饰器的容器周围绘制一个
+///    圆角矩形。
+///  * [InputDecoration]，用于配置 [MongolInputDecorator]。
 class SidelineInputBorder extends InputBorder {
-  /// Creates a single line border on the right for a [MongolInputDecorator].
+  /// 为 [MongolInputDecorator] 创建右侧的单线条边框。
   ///
-  /// The [borderSide] parameter defaults to [BorderSide.none] (it must not be
-  /// null). Applications typically do not specify a [borderSide] parameter
-  /// because the input decorator substitutes its own, using [copyWith], based
-  /// on the current theme and [MongolInputDecorator.isFocused].
+  /// [borderSide] 参数默认为 [BorderSide.none]（不能为空）。应用程序通常不指定
+  /// [borderSide] 参数，因为输入装饰器会根据当前主题和 [MongolInputDecorator.isFocused]
+  /// 使用 [copyWith] 替换自己的边框。
   ///
-  /// The [borderRadius] parameter defaults to a value where the top and
-  /// bottom left corners have a circular radius of 4.0. The [borderRadius]
-  /// parameter must not be null.
+  /// [borderRadius] 参数默认为左上角和左下角具有 4.0 圆形半径的值。
+  /// [borderRadius] 参数不能为空。
   const SidelineInputBorder({
-    BorderSide borderSide = const BorderSide(),
+    super.borderSide = const BorderSide(),
     this.borderRadius = const BorderRadius.only(
       topLeft: Radius.circular(4.0),
       bottomLeft: Radius.circular(4.0),
     ),
-  }) : super(borderSide: borderSide);
+  });
 
-  /// The radii of the border's rounded rectangle corners.
+  /// 边框圆角矩形角的半径。
   ///
-  /// When this border is used with a filled input decorator, see
-  /// [InputDecoration.filled], the border radius defines the shape
-  /// of the background fill as well as the top and bottom right
-  /// edges of the sideline itself.
+  /// 当此边框与填充的输入装饰器一起使用时，参见 [InputDecoration.filled]，
+  /// 边框半径定义背景填充的形状以及边线本身的右上和右下边缘。
   ///
-  /// By default the top and bottom left corners have a circular radius
-  /// of 4.0.
+  /// 默认情况下，左上角和左下角的圆形半径为 4.0。
   final BorderRadius borderRadius;
 
   @override
@@ -116,9 +108,9 @@ class SidelineInputBorder extends InputBorder {
     return super.lerpTo(b, t);
   }
 
-  /// Draw a vertical line at the right side of [rect].
+  /// 在 [rect] 的右侧绘制一条垂直线。
   ///
-  /// The [borderSide] defines the line's color and weight.
+  /// [borderSide] 定义线条的颜色和粗细。
   @override
   void paint(
     Canvas canvas,
@@ -146,46 +138,39 @@ class SidelineInputBorder extends InputBorder {
   int get hashCode => borderSide.hashCode;
 }
 
-/// Draws a rounded rectangle around a [MongolInputDecorator]'s container.
+/// 在 [MongolInputDecorator] 的容器周围绘制一个圆角矩形。
 ///
-/// When the input decorator's label is floating, for example because its
-/// input child has the focus, the label appears in a gap in the border outline.
+/// 当输入装饰器的标签浮动时，例如因为其输入子项获得焦点，标签会出现在边框轮廓的间隙中。
 ///
-/// See also:
+/// 另请参见：
 ///
-///  * [SidelineInputBorder], the default [InputDecorator] border which
-///    draws a vertical line at the right of the input decorator's container.
-///  * [InputDecoration], which is used to configure an [MongolInputDecorator].
+///  * [SidelineInputBorder]，默认的 [InputDecorator] 边框，它在输入装饰器的容器右侧绘制一条垂直线。
+///  * [InputDecoration]，用于配置 [MongolInputDecorator]。
 class MongolOutlineInputBorder extends InputBorder {
-  /// Creates a rounded rectangle outline border for a [MongolInputDecorator].
+  /// 为 [MongolInputDecorator] 创建一个圆角矩形轮廓边框。
   ///
-  /// If the [borderSide] parameter is [BorderSide.none], it will not draw a
-  /// border. However, it will still define a shape (which you can see if
-  /// [InputDecoration.filled] is true).
+  /// 如果 [borderSide] 参数为 [BorderSide.none]，则不会绘制边框。
+  /// 但是，它仍然会定义一个形状（如果 [InputDecoration.filled] 为 true，您可以看到）。
   ///
-  /// If an application does not specify a [borderSide] parameter of
-  /// value [BorderSide.none], the input decorator substitutes its own, using
-  /// [copyWith], based on the current theme and [InputDecorator.isFocused].
+  /// 如果应用程序未指定值为 [BorderSide.none] 的 [borderSide] 参数，
+  /// 输入装饰器会使用 [copyWith] 替换自己的边框，基于当前主题和 [InputDecorator.isFocused]。
   ///
-  /// The [borderRadius] parameter defaults to a value where all four
-  /// corners have a circular radius of 4.0. The [borderRadius] parameter
-  /// must not be null and the corner radii must be circular, i.e. their
-  /// [Radius.x] and [Radius.y] values must be the same.
+  /// [borderRadius] 参数默认为所有四个角都有 4.0 圆形半径的值。
+  /// [borderRadius] 参数不能为空，且角半径必须是圆形的，即它们的
+  /// [Radius.x] 和 [Radius.y] 值必须相同。
   ///
-  /// See also:
+  /// 另请参见：
   ///
-  ///  * [InputDecoration.floatingLabelBehavior], which should be set to
-  ///    [FloatingLabelBehavior.never] when the [borderSide] is
-  ///    [BorderSide.none]. If let as [FloatingLabelBehavior.auto], the label
-  ///    will extend beyond the container as if the border were still being
-  ///    drawn.
+  ///  * [InputDecoration.floatingLabelBehavior]，当 [borderSide] 为
+  ///    [BorderSide.none] 时，应设置为 [FloatingLabelBehavior.never]。
+  ///    如果保留为 [FloatingLabelBehavior.auto]，标签将延伸超出容器，就好像边框仍在绘制一样。
   const MongolOutlineInputBorder({
     super.borderSide = const BorderSide(),
     this.borderRadius = const BorderRadius.all(Radius.circular(4.0)),
     this.gapPadding = 4.0,
   }) : assert(gapPadding >= 0.0);
 
-  // This can't be checked by the constructor because const constructor.
+  // 这不能由构造函数检查，因为是 const 构造函数。
   static bool _cornersAreCircular(BorderRadius borderRadius) {
     return borderRadius.topLeft.x == borderRadius.topLeft.y &&
         borderRadius.bottomLeft.x == borderRadius.bottomLeft.y &&
@@ -193,16 +178,14 @@ class MongolOutlineInputBorder extends InputBorder {
         borderRadius.bottomRight.x == borderRadius.bottomRight.y;
   }
 
-  /// Vertical padding on either side of the border's
-  /// [InputDecoration.labelText] height gap.
+  /// 边框的 [InputDecoration.labelText] 高度间隙两侧的垂直填充。
   ///
-  /// This value is used by the [paint] method to compute the actual gap width.
+  /// 此值由 [paint] 方法用于计算实际间隙宽度。
   final double gapPadding;
 
-  /// The radii of the border's rounded rectangle corners.
+  /// 边框圆角矩形角的半径。
   ///
-  /// The corner radii must be circular, i.e. their [Radius.x] and [Radius.y]
-  /// values must be the same.
+  /// 角半径必须是圆形的，即它们的 [Radius.x] 和 [Radius.y] 值必须相同。
   final BorderRadius borderRadius;
 
   @override
@@ -277,9 +260,8 @@ class MongolOutlineInputBorder extends InputBorder {
 
   Path _gapBorderPath(
       Canvas canvas, RRect center, double start, double extent) {
-    // When the corner radii on any side add up to be greater than the
-    // given width, each radius has to be scaled to not exceed the
-    // size of the width/height of the RRect.
+    // 当任何一侧的角半径加起来大于给定的宽度时，每个半径都必须缩放以不超过
+    // RRect 的宽度/高度大小。
     final RRect scaledRRect = center.scaleRadii();
 
     final Rect tlCorner = Rect.fromLTWH(
@@ -307,10 +289,9 @@ class MongolOutlineInputBorder extends InputBorder {
       scaledRRect.blRadiusX * 2.0,
     );
 
-    // Unlike OutlineInputBorder, MongolOutlineInputBorder ignores partial
-    // sweeps around the corners. It's just a plain 90 degrees at all four
-    // corners.
-    const double cornerArcSweep = math.pi / 2.0; // 90 degrees
+    // 与 OutlineInputBorder 不同，MongolOutlineInputBorder 忽略角落周围的部分扫描。
+    // 它在所有四个角落都是简单的 90 度。
+    const double cornerArcSweep = math.pi / 2.0; // 90 度
     final Path path = Path()
       ..addArc(tlCorner, math.pi, cornerArcSweep)
       ..lineTo(scaledRRect.right - scaledRRect.trRadiusX, scaledRRect.top)
@@ -319,16 +300,16 @@ class MongolOutlineInputBorder extends InputBorder {
       ..addArc(brCorner, 0.0, cornerArcSweep)
       ..lineTo(scaledRRect.left + scaledRRect.blRadiusX, scaledRRect.bottom);
 
-    // Don't draw the bottom left corner if the text is too long.
+    // 如果文本太长，不要绘制左下角。
     if (start + extent < scaledRRect.height - scaledRRect.blRadiusY) {
       path.addArc(blCorner, math.pi / 2, cornerArcSweep);
       path.lineTo(scaledRRect.left, scaledRRect.top + start + extent);
     }
 
-    // Don't draw a line for the extent gap.
+    // 不要为范围间隙绘制线条。
     path.moveTo(scaledRRect.left, start);
 
-    // Finish off a little line segment from the top of the gap to the corner.
+    // 完成从间隙顶部到角落的小线段。
     if (start > scaledRRect.tlRadiusY) {
       path.lineTo(scaledRRect.left, scaledRRect.tlRadiusY);
     }
@@ -336,14 +317,13 @@ class MongolOutlineInputBorder extends InputBorder {
     return path;
   }
 
-  /// Draw a rounded rectangle around [rect] using [borderRadius].
+  /// 使用 [borderRadius] 在 [rect] 周围绘制一个圆角矩形。
   ///
-  /// The [borderSide] defines the line's color and weight.
+  /// [borderSide] 定义线条的颜色和粗细。
   ///
-  /// The top side of the rounded rectangle may be interrupted by a single gap
-  /// if [gapExtent] is non-null. In that case the gap begins at
-  /// `gapStart - gapPadding`. The gap's height is
-  /// `(gapPadding + gapExtent + gapPadding) * gapPercentage`.
+  /// 如果 [gapExtent] 非空，圆角矩形的顶部可能会被单个间隙中断。
+  /// 在这种情况下，间隙从 `gapStart - gapPadding` 开始。
+  /// 间隙的高度是 `(gapPadding + gapExtent + gapPadding) * gapPercentage`。
   @override
   void paint(
     Canvas canvas,

@@ -35,15 +35,37 @@ import 'mongol_input_decorator.dart';
 import 'text_selection/mongol_text_selection.dart';
 import 'text_selection/mongol_text_selection_controls.dart';
 
+/// 文本选择手势检测器构建器，用于处理垂直蒙古文文本字段的手势操作
 class _TextFieldSelectionGestureDetectorBuilder
     extends MongolTextSelectionGestureDetectorBuilder {
+  /// 创建文本选择手势检测器构建器
+  /// 
+  /// [state]：文本字段的状态对象
   _TextFieldSelectionGestureDetectorBuilder({
     required _TextFieldState state,
   })  : _state = state,
         super(delegate: state);
 
+  /// 文本字段的状态对象
   final _TextFieldState _state;
 
+  void _showToolbarOnWebIfSelectionActive() {
+    if (!kIsWeb || !delegate.selectionEnabled) {
+      return;
+    }
+
+    final TextSelection selection = editableText.textEditingValue.selection;
+    if (!selection.isValid || selection.isCollapsed) {
+      return;
+    }
+
+    editableText.hideToolbar(false);
+    editableText.showToolbar();
+  }
+
+  /// 处理强制按压开始事件
+  /// 
+  /// 当用户在支持3D Touch的设备上用力按压时触发
   @override
   void onForcePressStart(ForcePressDetails details) {
     super.onForcePressStart(details);
@@ -52,17 +74,24 @@ class _TextFieldSelectionGestureDetectorBuilder
     }
   }
 
+  /// 处理强制按压结束事件
+  /// 
+  /// 此方法为空实现，因为不需要特殊处理
   @override
   void onForcePressEnd(ForcePressDetails details) {
     // Not required.
   }
 
+  /// 处理长按移动更新事件
+  /// 
+  /// 根据不同平台的行为，选择不同的文本选择方式
   @override
   void onSingleLongTapMoveUpdate(LongPressMoveUpdateDetails details) {
     if (delegate.selectionEnabled) {
       switch (Theme.of(_state.context).platform) {
         case TargetPlatform.iOS:
         case TargetPlatform.macOS:
+          // 在iOS和macOS上，直接选择指定位置的文本
           renderEditable.selectPositionAt(
             from: details.globalPosition,
             cause: SelectionChangedCause.longPress,
@@ -72,6 +101,7 @@ class _TextFieldSelectionGestureDetectorBuilder
         case TargetPlatform.fuchsia:
         case TargetPlatform.linux:
         case TargetPlatform.windows:
+          // 在其他平台上，选择从起始位置到当前位置的所有单词
           renderEditable.selectWordsInRange(
             from: details.globalPosition - details.offsetFromOrigin,
             to: details.globalPosition,
@@ -79,9 +109,13 @@ class _TextFieldSelectionGestureDetectorBuilder
           );
           break;
       }
+      _showToolbarOnWebIfSelectionActive();
     }
   }
 
+  /// 处理单击抬起事件
+  /// 
+  /// 触发键盘请求并调用用户定义的点击回调
   @override
   void onSingleTapUp(TapDragUpDetails details) {
     super.onSingleTapUp(details);
@@ -90,11 +124,48 @@ class _TextFieldSelectionGestureDetectorBuilder
   }
 
   @override
+  void onSingleLongTapEnd(LongPressEndDetails details) {
+    super.onSingleLongTapEnd(details);
+    _showToolbarOnWebIfSelectionActive();
+  }
+
+  @override
+  void onDragSelectionEnd(TapDragEndDetails details) {
+    super.onDragSelectionEnd(details);
+    _showToolbarOnWebIfSelectionActive();
+  }
+
+  /// 处理鼠标右键点击事件。
+  ///
+  /// 在 Web 上，显式显示工具栏以避免与浏览器右键菜单时序冲突。
+  @override
+  void onSecondaryTap() {
+    if (!delegate.selectionEnabled) {
+      return;
+    }
+
+    if (kIsWeb) {
+      if (!renderEditable.hasFocus) {
+        renderEditable.selectPosition(cause: SelectionChangedCause.tap);
+      }
+      editableText.hideToolbar(false);
+      editableText.showToolbar();
+      return;
+    }
+
+    super.onSecondaryTap();
+  }
+
+  /// 处理长按开始事件
+  /// 
+  /// 根据不同平台的行为，选择不同的文本选择方式
+  @override
   void onSingleLongTapStart(LongPressStartDetails details) {
     if (delegate.selectionEnabled) {
       switch (Theme.of(_state.context).platform) {
         case TargetPlatform.iOS:
         case TargetPlatform.macOS:
+          // 在iOS和macOS上，直接选择指定位置的文本
           renderEditable.selectPositionAt(
             from: details.globalPosition,
             cause: SelectionChangedCause.longPress,
@@ -104,51 +175,42 @@ class _TextFieldSelectionGestureDetectorBuilder
         case TargetPlatform.fuchsia:
         case TargetPlatform.linux:
         case TargetPlatform.windows:
+          // 在其他平台上，选择当前单词并提供长按反馈
           renderEditable.selectWord(cause: SelectionChangedCause.longPress);
           Feedback.forLongPress(_state.context);
           break;
       }
+      _showToolbarOnWebIfSelectionActive();
     }
   }
 }
 
-/// A material design text field for vertical Mongolian script.
+/// 用于垂直蒙古文的Material设计文本字段
 ///
-/// A text field lets the user enter text, either with hardware keyboard or with
-/// an onscreen keyboard.
+/// 文本字段允许用户输入文本，可以使用硬件键盘或屏幕键盘
 ///
-/// The text field calls the [onChanged] callback whenever the user changes the
-/// text in the field. If the user indicates that they are done typing in the
-/// field (e.g., by pressing a button on the soft keyboard), the text field
-/// calls the [onSubmitted] callback.
+/// 当用户更改字段中的文本时，文本字段会调用[onChanged]回调。如果用户表示
+/// 他们已完成在字段中输入（例如，通过按下软键盘上的按钮），文本字段会
+/// 调用[onSubmitted]回调。
 ///
-/// To control the text that is displayed in the text field, use the
-/// [controller]. For example, to set the initial value of the text field, use
-/// a [controller] that already contains some text. The [controller] can also
-/// control the selection and composing region (and to observe changes to the
-/// text, selection, and composing region).
+/// 要控制显示在文本字段中的文本，请使用[controller]。例如，要设置文本字段的初始值，
+/// 使用已经包含一些文本的[controller]。[controller]还可以控制选择和组合区域
+/// （并观察文本、选择和组合区域的变化）。
 ///
-/// By default, a text field has a [decoration] that draws a divider to the
-/// right of the text field. You can use the [decoration] property to control
-/// the decoration, for example by adding a label or an icon. If you set the
-/// [decoration] property to null, the decoration will be removed entirely,
-/// including the extra padding introduced by the decoration to save space for
-/// the labels.
+/// 默认情况下，文本字段有一个[decoration]，在文本字段的右侧绘制一个分隔线。
+/// 您可以使用[decoration]属性来控制装饰，例如添加标签或图标。如果将[decoration]
+/// 属性设置为null，装饰将被完全移除，包括装饰为节省标签空间而引入的额外填充。
 ///
-/// If [decoration] is non-null (which is the default), the text field requires
-/// one of its ancestors to be a [Material] widget.
+/// 如果[decoration]不为null（默认情况），文本字段需要其祖先之一是[Material]部件。
 ///
-/// To integrate the [MongolTextField] into a [Form] with other [FormField] widgets,
-/// consider using [MongolTextFormField].
+/// 要将[MongolTextField]与其他[FormField]部件集成到[Form]中，请考虑使用[MongolTextFormField]。
 ///
-/// Remember to call [TextEditingController.dispose] of the [TextEditingController]
-/// when it is no longer needed. This will ensure we discard any resources used
-/// by the object.
+/// 当不再需要[TextEditingController]时，请记得调用其[dispose]方法。这将确保
+/// 我们释放该对象使用的任何资源。
 ///
 /// {@tool snippet}
-/// This example shows how to create a [MongolTextField] that will obscure input. The
-/// [InputDecoration] surrounds the field in a border using [OutlineInputBorder]
-/// and adds a label.
+/// 此示例显示如何创建一个会隐藏输入的[MongolTextField]。
+/// [InputDecoration]使用[OutlineInputBorder]在字段周围添加边框并添加标签。
 ///
 /// ![](https://flutter.github.io/assets-for-api-docs/assets/material/text_field.png)
 ///
@@ -163,82 +225,64 @@ class _TextFieldSelectionGestureDetectorBuilder
 /// ```
 /// {@end-tool}
 ///
-/// ## Reading values
+/// ## 读取值
 ///
-/// A common way to read a value from a MongolTextField is to use the [onSubmitted]
-/// callback. This callback is applied to the text field's current value when
-/// the user finishes editing.
+/// 从MongolTextField读取值的常用方法是使用[onSubmitted]回调。
+/// 当用户完成编辑时，此回调会应用于文本字段的当前值。
 ///
-/// For most applications the [onSubmitted] callback will be sufficient for
-/// reacting to user input.
+/// 对于大多数应用程序，[onSubmitted]回调足以响应用户输入。
 ///
-/// The [onEditingComplete] callback also runs when the user finishes editing.
-/// It's different from [onSubmitted] because it has a default value which
-/// updates the text controller and yields the keyboard focus. Applications that
-/// require different behavior can override the default [onEditingComplete]
-/// callback.
+/// [onEditingComplete]回调也会在用户完成编辑时运行。
+/// 它与[onSubmitted]不同，因为它有一个默认值，该值会更新文本控制器并释放键盘焦点。
+/// 需要不同行为的应用程序可以覆盖默认的[onEditingComplete]回调。
 ///
-/// Keep in mind you can also always read the current string from a MongolTextField's
-/// [TextEditingController] using [TextEditingController.text].
+/// 请记住，您始终可以使用[TextEditingController.text]从MongolTextField的
+/// [TextEditingController]中读取当前字符串。
 ///
-/// ## Handling emojis and other complex characters
+/// ## 处理表情符号和其他复杂字符
 ///
-/// In the live Dartpad example above, try typing the emoji 👨‍👩‍👦
-/// into the field and submitting. Because the example code measures the length
-/// with `value.characters.length`, the emoji is correctly counted as a single
-/// character.
+/// 在上面的实时Dartpad示例中，尝试输入表情符号👨‍👩‍👦并提交。
+/// 因为示例代码使用`value.characters.length`测量长度，
+/// 所以表情符号被正确计数为单个字符。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolTextFormField], which integrates with the [Form] widget.
-///  * [InputDecorator], which shows the labels and other visual elements that
-///    surround the actual text editing widget.
-///  * [MongolEditableText], which is the raw text editing control at the heart of a
-///    [MongolTextField]. The [MongolEditableText] widget is rarely used directly unless
-///    you are implementing an entirely different design language, such as
-///    Cupertino.
+///  * [MongolTextFormField]，它与[Form]部件集成。
+///  * [InputDecorator]，它显示围绕实际文本编辑部件的标签和其他视觉元素。
+///  * [MongolEditableText]，它是[MongolTextField]核心的原始文本编辑控件。
+///    除非您正在实现完全不同的设计语言（例如Cupertino），否则很少直接使用[MongolEditableText]部件。
 class MongolTextField extends StatefulWidget {
-  /// Creates a Material Design text field for vertical Mongolian text.
+  /// 创建用于垂直蒙古文的Material Design文本字段
   ///
-  /// If [decoration] is non-null (which is the default), the text field requires
-  /// one of its ancestors to be a [Material] widget.
+  /// 如果[decoration]不为null（默认情况），文本字段需要其祖先之一是[Material]部件
   ///
-  /// To remove the decoration entirely (including the extra padding introduced
-  /// by the decoration to save space for the labels), set the [decoration] to
-  /// null.
+  /// 要完全移除装饰（包括装饰为节省标签空间而引入的额外填充），请将[decoration]设置为null
   ///
-  /// The [maxLines] property can be set to null to remove the restriction on
-  /// the number of lines. By default, it is one, meaning this is a single-line
-  /// text field. [maxLines] must not be zero.
+  /// [maxLines]属性可以设置为null以移除对行数的限制。默认情况下，它为1，
+  /// 意味着这是一个单行文本字段。[maxLines]不能为零
   ///
-  /// The [maxLength] property is set to null by default, which means the
-  /// number of characters allowed in the text field is not restricted. If
-  /// [maxLength] is set a character counter will be displayed to the right of the
-  /// field showing how many characters have been entered. If the value is
-  /// set to a positive integer it will also display the maximum allowed
-  /// number of characters to be entered.  If the value is set to
-  /// [TextField.noMaxLength] then only the current length is displayed.
+  /// [maxLength]属性默认设置为null，这意味着文本字段中允许的字符数不受限制。
+  /// 如果设置了[maxLength]，将在字段右侧显示一个字符计数器，显示已输入的字符数。
+  /// 如果该值设置为正整数，它还将显示允许输入的最大字符数。
+  /// 如果该值设置为[TextField.noMaxLength]，则仅显示当前长度
   ///
-  /// After [maxLength] characters have been input, additional input
-  /// is ignored, unless [maxLengthEnforcement] is set to
-  /// [MaxLengthEnforcement.none].
-  /// The text field enforces the length with a [LengthLimitingTextInputFormatter],
-  /// which is evaluated after the supplied [inputFormatters], if any.
-  /// The [maxLength] value must be either null or greater than zero.
+  /// 输入[maxLength]个字符后，除非[maxLengthEnforcement]设置为
+  /// [MaxLengthEnforcement.none]，否则忽略额外的输入
+  /// 文本字段使用[LengthLimitingTextInputFormatter]强制执行长度限制，
+  /// 该格式化程序在提供的[inputFormatters]（如果有）之后评估
+  /// [maxLength]值必须为null或大于零
   ///
-  /// The text cursor is not shown if [showCursor] is false or if [showCursor]
-  /// is null (the default) and [readOnly] is true.
+  /// 如果[showCursor]为false，或者[showCursor]为null（默认值）且[readOnly]为true，
+  /// 则不显示文本光标
   ///
-  /// The [textAlign], [autofocus], [obscureText], [readOnly], [autocorrect],
-  /// [scrollPadding], [maxLines], [maxLength], and [enableSuggestions]
-  /// arguments must not be null.
+  /// [textAlign]、[autofocus]、[obscureText]、[readOnly]、[autocorrect]、
+  /// [scrollPadding]、[maxLines]、[maxLength]和[enableSuggestions]参数不能为空
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [maxLength], which discusses the precise meaning of "number of
-  ///    characters" and how it may differ from the intuitive meaning.
+  ///  * [maxLength]，它讨论了"字符数"的精确含义以及它可能与直观含义的不同之处
   const MongolTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.focusNode,
     this.decoration = const InputDecoration(),
@@ -284,6 +328,7 @@ class MongolTextField extends StatefulWidget {
     this.autofillHints,
     this.restorationId,
     this.contentInsertionConfiguration,
+    this.contextMenuBuilder,
   })  : assert(obscuringCharacter.length == 1),
         assert(maxLines == null || maxLines > 0),
         assert(minLines == null || minLines > 0),
@@ -319,229 +364,199 @@ class MongolTextField extends StatefulWidget {
                     cut: true,
                     selectAll: true,
                     paste: true,
-                  )),
-        super(key: key);
+                  ));
 
-  /// Controls the text being edited.
+  /// 控制正在编辑的文本
   ///
-  /// If null, this widget will create its own [TextEditingController].
+  /// 如果为null，此部件将创建自己的[TextEditingController]
   final TextEditingController? controller;
 
-  /// Defines the keyboard focus for this widget.
+  /// 定义此部件的键盘焦点
   ///
-  /// The [focusNode] is a long-lived object that's typically managed by a
-  /// [StatefulWidget] parent. See [FocusNode] for more information.
+  /// [focusNode]是一个长期存在的对象，通常由[StatefulWidget]父部件管理。
+  /// 有关更多信息，请参阅[FocusNode]
   ///
-  /// To give the keyboard focus to this widget, provide a [focusNode] and then
-  /// use the current [FocusScope] to request the focus:
+  /// 要为此部件提供键盘焦点，请提供一个[focusNode]，然后使用当前的[FocusScope]来请求焦点：
   ///
   /// ```dart
   /// FocusScope.of(context).requestFocus(myFocusNode);
   /// ```
   ///
-  /// This happens automatically when the widget is tapped.
+  /// 当部件被点击时，这会自动发生
   ///
-  /// To be notified when the widget gains or loses the focus, add a listener
-  /// to the [focusNode]:
+  /// 要在部件获得或失去焦点时收到通知，请向[focusNode]添加一个监听器：
   ///
   /// ```dart
   /// focusNode.addListener(() { print(myFocusNode.hasFocus); });
   /// ```
   ///
-  /// If null, this widget will create its own [FocusNode].
+  /// 如果为null，此部件将创建自己的[FocusNode]
   ///
-  /// ## Keyboard
+  /// ## 键盘
   ///
-  /// Requesting the focus will typically cause the keyboard to be shown
-  /// if it's not showing already.
+  /// 请求焦点通常会导致键盘显示（如果尚未显示）
   ///
-  /// On Android, the user can hide the keyboard - without changing the focus -
-  /// with the system back button. They can restore the keyboard's visibility
-  /// by tapping on a text field.  The user might hide the keyboard and
-  /// switch to a physical keyboard, or they might just need to get it
-  /// out of the way for a moment, to expose something it's
-  /// obscuring. In this case requesting the focus again will not
-  /// cause the focus to change, and will not make the keyboard visible.
+  /// 在Android上，用户可以使用系统返回按钮隐藏键盘而不更改焦点。
+  /// 他们可以通过点击文本字段来恢复键盘的可见性。用户可能会隐藏键盘并
+  /// 切换到物理键盘，或者他们可能只是需要暂时让它不挡住视线，以暴露它
+  /// 遮挡的内容。在这种情况下，再次请求焦点不会导致焦点改变，也不会使键盘可见
   ///
-  /// This widget builds a [MongolEditableText] and will ensure that the keyboard is
-  /// showing when it is tapped by calling [MongolEditableTextState.requestKeyboard()].
+  /// 此部件构建一个[MongolEditableText]，并通过调用[MongolEditableTextState.requestKeyboard()]
+  /// 确保在点击时显示键盘
   final FocusNode? focusNode;
 
-  /// The decoration to show around the text field.
+  /// 显示在文本字段周围的装饰
   ///
-  /// By default, draws a vertical line to the right of the text field but can be
-  /// configured to show an icon, label, hint text, and error text.
+  /// 默认情况下，在文本字段右侧绘制一条垂直线，但可以配置为显示图标、标签、提示文本和错误文本
   ///
-  /// Specify null to remove the decoration entirely (including the
-  /// extra padding introduced by the decoration to save space for the labels).
+  /// 指定null以完全移除装饰（包括装饰为节省标签空间而引入的额外填充）
   final InputDecoration? decoration;
 
-  /// The type of keyboard to use for editing the text.
+  /// 用于编辑文本的键盘类型
   ///
-  /// Defaults to [TextInputType.text] if [maxLines] is one and
-  /// [TextInputType.multiline] otherwise.
+  /// 如果[maxLines]为1，则默认为[TextInputType.text]，否则默认为[TextInputType.multiline]
   final TextInputType keyboardType;
 
-  /// The type of action button to use for the keyboard.
+  /// 键盘使用的操作按钮类型
   ///
-  /// Defaults to [TextInputAction.newline] if [keyboardType] is
-  /// [TextInputType.multiline] and [TextInputAction.done] otherwise.
+  /// 如果[keyboardType]是[TextInputType.multiline]，则默认为[TextInputAction.newline]，
+  /// 否则默认为[TextInputAction.done]
   final TextInputAction? textInputAction;
 
-  /// The style to use for the text being edited.
+  /// 用于正在编辑的文本的样式
   ///
-  /// This text style is also used as the base style for the [decoration].
+  /// 此文本样式也用作[decoration]的基础样式
   ///
-  /// If null, defaults to the `subtitle1` text style from the current [Theme].
+  /// 如果为null，默认为当前[Theme]中的`subtitle1`文本样式
   final TextStyle? style;
 
-  /// How the text should be aligned vertically.
+  /// 文本应如何垂直对齐
   ///
-  /// Defaults to [MongolTextAlign.top].
+  /// 默认为[MongolTextAlign.top]
   final MongolTextAlign textAlign;
 
-  /// The horizontal alignment of vertical Mongolian text within an input box.
+  /// 垂直蒙古文在输入框内的水平对齐方式
   final TextAlignHorizontal? textAlignHorizontal;
 
-  /// Whether this text field should focus itself if nothing else is already
-  /// focused.
+  /// 如果没有其他部件已经获得焦点，此文本字段是否应该自动获得焦点
   ///
-  /// If true, the keyboard will open as soon as this text field obtains focus.
-  /// Otherwise, the keyboard is only shown after the user taps the text field.
+  /// 如果为true，当此文本字段获得焦点时，键盘将立即打开。
+  /// 否则，只有在用户点击文本字段后才会显示键盘
   ///
-  /// Defaults to false.
+  /// 默认为false
   final bool autofocus;
 
+  /// 当用户点击文本字段外部时调用的回调
   final TapRegionCallback? onTapOutside;
 
-  /// Character used for obscuring text if [obscureText] is true.
+  /// 如果[obscureText]为true，则用于隐藏文本的字符
   ///
-  /// Must be only a single character.
+  /// 必须只有一个字符
   ///
-  /// Defaults to the character U+2022 BULLET (•).
+  /// 默认为字符U+2022 BULLET (•)
   final String obscuringCharacter;
 
-  /// Whether to hide the text being edited (e.g., for passwords).
+  /// 是否隐藏正在编辑的文本（例如，用于密码）
   ///
-  /// When this is set to true, all the characters in the text field are
-  /// replaced by [obscuringCharacter].
+  /// 当设置为true时，文本字段中的所有字符都将被[obscuringCharacter]替换
   ///
-  /// Defaults to false.
+  /// 默认为false
   final bool obscureText;
 
-  /// Whether to enable autocorrection.
+  /// 是否启用自动更正
   ///
-  /// Defaults to true.
+  /// 默认为true
   final bool autocorrect;
 
-  /// Whether to show input suggestions as the user types.
+  /// 是否在用户输入时显示输入建议
   ///
-  /// This flag only affects Android. On iOS, suggestions are tied directly to
-  /// [autocorrect], so that suggestions are only shown when [autocorrect] is
-  /// true. On Android autocorrection and suggestion are controlled separately.
+  /// 此标志仅影响Android。在iOS上，建议直接与[autocorrect]相关联，
+  /// 因此只有当[autocorrect]为true时才会显示建议。在Android上，自动更正和建议是分开控制的
   ///
-  /// Defaults to true.
+  /// 默认为true
   ///
-  /// See also:
+  /// 另请参阅：
   ///
   ///  * <https://developer.android.com/reference/android/text/InputType.html#TYPE_TEXT_FLAG_NO_SUGGESTIONS>
   final bool enableSuggestions;
 
-  /// The maximum number of lines for the text to span, wrapping if necessary.
+  /// 文本要跨越的最大行数，必要时换行
   ///
-  /// If this is 1 (the default), the text will not wrap, but will scroll
-  /// vertically instead.
+  /// 如果为1（默认值），文本将不会换行，而是会垂直滚动
   ///
-  /// If this is null, there is no limit to the number of lines, and the text
-  /// container will start with enough horizontal space for one line and
-  /// automatically grow to accommodate additional lines as they are entered.
+  /// 如果为null，则行数没有限制，文本容器将从一行的足够水平空间开始，
+  /// 并随着输入的增加自动增长以容纳更多行
   ///
-  /// If this is not null, the value must be greater than zero, and it will lock
-  /// the input to the given number of lines and take up enough vertical space
-  /// to accommodate that number of lines. Setting [minLines] as well allows the
-  /// input to grow between the indicated range.
+  /// 如果不为null，该值必须大于零，它将锁定输入到给定的行数，并占用足够的垂直空间
+  /// 以容纳该数量的行。同时设置[minLines]允许输入在指定的范围内增长
   ///
-  /// The full set of behaviors possible with [minLines] and [maxLines] are as
-  /// follows. These examples apply equally to `MongolTextField`,
-  /// `MongolTextFormField`, and `MongolEditableText`.
+  /// [minLines]和[maxLines]可能的完整行为集如下。这些示例同样适用于`MongolTextField`、
+  /// `MongolTextFormField`和`MongolEditableText`
   ///
-  /// Input that occupies a single line and scrolls vertically as needed.
+  /// 占用单行并根据需要垂直滚动的输入：
   /// ```dart
   /// MongolTextField()
   /// ```
   ///
-  /// Input whose width grows from one line up to as many lines as needed for
-  /// the text that was entered. If a width limit is imposed by its parent, it
-  /// will scroll horizontally when its width reaches that limit.
+  /// 宽度从一行增长到输入文本所需的任意多行的输入。如果其父部件施加宽度限制，
+  /// 当宽度达到该限制时，它将水平滚动：
   /// ```dart
   /// MongolTextField(maxLines: null)
   /// ```
   ///
-  /// The input's width is large enough for the given number of lines. If
-  /// additional lines are entered the input scrolls horizontally.
+  /// 输入的宽度足够容纳给定的行数。如果输入额外的行，输入将水平滚动：
   /// ```dart
   /// MongolTextField(maxLines: 2)
   /// ```
   ///
-  /// Input whose width grows with content between a min and max. An infinite
-  /// max is possible with `maxLines: null`.
+  /// 宽度在最小和最大之间随内容增长的输入。使用`maxLines: null`可以实现无限最大值：
   /// ```dart
   /// MongolTextField(minLines: 2, maxLines: 4)
   /// ```
   final int? maxLines;
 
-  /// The minimum number of lines to occupy when the content spans fewer lines.
+  /// 当内容跨越少行时要占用的最小行数
   ///
-  /// If this is null (default), text container starts with enough horizontal space
-  /// for one line and grows to accommodate additional lines as they are entered.
+  /// 如果为null（默认值），文本容器开始时具有一行的足够水平空间，
+  /// 并随着输入的增加自动增长以容纳更多行
   ///
-  /// This can be used in combination with [maxLines] for a varying set of behaviors.
+  /// 这可以与[maxLines]结合使用，以实现各种行为
   ///
-  /// If the value is set, it must be greater than zero. If the value is greater
-  /// than 1, [maxLines] should also be set to either null or greater than
-  /// this value.
+  /// 如果设置了该值，它必须大于零。如果该值大于1，[maxLines]也应设置为null或大于此值
   ///
-  /// When [maxLines] is set as well, the width will grow between the indicated
-  /// range of lines. When [maxLines] is null, it will grow as wide as needed,
-  /// starting from [minLines].
+  /// 当同时设置[maxLines]时，宽度将在指定的行数范围内增长。
+  /// 当[maxLines]为null时，它将从[minLines]开始，根据需要增长到任意宽度
   ///
-  /// A few examples of behaviors possible with [minLines] and [maxLines] are as follows.
-  /// These apply equally to `MongolTextField`, `MongolTextFormField`,
-  /// and `MongolEditableText`.
+  /// [minLines]和[maxLines]可能的行为示例如下。
+  /// 这些同样适用于`MongolTextField`、`MongolTextFormField`和`MongolEditableText`
   ///
-  /// Input that always occupies at least 2 lines and has an infinite max.
-  /// Expands horizontally as needed.
+  /// 始终至少占用2行且最大行数无限的输入。根据需要水平扩展：
   /// ```dart
   /// MongolTextField(minLines: 2)
   /// ```
   ///
-  /// Input whose width starts from 2 lines and grows up to 4 lines at which
-  /// point the width limit is reached. If additional lines are entered it will
-  /// scroll horizontally.
+  /// 宽度从2行开始增长到4行，此时达到宽度限制。如果输入额外的行，它将水平滚动：
   /// ```dart
   /// MongolTextField(minLines:2, maxLines: 4)
   /// ```
   ///
-  /// See the examples in [maxLines] for the complete picture of how [maxLines]
-  /// and [minLines] interact to produce various behaviors.
+  /// 有关[maxLines]和[minLines]如何交互以产生各种行为的完整情况，请参阅[maxLines]中的示例
   ///
-  /// Defaults to null.
+  /// 默认为null
   final int? minLines;
 
-  /// Whether this widget's width will be sized to fill its parent.
+  /// 此部件的宽度是否将调整为填充其父部件
   ///
-  /// If set to true and wrapped in a parent widget like [Expanded] or
-  /// [SizedBox], the input will expand to fill the parent.
+  /// 如果设置为true并包装在[Expanded]或[SizedBox]等父部件中，输入将扩展以填充父部件
   ///
-  /// [maxLines] and [minLines] must both be null when this is set to true,
-  /// otherwise an error is thrown.
+  /// 当设置为true时，[maxLines]和[minLines]都必须为null，否则会抛出错误
   ///
-  /// Defaults to false.
+  /// 默认为false
   ///
-  /// See the examples in [maxLines] for the complete picture of how [maxLines],
-  /// [minLines], and [expands] interact to produce various behaviors.
+  /// 有关[maxLines]、[minLines]和[expands]如何交互以产生各种行为的完整情况，
+  /// 请参阅[maxLines]中的示例
   ///
-  /// Input that matches the width of its parent:
+  /// 与父部件宽度匹配的输入：
   /// ```dart
   /// Expanded(
   ///   child: MongolTextField(maxLines: null, expands: true),
@@ -549,336 +564,264 @@ class MongolTextField extends StatefulWidget {
   /// ```
   final bool expands;
 
-  /// Whether the text can be changed.
+  /// 文本是否可以更改
   ///
-  /// When this is set to true, the text cannot be modified
-  /// by any shortcut or keyboard operation. The text is still selectable.
+  /// 当设置为true时，文本不能通过任何快捷方式或键盘操作修改。文本仍然可以选择
   ///
-  /// Defaults to false.
+  /// 默认为false
   final bool readOnly;
 
-  /// Configuration of toolbar options.
+  /// 工具栏选项的配置
   ///
-  /// If not set, select all and paste will default to be enabled. Copy and cut
-  /// will be disabled if [obscureText] is true. If [readOnly] is true,
-  /// paste and cut will be disabled regardless.
+  /// 如果未设置，默认启用全选和粘贴。如果[obscureText]为true，则禁用复制和剪切。
+  /// 如果[readOnly]为true，则无论如何都禁用粘贴和剪切
   final ToolbarOptions toolbarOptions;
 
-  /// Whether to show cursor.
+  /// 是否显示光标
   ///
-  /// The cursor refers to the blinking caret when the [MongolEditableText] is
-  /// focused.
+  /// 光标是指[MongolEditableText]获得焦点时的闪烁插入符
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [showSelectionHandles], which controls the visibility of the selection
-  ///    handles.
+  ///  * [showSelectionHandles]，它控制选择手柄的可见性
   final bool? showCursor;
 
-  /// If [maxLength] is set to this value, only the "current input length"
-  /// part of the character counter is shown.
+  /// 如果[maxLength]设置为此值，则仅显示字符计数器的"当前输入长度"部分
   static const int noMaxLength = -1;
 
-  /// The maximum number of characters (Unicode scalar values) to allow in the
-  /// text field.
+  /// 文本字段中允许的最大字符数（Unicode标量值）
   ///
-  /// If set, a character counter will be displayed to the right of the
-  /// field showing how many characters have been entered. If set to a number
-  /// greater than 0, it will also display the maximum number allowed. If set
-  /// to [MongolTextField.noMaxLength] then only the current character count
-  /// is displayed.
+  /// 如果设置，将在字段右侧显示一个字符计数器，显示已输入的字符数。
+  /// 如果设置为大于0的数字，它还将显示允许的最大字符数。
+  /// 如果设置为[MongolTextField.noMaxLength]，则仅显示当前字符计数
   ///
-  /// After [maxLength] characters have been input, additional input
-  /// is ignored, unless [maxLengthEnforcement] is set to
-  /// [MaxLengthEnforcement.none].
+  /// 输入[maxLength]个字符后，除非[maxLengthEnforcement]设置为
+  /// [MaxLengthEnforcement.none]，否则忽略额外的输入
   ///
-  /// The text field enforces the length with a [LengthLimitingTextInputFormatter],
-  /// which is evaluated after the supplied [inputFormatters], if any.
+  /// 文本字段使用[LengthLimitingTextInputFormatter]强制执行长度限制，
+  /// 该格式化程序在提供的[inputFormatters]（如果有）之后评估
   ///
-  /// This value must be either null, [MongolTextField.noMaxLength], or greater than 0.
-  /// If null (the default) then there is no limit to the number of characters
-  /// that can be entered. If set to [MongolTextField.noMaxLength], then no limit will
-  /// be enforced, but the number of characters entered will still be displayed.
+  /// 该值必须为null、[MongolTextField.noMaxLength]或大于0。
+  /// 如果为null（默认值），则对可以输入的字符数没有限制。
+  /// 如果设置为[MongolTextField.noMaxLength]，则不会强制执行限制，但仍会显示已输入的字符数
   ///
-  /// Whitespace characters (e.g. newline, space, tab) are included in the
-  /// character count.
+  /// 空白字符（例如换行符、空格、制表符）包含在字符计数中
   ///
-  /// If [maxLengthEnforcement] is
-  /// [MaxLengthEnforcement.none], then more than [maxLength]
-  /// characters may be entered, but the error counter and divider will switch
-  /// to the [decoration]'s [InputDecoration.errorStyle] when the limit is
-  /// exceeded.
+  /// 如果[maxLengthEnforcement]是[MaxLengthEnforcement.none]，则可以输入超过[maxLength]
+  /// 的字符，但当超过限制时，错误计数器和分隔线将切换到[decoration]的[InputDecoration.errorStyle]
   ///
-  /// ## Characters
+  /// ## 字符
   ///
-  /// For a specific definition of what is considered a character, see the
-  /// [characters](https://pub.dev/packages/characters) package on Pub, which is
-  /// what Flutter uses to delineate characters. In general, even complex
-  /// characters like surrogate pairs and extended grapheme clusters are
-  /// correctly interpreted by Flutter as each being a single user-perceived
-  /// character.
+  /// 有关什么被视为字符的具体定义，请参阅Pub上的[characters](https://pub.dev/packages/characters)包，
+  /// 这是Flutter用于划分字符的包。通常，即使是复杂的字符如代理对和扩展字形集群，
+  /// Flutter也会正确地将它们解释为每个都是单个用户感知的字符
   ///
-  /// For instance, the character "ö" can be represented as '\u{006F}\u{0308}',
-  /// which is the letter "o" followed by a composed diaeresis "¨", or it can
-  /// be represented as '\u{00F6}', which is the Unicode scalar value "LATIN
-  /// SMALL LETTER O WITH DIAERESIS". It will be counted as a single character
-  /// in both cases.
+  /// 例如，字符"ö"可以表示为'\u{006F}\u{0308}'，即字母"o"后跟组合变音符号"¨"，
+  /// 或者可以表示为'\u{00F6}'，即Unicode标量值"LATIN SMALL LETTER O WITH DIAERESIS"。
+  /// 在这两种情况下，它都将被计数为单个字符
   ///
-  /// Similarly, some emoji are represented by multiple scalar values. The
-  /// Unicode "THUMBS UP SIGN + MEDIUM SKIN TONE MODIFIER", "👍🏽"is counted as
-  /// a single character, even though it is a combination of two Unicode scalar
-  /// values, '\u{1F44D}\u{1F3FD}'.
+  /// 同样，一些表情符号由多个标量值表示。Unicode"THUMBS UP SIGN + MEDIUM SKIN TONE MODIFIER"，
+  /// "👍🏽"被计数为单个字符，即使它是两个Unicode标量值'\u{1F44D}\u{1F3FD}'的组合
   final int? maxLength;
 
-  /// Determines how the [maxLength] limit should be enforced.
+  /// 确定应如何强制执行[maxLength]限制
   final MaxLengthEnforcement? maxLengthEnforcement;
 
-  /// Called when the user initiates a change to the MongolTextField's
-  /// value: when they have inserted or deleted text.
+  /// 当用户启动对MongolTextField值的更改时调用：当他们插入或删除文本时
   ///
-  /// This callback doesn't run when the MongolTextField's text is changed
-  /// programmatically, via the MongolTextField's [controller]. Typically it
-  /// isn't necessary to be notified of such changes, since they're
-  /// initiated by the app itself.
+  /// 当通过MongolTextField的[controller]以编程方式更改MongolTextField的文本时，
+  /// 此回调不会运行。通常不需要通知此类更改，因为它们是由应用程序本身启动的
   ///
-  /// To be notified of all changes to the MongolTextField's text, cursor,
-  /// and selection, one can add a listener to its [controller] with
-  /// [TextEditingController.addListener].
+  /// 要收到MongolTextField的文本、光标和选择的所有更改的通知，
+  /// 可以使用[TextEditingController.addListener]向其[controller]添加监听器
   ///
-  /// ## Handling emojis and other complex characters
+  /// ## 处理表情符号和其他复杂字符
   ///
-  /// It's important to always use
-  /// [characters](https://pub.dev/packages/characters) when dealing with user
-  /// input text that may contain complex characters. This will ensure that
-  /// extended grapheme clusters and surrogate pairs are treated as single
-  /// characters, as they appear to the user.
+  /// 当处理可能包含复杂字符的用户输入文本时，始终使用[characters](https://pub.dev/packages/characters)包非常重要。
+  /// 这将确保扩展字形集群和代理对被视为单个字符，就像它们在用户看来一样
   ///
-  /// For example, when finding the length of some user input, use
-  /// `string.characters.length`. Do NOT use `string.length` or even
-  /// `string.runes.length`. For the complex character "👨‍👩‍👦", this
-  /// appears to the user as a single character, and `string.characters.length`
-  /// intuitively returns 1. On the other hand, `string.length` returns 8, and
-  /// `string.runes.length` returns 5!
+  /// 例如，当查找某些用户输入的长度时，使用`string.characters.length`。
+  /// 不要使用`string.length`甚至`string.runes.length`。对于复杂字符"👨‍👩‍👦"，
+  /// 它在用户看来是单个字符，`string.characters.length`直观地返回1。
+  /// 另一方面，`string.length`返回8，`string.runes.length`返回5！
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [inputFormatters], which are called before [onChanged]
-  ///    runs and can validate and change ("format") the input value.
-  ///  * [onEditingComplete], [onSubmitted]:
-  ///    which are more specialized input change notifications.
+  ///  * [inputFormatters]，它们在[onChanged]运行之前被调用，可以验证和更改（"格式化"）输入值
+  ///  * [onEditingComplete]、[onSubmitted]：更专门的输入更改通知
   final ValueChanged<String>? onChanged;
 
-  /// Called when the user submits editable content (e.g., user presses the "done"
-  /// button on the keyboard).
+  /// 当用户提交可编辑内容时调用（例如，用户按下键盘上的"完成"按钮）
   ///
-  /// The default implementation of [onEditingComplete] executes 2 different
-  /// behaviors based on the situation:
+  /// [onEditingComplete]的默认实现根据情况执行两种不同的行为：
   ///
-  ///  - When a completion action is pressed, such as "done", "go", "send", or
-  ///    "search", the user's content is submitted to the [controller] and then
-  ///    focus is given up.
+  ///  - 当按下完成操作（如"完成"、"前往"、"发送"或"搜索"）时，用户的内容被提交到[controller]，然后放弃焦点
   ///
-  ///  - When a non-completion action is pressed, such as "next" or "previous",
-  ///    the user's content is submitted to the [controller], but focus is not
-  ///    given up because developers may want to immediately move focus to
-  ///    another input widget within [onSubmitted].
+  ///  - 当按下非完成操作（如"下一个"或"上一个"）时，用户的内容被提交到[controller]，
+  ///    但不放弃焦点，因为开发人员可能希望在[onSubmitted]中立即将焦点移动到另一个输入部件
   ///
-  /// Providing [onEditingComplete] prevents the aforementioned default behavior.
+  /// 提供[onEditingComplete]会阻止上述默认行为
   final VoidCallback? onEditingComplete;
 
-  /// Called when the user indicates that they are done editing the text in the
-  /// field.
+  /// 当用户表示他们已完成编辑字段中的文本时调用
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextInputAction.next] and [TextInputAction.previous], which
-  ///    automatically shift the focus to the next/previous focusable item when
-  ///    the user is done editing.
+  ///  * [TextInputAction.next]和[TextInputAction.previous]，它们在用户完成编辑时
+  ///    自动将焦点转移到下一个/上一个可聚焦项目
   final ValueChanged<String>? onSubmitted;
 
-  /// This is used to receive a private command from the input method.
+  /// 用于接收来自输入方法的私有命令
   ///
-  /// Called when the result of [TextInputClient.performPrivateCommand] is
-  /// received.
+  /// 当收到[TextInputClient.performPrivateCommand]的结果时调用
   ///
-  /// This can be used to provide domain-specific features that are only known
-  /// between certain input methods and their clients.
+  /// 这可用于提供仅在某些输入方法及其客户端之间已知的特定于域的功能
   ///
-  /// See also:
-  ///   * [https://developer.android.com/reference/android/view/inputmethod/InputConnection#performPrivateCommand(java.lang.String,%20android.os.Bundle)],
-  ///     which is the Android documentation for performPrivateCommand, used to
-  ///     send a command from the input method.
-  ///   * [https://developer.android.com/reference/android/view/inputmethod/InputMethodManager#sendAppPrivateCommand],
-  ///     which is the Android documentation for sendAppPrivateCommand, used to
-  ///     send a command to the input method.
+  /// 另请参阅：
+  ///   * [https://developer.android.com/reference/android/view/inputmethod/InputConnection#performPrivateCommand(java.lang.String,%20android.os.Bundle)]，
+  ///     这是Android的performPrivateCommand文档，用于从输入方法发送命令
+  ///   * [https://developer.android.com/reference/android/view/inputmethod/InputMethodManager#sendAppPrivateCommand]，
+  ///     这是Android的sendAppPrivateCommand文档，用于向输入方法发送命令
   final AppPrivateCommandCallback? onAppPrivateCommand;
 
-  /// Optional input validation and formatting overrides.
+  /// 可选的输入验证和格式化覆盖
   ///
-  /// Formatters are run in the provided order when the text input changes. When
-  /// this parameter changes, the new formatters will not be applied until the
-  /// next time the user inserts or deletes text.
+  /// 当文本输入更改时，格式化程序按提供的顺序运行。当此参数更改时，
+  /// 新的格式化程序将不会应用，直到用户下次插入或删除文本
   final List<TextInputFormatter>? inputFormatters;
 
-  /// If false the text field is "disabled": it ignores taps and its
-  /// [decoration] is rendered in grey.
+  /// 如果为false，文本字段被"禁用"：它忽略点击，其[decoration]以灰色渲染
   ///
-  /// If non-null this property overrides the [decoration]'s
-  /// [InputDecoration.enabled] property.
+  /// 如果非null，此属性会覆盖[decoration]的[InputDecoration.enabled]属性
   final bool? enabled;
 
-  /// How wide the cursor will be.
+  /// 光标的宽度
   ///
-  /// If this property is null, [MongolRenderEditable.preferredLineWidth] will
-  /// be used.
+  /// 如果此属性为null，将使用[MongolRenderEditable.preferredLineWidth]
   final double? cursorWidth;
 
-  /// How thick the cursor will be.
+  /// 光标的厚度
   ///
-  /// Defaults to 2.0.
+  /// 默认为2.0
   ///
-  /// The cursor will draw above the text. The cursor height will extend
-  /// down from the boundary between characters. This corresponds to extending
-  /// downstream relative to the selected position. Negative values may be used
-  /// to reverse this behavior.
+  /// 光标将在文本上方绘制。光标高度将从字符之间的边界向下延伸。
+  /// 这对应于相对于所选位置向下游延伸。可以使用负值来反转此行为
   final double cursorHeight;
 
-  /// How rounded the corners of the cursor should be.
+  /// 光标的角应该有多圆
   ///
-  /// By default, the cursor has no radius.
+  /// 默认情况下，光标没有圆角
   final Radius? cursorRadius;
 
-  /// The color of the cursor.
+  /// 光标的颜色
   ///
-  /// The cursor indicates the current location of text insertion point in
-  /// the field.
+  /// 光标指示字段中文本插入点的当前位置
   ///
-  /// If this is null it will default to the ambient
-  /// [TextSelectionThemeData.cursorColor]. If that is null, and the
-  /// [ThemeData.platform] is [TargetPlatform.iOS] or [TargetPlatform.macOS]
-  /// it will use [CupertinoThemeData.primaryColor]. Otherwise it will use
-  /// the value of [ColorScheme.primary] of [ThemeData.colorScheme].
+  /// 如果为null，它将默认为环境[TextSelectionThemeData.cursorColor]。
+  /// 如果该值为null，且[ThemeData.platform]是[TargetPlatform.iOS]或[TargetPlatform.macOS]，
+  /// 它将使用[CupertinoThemeData.primaryColor]。否则，它将使用[ThemeData.colorScheme]的[ColorScheme.primary]值
   final Color? cursorColor;
 
-  /// The appearance of the keyboard.
+  /// 键盘的外观
   ///
-  /// This setting is only honored on iOS devices.
+  /// 此设置仅在iOS设备上有效
   ///
-  /// If unset, defaults to [ThemeData.brightness].
+  /// 如果未设置，默认为[ThemeData.brightness]
   final Brightness? keyboardAppearance;
 
-  /// Configures padding to edges surrounding a [Scrollable] when the
-  /// MongolTextField scrolls into view.
+  /// 配置当MongolTextField滚动到视图中时围绕[Scrollable]的边缘的填充
   ///
-  /// When this widget receives focus and is not completely visible (for
-  /// example scrolled partially off the screen or overlapped by the keyboard)
-  /// then it will attempt to make itself visible by scrolling a surrounding
-  /// [Scrollable], if one is present. This value controls how far from the
-  /// edges of a [Scrollable] the MongolTextField will be positioned after the
-  /// scroll.
+  /// 当此部件获得焦点且未完全可见时（例如，部分滚动出屏幕或被键盘覆盖），
+  /// 它将尝试通过滚动周围的[Scrollable]（如果存在）来使自己可见。
+  /// 此值控制滚动后MongolTextField将定位在[Scrollable]边缘多远的位置
   ///
-  /// Defaults to EdgeInsets.all(20.0).
+  /// 默认为EdgeInsets.all(20.0)
   final EdgeInsets scrollPadding;
 
-  /// Whether to enable user interface affordances for changing the
-  /// text selection.
+  /// 是否启用以更改文本选择的用户界面功能
   ///
-  /// For example, setting this to true will enable features such as
-  /// long-pressing the MongolTextField to select text and show the
-  /// cut/copy/paste menu, and tapping to move the text caret.
+  /// 例如，将此设置为true将启用长按MongolTextField以选择文本并显示
+  /// 剪切/复制/粘贴菜单，以及点击移动文本插入符等功能
   ///
-  /// When this is false, the text selection cannot be adjusted by
-  /// the user, text cannot be copied, and the user cannot paste into
-  /// the text field from the clipboard.
+  /// 当此为false时，用户无法调整文本选择，无法复制文本，
+  /// 且用户无法从剪贴板粘贴到文本字段
   final bool enableInteractiveSelection;
 
-  /// Optional delegate for building the text selection handles and toolbar.
+  /// 用于构建文本选择手柄和工具栏的可选委托
   ///
-  /// The [MongolEditableText] widget used on its own will not trigger the display
-  /// of the selection toolbar by itself. The toolbar is shown by calling
-  /// [EditableTextState.showToolbar] in response to an appropriate user event.
+  /// 单独使用的[MongolEditableText]部件不会自行触发选择工具栏的显示。
+  /// 工具栏是通过响应适当的用户事件调用[EditableTextState.showToolbar]来显示的
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [MongolTextField], a Material Design themed wrapper of
-  ///    [MongolEditableText], which shows the selection toolbar upon
-  ///    appropriate user events based on the user's platform set in
-  ///    [ThemeData.platform].
+  ///  * [MongolTextField]，[MongolEditableText]的Material Design主题包装器，
+  ///    它根据用户平台设置在[ThemeData.platform]中，在适当的用户事件时显示选择工具栏
   ///
   final TextSelectionControls? selectionControls;
 
-  /// Determines the way that drag start behavior is handled.
+  /// 上下文菜单构建器，用于自定义长按/右键时显示的选择菜单。
   ///
-  /// If set to [DragStartBehavior.start], scrolling drag behavior will
-  /// begin upon the detection of a drag gesture. If set to
-  /// [DragStartBehavior.down] it will begin when a down event is first detected.
+  /// 若为 null，则使用平台默认的 [toolbarOptions] 工具栏。
+  final MongolEditableTextContextMenuBuilder? contextMenuBuilder;
+
+  /// 确定如何处理拖动开始行为
   ///
-  /// In general, setting this to [DragStartBehavior.start] will make drag
-  /// animation smoother and setting it to [DragStartBehavior.down] will make
-  /// drag behavior feel slightly more reactive.
+  /// 如果设置为[DragStartBehavior.start]，滚动拖动行为将在检测到拖动手势时开始。
+  /// 如果设置为[DragStartBehavior.down]，它将在首次检测到按下事件时开始
   ///
-  /// By default, the drag start behavior is [DragStartBehavior.start].
+  /// 一般来说，将此设置为[DragStartBehavior.start]将使拖动动画更平滑，
+  /// 而将其设置为[DragStartBehavior.down]将使拖动行为感觉稍微更具响应性
   ///
-  /// See also:
+  /// 默认情况下，拖动开始行为是[DragStartBehavior.start]
   ///
-  ///  * [DragGestureRecognizer.dragStartBehavior], which gives an example for
-  ///    the different behaviors.
+  /// 另请参阅：
+  ///
+  ///  * [DragGestureRecognizer.dragStartBehavior]，它给出了不同行为的示例
   final DragStartBehavior dragStartBehavior;
 
-  /// Same as [enableInteractiveSelection].
+  /// 与[enableInteractiveSelection]相同
   ///
-  /// This getter exists primarily for consistency with
-  /// [MongolRenderEditable.selectionEnabled].
+  /// 此 getter 主要是为了与[MongolRenderEditable.selectionEnabled]保持一致
   bool get selectionEnabled => enableInteractiveSelection;
 
-  /// Called for each distinct tap except for every second tap of a double tap.
+  /// 为每次不同的点击调用，除了双击的第二次点击
   ///
-  /// The text field builds a [GestureDetector] to handle input events like tap,
-  /// to trigger focus requests, to move the caret, adjust the selection, etc.
-  /// Handling some of those events by wrapping the text field with a competing
-  /// GestureDetector is problematic.
+  /// 文本字段构建一个[GestureDetector]来处理输入事件，如点击、触发焦点请求、
+  /// 移动插入符、调整选择等。通过用竞争的GestureDetector包装文本字段来处理其中一些事件是有问题的
   ///
-  /// To unconditionally handle taps, without interfering with the text field's
-  /// internal gesture detector, provide this callback.
+  /// 要无条件处理点击，而不干扰文本字段的内部手势检测器，请提供此回调
   ///
-  /// If the text field is created with [enabled] false, taps will not be
-  /// recognized.
+  /// 如果文本字段使用[enabled] false创建，则不会识别点击
   ///
-  /// To be notified when the text field gains or loses the focus, provide a
-  /// [focusNode] and add a listener to that.
+  /// 要在文本字段获得或失去焦点时收到通知，请提供一个[focusNode]并向其添加监听器
   ///
-  /// To listen to arbitrary pointer events without competing with the
-  /// text field's internal gesture detector, use a [Listener].
+  /// 要在不与文本字段的内部手势检测器竞争的情况下监听任意指针事件，请使用[Listener]
   final GestureTapCallback? onTap;
 
-  /// The cursor for a mouse pointer when it enters or is hovering over the
-  /// widget.
+  /// 鼠标指针进入或悬停在部件上时的光标
   ///
-  /// If [mouseCursor] is a [MaterialStateProperty<MouseCursor>],
-  /// [MaterialStateProperty.resolve] is used for the following [MaterialState]s:
+  /// 如果[mouseCursor]是[MaterialStateProperty<MouseCursor>]，
+  /// [MaterialStateProperty.resolve]将用于以下[MaterialState]：
   ///
-  ///  * [MaterialState.error].
-  ///  * [MaterialState.hovered].
-  ///  * [MaterialState.focused].
-  ///  * [MaterialState.disabled].
+  ///  * [MaterialState.error]
+  ///  * [MaterialState.hovered]
+  ///  * [MaterialState.focused]
+  ///  * [MaterialState.disabled]
   ///
-  /// If this property is null, [MaterialStateMouseCursor.textable] will be used.
+  /// 如果此属性为null，将使用[MaterialStateMouseCursor.textable]
   ///
-  /// The [mouseCursor] is the only property of [MongolTextField] that controls the
-  /// appearance of the mouse pointer. All other properties related to "cursor"
-  /// stand for the text cursor, which is usually a blinking horizontal line at
-  /// the editing position.
+  /// [mouseCursor]是[MongolTextField]中唯一控制鼠标指针外观的属性。
+  /// 所有其他与"cursor"相关的属性都代表文本光标，通常是编辑位置的闪烁水平线
   final MouseCursor? mouseCursor;
 
-  /// Callback that generates a custom [InputDecoration.counter] widget.
+  /// 生成自定义[InputDecoration.counter]部件的回调
   ///
-  /// See [InputCounterWidgetBuilder] for an explanation of the passed in
-  /// arguments.  The returned widget will be placed below the line in place of
-  /// the default widget built when [InputDecoration.counterText] is specified.
+  /// 有关传入参数的解释，请参阅[InputCounterWidgetBuilder]。
+  /// 返回的部件将放置在行下方，替代指定[InputDecoration.counterText]时构建的默认部件
   ///
-  /// The returned widget will be wrapped in a [Semantics] widget for
-  /// accessibility, but it also needs to be accessible itself. For example,
-  /// if returning a MongolText widget, set the [MongolText.semanticsLabel] property.
+  /// 返回的部件将包装在[Semantics]部件中以实现可访问性，
+  /// 但它本身也需要是可访问的。例如，如果返回MongolText部件，
+  /// 请设置[MongolText.semanticsLabel]属性
   ///
   /// {@tool snippet}
   /// ```dart
@@ -898,153 +841,125 @@ class MongolTextField extends StatefulWidget {
   /// ```
   /// {@end-tool}
   ///
-  /// If buildCounter returns null, then no counter and no Semantics widget will
-  /// be created at all.
+  /// 如果buildCounter返回null，则不会创建计数器和Semantics部件
   final InputCounterWidgetBuilder? buildCounter;
 
-  /// The [ScrollPhysics] to use when horizontally scrolling the input.
+  /// 水平滚动输入时使用的[ScrollPhysics]
   ///
-  /// If not specified, it will behave according to the current platform.
+  /// 如果未指定，它将根据当前平台表现
   ///
-  /// See [Scrollable.physics].
+  /// 请参阅[Scrollable.physics]
   final ScrollPhysics? scrollPhysics;
 
-  /// The [ScrollController] to use when horizontally scrolling the input.
+  /// 水平滚动输入时使用的[ScrollController]
   ///
-  /// If null, it will instantiate a new ScrollController.
+  /// 如果为null，它将实例化一个新的ScrollController
   ///
-  /// See [Scrollable.controller].
+  /// 请参阅[Scrollable.controller]
   final ScrollController? scrollController;
 
-  /// A list of strings that helps the autofill service identify the type of this
-  /// text input.
+  /// 帮助自动填充服务识别此文本输入类型的字符串列表
   ///
-  /// When set to null or empty, this text input will not send its autofill
-  /// information to the platform, preventing it from participating in
-  /// autofills triggered by a different [AutofillClient], even if they're in the
-  /// same [AutofillScope]. Additionally, on Android and web, setting this to
-  /// null or empty will disable autofill for this text field.
+  /// 当设置为null或空时，此文本输入将不会向平台发送其自动填充信息，
+  /// 从而防止它参与由不同[AutofillClient]触发的自动填充，即使它们在同一个[AutofillScope]中。
+  /// 此外，在Android和Web上，将此设置为null或空将禁用此文本字段的自动填充
   ///
-  /// The minimum platform SDK version that supports Autofill is API level 26
-  /// for Android, and iOS 10.0 for iOS.
+  /// 支持自动填充的最低平台SDK版本是Android的API级别26和iOS的10.0
   ///
-  /// ### Setting up iOS autofill:
+  /// ### 设置iOS自动填充：
   ///
-  /// To provide the best user experience and ensure your app fully supports
-  /// password autofill on iOS, follow these steps:
+  /// 要提供最佳用户体验并确保您的应用完全支持iOS上的密码自动填充，请按照以下步骤操作：
   ///
-  /// * Set up your iOS app's
-  ///   [associated domains](https://developer.apple.com/documentation/safariservices/supporting_associated_domains_in_your_app).
-  /// * Some autofill hints only work with specific [keyboardType]s. For example,
-  ///   [AutofillHints.name] requires [TextInputType.name] and [AutofillHints.email]
-  ///   works only with [TextInputType.emailAddress]. Make sure the input field has a
-  ///   compatible [keyboardType]. Empirically, [TextInputType.name] works well
-  ///   with many autofill hints that are predefined on iOS.
+  /// * 设置iOS应用的[关联域](https://developer.apple.com/documentation/safariservices/supporting_associated_domains_in_your_app)
+  /// * 某些自动填充提示仅适用于特定的[keyboardType]。例如，
+  ///   [AutofillHints.name]需要[TextInputType.name]，[AutofillHints.email]仅适用于[TextInputType.emailAddress]。
+  ///   确保输入字段具有兼容的[keyboardType]。根据经验，[TextInputType.name]可以很好地适用于iOS上预定义的许多自动填充提示
   ///
-  /// ### Troubleshooting Autofill
+  /// ### 故障排除自动填充
   ///
-  /// Autofill service providers rely heavily on [autofillHints]. Make sure the
-  /// entries in [autofillHints] are supported by the autofill service currently
-  /// in use (the name of the service can typically be found in your mobile
-  /// device's system settings).
+  /// 自动填充服务提供商严重依赖[autofillHints]。确保[autofillHints]中的条目
+  /// 受当前使用的自动填充服务支持（服务名称通常可以在移动设备的系统设置中找到）
   ///
-  /// #### Autofill UI refuses to show up when I tap on the text field
+  /// #### 当我点击文本字段时，自动填充UI拒绝显示
   ///
-  /// Check the device's system settings and make sure autofill is turned on,
-  /// and there're available credentials stored in the autofill service.
+  /// 检查设备的系统设置，确保自动填充已打开，并且自动填充服务中存储了可用的凭据
   ///
-  /// * iOS password autofill: Go to Settings -> Password, turn on "Autofill
-  ///   Passwords", and add new passwords for testing by pressing the top right
-  ///   "+" button. Use an arbitrary "website" if you don't have associated
-  ///   domains set up for your app. As long as there's at least one password
-  ///   stored, you should be able to see a key-shaped icon in the quick type
-  ///   bar on the software keyboard, when a password related field is focused.
+  /// * iOS密码自动填充：转到设置 -> 密码，打开"自动填充密码"，
+  ///   并通过按右上角的"+"按钮添加用于测试的新密码。如果您的应用未设置关联域，
+  ///   请使用任意"网站"。只要至少存储了一个密码，当密码相关字段获得焦点时，
+  ///   您应该能够在软键盘的快速输入栏中看到一个钥匙形状的图标
   ///
-  /// * iOS contact information autofill: iOS seems to pull contact info from
-  ///   the Apple ID currently associated with the device. Go to Settings ->
-  ///   Apple ID (usually the first entry, or "Sign in to your iPhone" if you
-  ///   haven't set up one on the device), and fill out the relevant fields. If
-  ///   you wish to test more contact info types, try adding them in Contacts ->
-  ///   My Card.
+  /// * iOS联系信息自动填充：iOS似乎从当前与设备关联的Apple ID中提取联系信息。
+  ///   转到设置 -> Apple ID（通常是第一个条目，或者如果您尚未在设备上设置，则为"登录到您的iPhone"），
+  ///   并填写相关字段。如果您希望测试更多联系信息类型，请尝试在联系人 -> 我的名片中添加它们
   ///
-  /// * Android autofill: Go to Settings -> System -> Languages & input ->
-  ///   Autofill service. Enable the autofill service of your choice, and make
-  ///   sure there're available credentials associated with your app.
+  /// * Android自动填充：转到设置 -> 系统 -> 语言和输入 -> 自动填充服务。
+  ///   启用您选择的自动填充服务，并确保有与您的应用关联的可用凭据
   ///
-  /// #### I called `TextInput.finishAutofillContext` but the autofill save
-  /// prompt isn't showing
+  /// #### 我调用了`TextInput.finishAutofillContext`但自动填充保存提示没有显示
   ///
-  /// * iOS: iOS may not show a prompt or any other visual indication when it
-  ///   saves user password. Go to Settings -> Password and check if your new
-  ///   password is saved. Neither saving password nor auto-generating strong
-  ///   password works without properly setting up associated domains in your
-  ///   app. To set up associated domains, follow the instructions in
-  ///   <https://developer.apple.com/documentation/safariservices/supporting_associated_domains_in_your_app>.
+  /// * iOS：iOS在保存用户密码时可能不会显示提示或任何其他视觉指示。
+  ///   转到设置 -> 密码，检查您的新密码是否已保存。
+  ///   如果未正确设置应用中的关联域，保存密码和自动生成强密码都不起作用。
+  ///   要设置关联域，请按照<https://developer.apple.com/documentation/safariservices/supporting_associated_domains_in_your_app>中的说明操作
   ///
-  /// For the best results, hint strings need to be understood by the platform's
-  /// autofill service. The common values of hint strings can be found in
-  /// [AutofillHints], as well as their availability on different platforms.
+  /// 为获得最佳效果，提示字符串需要被平台的自动填充服务理解。
+  /// 提示字符串的常见值可以在[AutofillHints]中找到，以及它们在不同平台上的可用性
   ///
-  /// If an autofillable input field needs to use a custom hint that translates to
-  /// different strings on different platforms, the easiest way to achieve that
-  /// is to return different hint strings based on the value of
-  /// [defaultTargetPlatform].
+  /// 如果可自动填充的输入字段需要使用在不同平台上转换为不同字符串的自定义提示，
+  /// 实现此目的的最简单方法是根据[defaultTargetPlatform]的值返回不同的提示字符串
   ///
-  /// Each hint in the list, if not ignored, will be translated to the platform's
-  /// autofill hint type understood by its autofill services:
+  /// 列表中的每个提示（如果未被忽略）将被转换为平台的自动填充服务理解的平台自动填充提示类型：
   ///
-  /// * On iOS, only the first hint in the list is accounted for. The hint will
-  ///   be translated to a
-  ///   [UITextContentType](https://developer.apple.com/documentation/uikit/uitextcontenttype).
+  /// * 在iOS上，仅考虑列表中的第一个提示。该提示将被转换为
+  ///   [UITextContentType](https://developer.apple.com/documentation/uikit/uitextcontenttype)
   ///
-  /// * On Android, all hints in the list are translated to Android hint strings.
+  /// * 在Android上，列表中的所有提示都被转换为Android提示字符串
   ///
-  /// * On web, only the first hint is accounted for and will be translated to
-  ///   an "autocomplete" string.
+  /// * 在Web上，仅考虑第一个提示，并将其转换为"autocomplete"字符串
   ///
-  /// Providing an autofill hint that is predefined on the platform does not
-  /// automatically grant the input field eligibility for autofill. Ultimately,
-  /// it comes down to the autofill service currently in charge to determine
-  /// whether an input field is suitable for autofill and what the autofill
-  /// candidates are.
+  /// 提供平台上预定义的自动填充提示并不自动授予输入字段自动填充的资格。
+  /// 最终，由当前负责的自动填充服务决定输入字段是否适合自动填充以及自动填充候选项是什么
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  /// * [AutofillHints], a list of autofill hint strings that is predefined on at
-  ///   least one platform.
+  /// * [AutofillHints]，在至少一个平台上预定义的自动填充提示字符串列表
   ///
-  /// * [UITextContentType](https://developer.apple.com/documentation/uikit/uitextcontenttype),
-  ///   the iOS equivalent.
+  /// * [UITextContentType](https://developer.apple.com/documentation/uikit/uitextcontenttype)，
+  ///   iOS等效项
   ///
-  /// * Android [autofillHints](https://developer.android.com/reference/android/view/View#setAutofillHints(java.lang.String...)),
-  ///   the Android equivalent.
+  /// * Android [autofillHints](https://developer.android.com/reference/android/view/View#setAutofillHints(java.lang.String...))，
+  ///   Android等效项
   ///
-  /// * The [autocomplete](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete) attribute,
-  ///   the web equivalent.
+  /// * [autocomplete](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete)属性，
+  ///   Web等效项
   final Iterable<String>? autofillHints;
 
-  /// Restoration ID to save and restore the state of the text field.
+  /// 用于保存和恢复文本字段状态的恢复ID
   ///
-  /// If non-null, the text field will persist and restore its current scroll
-  /// offset and - if no [controller] has been provided - the content of the
-  /// text field. If a [controller] has been provided, it is the responsibility
-  /// of the owner of that controller to persist and restore it, e.g. by using
-  /// a [RestorableTextEditingController].
+  /// 如果非null，文本字段将持久化并恢复其当前滚动偏移量，
+  /// 并且 - 如果未提供[controller] - 文本字段的内容。
+  /// 如果提供了[controller]，则由该控制器的所有者负责持久化和恢复它，
+  /// 例如通过使用[RestorableTextEditingController]
   ///
-  /// The state of this widget is persisted in a [RestorationBucket] claimed
-  /// from the surrounding [RestorationScope] using the provided restoration ID.
+  /// 此部件的状态保存在从周围[RestorationScope]获取的[RestorationBucket]中，
+  /// 使用提供的恢复ID
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [RestorationManager], which explains how state restoration works in
-  ///    Flutter.
+  ///  * [RestorationManager]，它解释了Flutter中的状态恢复如何工作
   final String? restorationId;
 
+  /// 内容插入配置
   final ContentInsertionConfiguration? contentInsertionConfiguration;
 
+  /// 创建此部件的状态对象
   @override
   State<MongolTextField> createState() => _TextFieldState();
 
+  /// 向诊断树添加属性
+  ///
+  /// 用于在调试模式下显示部件的属性信息
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
@@ -1126,58 +1041,81 @@ class MongolTextField extends StatefulWidget {
   }
 }
 
+/// MongolTextField的状态类
 class _TextFieldState extends State<MongolTextField>
     with RestorationMixin
     implements MongolTextSelectionGestureDetectorBuilderDelegate {
+  /// 可恢复的文本编辑控制器
   RestorableTextEditingController? _controller;
+  
+  /// 获取有效的文本编辑控制器
+  /// 
+  /// 如果用户提供了控制器，则使用用户提供的；否则使用本地创建的
   TextEditingController get _effectiveController =>
       widget.controller ?? _controller!.value;
 
+  /// 焦点节点
   FocusNode? _focusNode;
+  
+  /// 获取有效的焦点节点
+  /// 
+  /// 如果用户提供了焦点节点，则使用用户提供的；否则创建一个新的
   FocusNode get _effectiveFocusNode =>
       widget.focusNode ?? (_focusNode ??= FocusNode());
 
+  /// 获取有效的最大长度强制执行策略
   MaxLengthEnforcement get _effectiveMaxLengthEnforcement =>
       widget.maxLengthEnforcement ??
       LengthLimitingTextInputFormatter.getDefaultMaxLengthEnforcement(
           Theme.of(context).platform);
 
+  /// 是否悬停
   bool _isHovering = false;
 
+  /// 是否需要计数器
   bool get needsCounter =>
       widget.maxLength != null &&
       widget.decoration != null &&
       widget.decoration!.counterText == null;
 
+  /// 是否显示选择手柄
   bool _showSelectionHandles = false;
 
+  /// 文本选择手势检测器构建器
   late _TextFieldSelectionGestureDetectorBuilder
       _selectionGestureDetectorBuilder;
 
-  // API for MongolTextSelectionGestureDetectorBuilderDelegate.
+  // MongolTextSelectionGestureDetectorBuilderDelegate API
   @override
   late bool forcePressEnabled;
 
   @override
-  final GlobalKey<MongolEditableTextState> editableTextKey =
+  final GlobalKey<MongolEditableTextState> editableTextKey = 
       GlobalKey<MongolEditableTextState>();
 
   @override
   bool get selectionEnabled => widget.selectionEnabled;
-  // End of API for MongolTextSelectionGestureDetectorBuilderDelegate.
+  // End of MongolTextSelectionGestureDetectorBuilderDelegate API
 
+  /// 文本字段是否启用
   bool get _isEnabled => widget.enabled ?? widget.decoration?.enabled ?? true;
 
+  /// 当前文本长度
   int get _currentLength => _effectiveController.value.text.characters.length;
 
+  /// 是否有内在错误（字符数超过限制）
   bool get _hasIntrinsicError =>
       widget.maxLength != null &&
       widget.maxLength! > 0 &&
       _effectiveController.value.text.characters.length > widget.maxLength!;
 
+  /// 是否有错误
   bool get _hasError =>
       widget.decoration?.errorText != null || _hasIntrinsicError;
 
+  /// 获取有效的装饰
+  /// 
+  /// 根据当前状态和配置，计算出最终使用的装饰
   InputDecoration _getEffectiveDecoration() {
     final localizations = MaterialLocalizations.of(context);
     final themeData = Theme.of(context);
@@ -1188,13 +1126,13 @@ class _TextFieldState extends State<MongolTextField>
           hintMaxLines: widget.decoration?.hintMaxLines ?? widget.maxLines,
         );
 
-    // No need to build anything if counter or counterText were given directly.
+    // 如果直接提供了计数器或计数器文本，则不需要构建任何东西
     if (effectiveDecoration.counter != null ||
         effectiveDecoration.counterText != null) {
       return effectiveDecoration;
     }
 
-    // If buildCounter was provided, use it to generate a counter widget.
+    // 如果提供了buildCounter，则使用它生成计数器部件
     Widget? counter;
     final currentLength = _currentLength;
     if (effectiveDecoration.counter == null &&
@@ -1207,7 +1145,7 @@ class _TextFieldState extends State<MongolTextField>
         maxLength: widget.maxLength,
         isFocused: isFocused,
       );
-      // If buildCounter returns null, don't add a counter widget to the field.
+      // 如果buildCounter返回null，则不向字段添加计数器部件
       if (builtCounter != null) {
         counter = Semantics(
           container: true,
@@ -1219,19 +1157,19 @@ class _TextFieldState extends State<MongolTextField>
     }
 
     if (widget.maxLength == null) {
-      return effectiveDecoration; // No counter widget
+      return effectiveDecoration; // 没有计数器部件
     }
 
     var counterText = '$currentLength';
     var semanticCounterText = '';
 
-    // Handle a real maxLength (positive number)
+    // 处理真实的maxLength（正数）
     if (widget.maxLength! > 0) {
-      // Show the maxLength in the counter
+      // 在计数器中显示maxLength
       counterText += '/${widget.maxLength}';
-      final remaining =
+      final remaining = 
           (widget.maxLength! - currentLength).clamp(0, widget.maxLength!);
-      semanticCounterText =
+      semanticCounterText = 
           localizations.remainingTextFieldCharacterCount(remaining);
     }
 
@@ -1252,10 +1190,11 @@ class _TextFieldState extends State<MongolTextField>
     );
   }
 
+  /// 初始化状态
   @override
   void initState() {
     super.initState();
-    _selectionGestureDetectorBuilder =
+    _selectionGestureDetectorBuilder = 
         _TextFieldSelectionGestureDetectorBuilder(state: this);
     if (widget.controller == null) {
       _createLocalController();
@@ -1263,6 +1202,7 @@ class _TextFieldState extends State<MongolTextField>
     _effectiveFocusNode.canRequestFocus = _isEnabled;
   }
 
+  /// 是否可以请求焦点
   bool get _canRequestFocus {
     final mode = MediaQuery.maybeOf(context)?.navigationMode ??
         NavigationMode.traditional;
@@ -1274,12 +1214,14 @@ class _TextFieldState extends State<MongolTextField>
     }
   }
 
+  /// 依赖项更改时调用
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _effectiveFocusNode.canRequestFocus = _canRequestFocus;
   }
 
+  /// 部件更新时调用
   @override
   void didUpdateWidget(MongolTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -1300,6 +1242,7 @@ class _TextFieldState extends State<MongolTextField>
     }
   }
 
+  /// 恢复状态
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
     if (_controller != null) {
@@ -1307,11 +1250,13 @@ class _TextFieldState extends State<MongolTextField>
     }
   }
 
+  /// 注册控制器
   void _registerController() {
     assert(_controller != null);
     registerForRestoration(_controller!, 'controller');
   }
 
+  /// 创建本地控制器
   void _createLocalController([TextEditingValue? value]) {
     assert(_controller == null);
     _controller = value == null
@@ -1322,9 +1267,11 @@ class _TextFieldState extends State<MongolTextField>
     }
   }
 
+  /// 获取恢复ID
   @override
   String? get restorationId => widget.restorationId;
 
+  /// 释放资源
   @override
   void dispose() {
     _focusNode?.dispose();
@@ -1332,15 +1279,23 @@ class _TextFieldState extends State<MongolTextField>
     super.dispose();
   }
 
+  /// 获取可编辑文本状态
   MongolEditableTextState? get _editableText => editableTextKey.currentState;
 
+  /// 请求键盘
   void _requestKeyboard() {
     _editableText?.requestKeyboard();
   }
 
+  /// 是否应该显示选择手柄
   bool _shouldShowSelectionHandles(SelectionChangedCause? cause) {
-    // When the text field is activated by something that doesn't trigger the
-    // selection overlay, we shouldn't show the handles either.
+    if (kIsWeb &&
+        _effectiveController.selection.isValid &&
+        !_effectiveController.selection.isCollapsed) {
+      return true;
+    }
+
+    // 当文本字段被不触发选择覆盖层的东西激活时，我们也不应该显示手柄
     if (!_selectionGestureDetectorBuilder.shouldShowSelectionToolbar) {
       return false;
     }
@@ -1360,6 +1315,7 @@ class _TextFieldState extends State<MongolTextField>
     return false;
   }
 
+  /// 处理选择更改
   void _handleSelectionChanged(
       TextSelection selection, SelectionChangedCause? cause) {
     final willShowSelectionHandles = _shouldShowSelectionHandles(cause);
@@ -1380,17 +1336,18 @@ class _TextFieldState extends State<MongolTextField>
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-      // Do nothing.
+        // Do nothing.
     }
   }
 
-  /// Toggle the toolbar when a selection handle is tapped.
+  /// 当选择手柄被点击时切换工具栏
   void _handleSelectionHandleTapped() {
     if (_effectiveController.selection.isCollapsed) {
       _editableText!.toggleToolbar();
     }
   }
 
+  /// 处理悬停
   void _handleHover(bool hovering) {
     if (hovering != _isHovering) {
       setState(() {
@@ -1399,6 +1356,7 @@ class _TextFieldState extends State<MongolTextField>
     }
   }
 
+  /// 构建部件
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterial(context));
@@ -1543,6 +1501,7 @@ class _TextFieldState extends State<MongolTextField>
           autofillHints: widget.autofillHints,
           restorationId: 'editable',
           contentInsertionConfiguration: widget.contentInsertionConfiguration,
+          contextMenuBuilder: widget.contextMenuBuilder,
         ),
       ),
     );

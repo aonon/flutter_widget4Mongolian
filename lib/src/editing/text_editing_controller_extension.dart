@@ -6,8 +6,12 @@
 
 import 'package:flutter/widgets.dart';
 
+/// TextEditingController 的扩展方法
+/// 提供用于检查文本选择是否在文本边界内的功能
 extension TextEditingControllerExtension on TextEditingController {
-  /// Check that the [selection] is inside of the bounds of [text].
+  /// 检查 [selection] 是否在 [text] 的边界内
+  /// 
+  /// 当选择的起始位置和结束位置都不超过文本长度时，返回 true
   bool isSelectionWithinTextBounds(TextSelection selection) {
     return selection.start <= text.length && selection.end <= text.length;
   }

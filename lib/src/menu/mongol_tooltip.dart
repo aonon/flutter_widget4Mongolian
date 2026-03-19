@@ -25,28 +25,23 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mongol/src/text/mongol_text.dart';
 
-/// A Mongol material design tooltip.
+/// 蒙古文 Material Design 提示工具（Tooltip）
 ///
-/// Tooltips provide text labels which help explain the function of a button or
-/// other user interface action. Wrap the button in a [Tooltip] widget and provide
-/// a message which will be shown when the widget is long pressed.
+/// 提示工具提供文本标签，帮助解释按钮或其他用户界面操作的功能。
+/// 将按钮包装在 [MongolTooltip] 小部件中，并提供一个消息，当长按该小部件时会显示该消息。
 ///
-/// Many widgets, such as [IconButton], [FloatingActionButton], and
-/// [MongolPopupMenuButton] have a `tooltip` property that, when non-null, causes the
-/// widget to include a [Tooltip] in its build.
+/// 许多小部件，如 [IconButton]、[FloatingActionButton] 和 [MongolPopupMenuButton] 都有一个
+/// `tooltip` 属性，当该属性不为 null 时，会导致小部件在其构建中包含一个 [Tooltip]。
 ///
-/// Tooltips improve the accessibility of visual widgets by proving a textual
-/// representation of the widget, which, for example, can be vocalized by a
-/// screen reader.
+/// 提示工具通过提供小部件的文本表示来提高视觉小部件的可访问性，例如，屏幕阅读器可以朗读这些文本。
 ///
 /// {@youtube 560 315 https://www.youtube.com/watch?v=EeEfD5fI-5Q}
 ///
 /// {@tool dartpad --template=stateless_widget_scaffold_center}
 ///
-/// This example show a basic [MongolTooltip] which has a [MongolText] as child.
-/// [message] contains your label to be shown by the tooltip when
-/// the child that MongolTooltip wraps is hovered over on web or desktop. On mobile,
-/// the tooltip is shown when the widget is long pressed.
+/// 这个例子展示了一个基本的 [MongolTooltip]，它有一个 [MongolText] 作为子部件。
+/// [message] 包含当鼠标悬停在 web 或桌面端的子部件上时要显示的标签。
+/// 在移动端，当长按小部件时会显示提示工具。
 ///
 /// ```dart
 /// Widget build(BuildContext context) {
@@ -60,17 +55,14 @@ import 'package:mongol/src/text/mongol_text.dart';
 ///
 /// {@tool dartpad --template=stateless_widget_scaffold_center}
 ///
-/// This example covers most of the attributes available in MongolTooltip.
-/// `decoration` has been used to give a gradient and borderRadius to MongolTooltip.
-/// `width` has been used to set a specific width of the MongolTooltip.
-/// `preferRight` is false, the tooltip will prefer showing left of [MongolTooltip]'s child widget.
-/// However, it may show the tooltip to the right if there's not enough space
-/// to the left of the widget.
-/// `textStyle` has been used to set the font size of the 'message'.
-/// `showDuration` accepts a Duration to continue showing the message after the long
-/// press has been released.
-/// `waitDuration` accepts a Duration for which a mouse pointer has to hover over the child
-/// widget before the tooltip is shown.
+/// 这个例子涵盖了 MongolTooltip 中可用的大多数属性。
+/// `decoration` 用于为 MongolTooltip 提供渐变和边框半径。
+/// `width` 用于设置 MongolTooltip 的特定宽度。
+/// `preferRight` 为 false 时，提示工具将优先显示在 [MongolTooltip] 子部件的左侧。
+/// 但是，如果左侧空间不足，它可能会在右侧显示提示工具。
+/// `textStyle` 用于设置 'message' 的字体大小。
+/// `showDuration` 接受一个 Duration，表示长按释放后继续显示消息的时间。
+/// `waitDuration` 接受一个 Duration，表示鼠标指针必须悬停在子部件上多长时间才显示提示工具。
 ///
 /// ```dart
 /// Widget build(BuildContext context) {
@@ -94,23 +86,21 @@ import 'package:mongol/src/text/mongol_text.dart';
 /// ```
 /// {@end-tool}
 ///
-/// See also:
+/// 另请参阅：
 ///
 ///  * <https://material.io/design/components/tooltips.html>
-///  * [TooltipTheme] or [ThemeData.tooltipTheme]
+///  * [TooltipTheme] 或 [ThemeData.tooltipTheme]
 class MongolTooltip extends StatefulWidget {
-  /// Creates a Mongol tooltip.
+  /// 创建一个蒙古文提示工具。
   ///
-  /// By default, tooltips should adhere to the
-  /// [Material specification](https://material.io/design/components/tooltips.html#spec).
-  /// If the optional constructor parameters are not defined, the values
-  /// provided by [TooltipTheme.of] will be used if a [TooltipTheme] is present
-  /// or specified in [ThemeData].
+  /// 默认情况下，提示工具应遵循
+  /// [Material 规范](https://material.io/design/components/tooltips.html#spec)。
+  /// 如果未定义可选构造函数参数，则如果存在 [TooltipTheme] 或在 [ThemeData] 中指定，
+  /// 将使用 [TooltipTheme.of] 提供的值。
   ///
-  /// All parameters that are defined in the constructor will
-  /// override the default values _and_ the values in [TooltipTheme.of].
+  /// 在构造函数中定义的所有参数将覆盖默认值和 [TooltipTheme.of] 中的值。
   const MongolTooltip({
-    Key? key,
+    super.key,
     required this.message,
     this.width,
     this.padding,
@@ -123,94 +113,75 @@ class MongolTooltip extends StatefulWidget {
     this.waitDuration,
     this.showDuration,
     this.child,
-  }) : super(key: key);
+  });
 
-  /// The text to display in the tooltip.
+  /// 要在提示工具中显示的文本。
   final String message;
 
-  /// The width of the tooltip's [child].
+  /// 提示工具的 [child] 的宽度。
   ///
-  /// If the [child] is null, then this is the tooltip's intrinsic width.
+  /// 如果 [child] 为 null，则这是提示工具的固有宽度。
   final double? width;
 
-  /// The amount of space by which to inset the tooltip's [child].
+  /// 提示工具的 [child] 的内边距。
   ///
-  /// Defaults to 16.0 logical pixels in each direction.
+  /// 默认为每个方向 16.0 逻辑像素。
   final EdgeInsetsGeometry? padding;
 
-  /// The empty space that surrounds the tooltip.
+  /// 围绕提示工具的空白空间。
   ///
-  /// Defines the tooltip's outer [Container.margin]. By default, a
-  /// long tooltip will span the height of its window. If tall enough,
-  /// a tooltip might also span the window's width. This property allows
-  /// one to define how much space the tooltip must be inset from the edges
-  /// of their display window.
+  /// 定义提示工具的外部 [Container.margin]。默认情况下，长提示工具将跨越其窗口的高度。
+  /// 如果足够高，提示工具也可能跨越窗口的宽度。此属性允许定义提示工具必须从其显示窗口边缘插入的空间量。
   ///
-  /// If this property is null, then [TooltipThemeData.margin] is used.
-  /// If [TooltipThemeData.margin] is also null, the default margin is
-  /// 0.0 logical pixels on all sides.
+  /// 如果此属性为 null，则使用 [TooltipThemeData.margin]。
+  /// 如果 [TooltipThemeData.margin] 也为 null，则默认边距为所有边 0.0 逻辑像素。
   final EdgeInsetsGeometry? margin;
 
-  /// The horizontal gap between the widget and the displayed tooltip.
+  /// 小部件和显示的提示工具之间的水平间隙。
   ///
-  /// When [preferRight] is set to true and tooltips have sufficient space to
-  /// display themselves, this property defines how much horizontal space
-  /// tooltips will position themselves to the right of their corresponding widgets.
-  /// Otherwise, tooltips will position themselves to the left of their corresponding
-  /// widgets with the given offset.
+  /// 当 [preferRight] 设置为 true 且提示工具有足够的空间显示自己时，此属性定义提示工具将在其对应小部件右侧定位的水平空间量。
+  /// 否则，提示工具将以给定的偏移量定位在其对应小部件的左侧。
   final double? horizontalOffset;
 
-  /// Whether the tooltip defaults to being displayed to the right of the widget.
+  /// 提示工具是否默认显示在小部件的右侧。
   ///
-  /// Defaults to true. If there is insufficient space to display the tooltip in
-  /// the preferred direction, the tooltip will be displayed in the opposite
-  /// direction.
+  /// 默认为 true。如果在首选方向显示提示工具的空间不足，提示工具将在相反方向显示。
   final bool? preferRight;
 
-  /// Whether the tooltip's [message] should be excluded from the semantics
-  /// tree.
+  /// 提示工具的 [message] 是否应从语义树中排除。
   ///
-  /// Defaults to false. A tooltip will add a [Semantics] label that is set to
-  /// [MongolTooltip.message]. Set this property to true if the app is going to
-  /// provide its own custom semantics label.
+  /// 默认为 false。提示工具将添加一个 [Semantics] 标签，该标签设置为 [MongolTooltip.message]。
+  /// 如果应用程序将提供自己的自定义语义标签，请将此属性设置为 true。
   final bool? excludeFromSemantics;
 
-  /// The widget below this widget in the tree.
+  /// 此小部件下方树中的小部件。
   ///
   /// {@macro flutter.widgets.ProxyWidget.child}
   final Widget? child;
 
-  /// Specifies the tooltip's shape and background color.
+  /// 指定提示工具的形状和背景颜色。
   ///
-  /// The tooltip shape defaults to a rounded rectangle with a border radius of
-  /// 4.0. Tooltips will also default to an opacity of 90% and with the color
-  /// [Colors.grey[700]] if [ThemeData.brightness] is [Brightness.dark], and
-  /// [Colors.white] if it is [Brightness.light].
+  /// 提示工具形状默认为边框半径为 4.0 的圆角矩形。如果 [ThemeData.brightness] 为 [Brightness.dark]，
+  /// 提示工具还将默认为 90% 的不透明度和 [Colors.grey[700]] 颜色；如果为 [Brightness.light]，则为 [Colors.white]。
   final Decoration? decoration;
 
-  /// The style to use for the message of the tooltip.
+  /// 用于提示工具消息的样式。
   ///
-  /// If null, the message's [TextStyle] will be determined based on
-  /// [ThemeData]. If [ThemeData.brightness] is set to [Brightness.dark],
-  /// [TextTheme.bodyText2] of [ThemeData.textTheme] will be used with
-  /// [Colors.white]. Otherwise, if [ThemeData.brightness] is set to
-  /// [Brightness.light], [TextTheme.bodyText2] of [ThemeData.textTheme] will be
-  /// used with [Colors.black].
+  /// 如果为 null，消息的 [TextStyle] 将基于 [ThemeData] 确定。
+  /// 如果 [ThemeData.brightness] 设置为 [Brightness.dark]，则将使用 [ThemeData.textTheme] 的 [TextTheme.bodyText2] 和 [Colors.white]。
+  /// 否则，如果 [ThemeData.brightness] 设置为 [Brightness.light]，则将使用 [ThemeData.textTheme] 的 [TextTheme.bodyText2] 和 [Colors.black]。
   final TextStyle? textStyle;
 
-  /// The length of time that a pointer must hover over a tooltip's widget
-  /// before the tooltip will be shown.
+  /// 指针必须悬停在提示工具的小部件上才能显示提示工具的时间长度。
   ///
-  /// Once the pointer leaves the widget, the tooltip will immediately
-  /// disappear.
+  /// 一旦指针离开小部件，提示工具将立即消失。
   ///
-  /// Defaults to 0 milliseconds (tooltips are shown immediately upon hover).
+  /// 默认为 0 毫秒（悬停时立即显示提示工具）。
   final Duration? waitDuration;
 
-  /// The length of time that the tooltip will be shown after a long press
-  /// is released.
+  /// 长按释放后提示工具将显示的时间长度。
   ///
-  /// Defaults to 1.5 seconds.
+  /// 默认为 1.5 秒。
   final Duration? showDuration;
 
   @override
@@ -245,51 +216,78 @@ class MongolTooltip extends StatefulWidget {
   }
 }
 
+/// MongolTooltip 的状态类
 class _MongolTooltipState extends State<MongolTooltip>
     with SingleTickerProviderStateMixin {
+  // 默认的水平偏移量
   static const double _defaultHorizontalOffset = 24.0;
+  // 默认是否优先显示在右侧
   static const bool _defaultPreferRight = true;
+  // 默认边距
   static const EdgeInsetsGeometry _defaultMargin = EdgeInsets.zero;
+  // 淡入动画持续时间
   static const Duration _fadeInDuration = Duration(milliseconds: 150);
+  // 淡出动画持续时间
   static const Duration _fadeOutDuration = Duration(milliseconds: 75);
+  // 默认显示持续时间
   static const Duration _defaultShowDuration = Duration(milliseconds: 1500);
+  // 默认等待持续时间
   static const Duration _defaultWaitDuration = Duration.zero;
+  // 默认是否从语义树中排除
   static const bool _defaultExcludeFromSemantics = false;
 
+  // 提示工具宽度
   late double width;
+  // 内边距
   late EdgeInsetsGeometry padding;
+  // 外边距
   late EdgeInsetsGeometry margin;
+  // 装饰
   late Decoration decoration;
+  // 文本样式
   late TextStyle textStyle;
+  // 水平偏移量
   late double horizontalOffset;
+  // 是否优先显示在右侧
   late bool preferRight;
+  // 是否从语义树中排除
   late bool excludeFromSemantics;
+  // 动画控制器
   late AnimationController _controller;
+  // 覆盖条目
   OverlayEntry? _entry;
+  // 隐藏计时器
   Timer? _hideTimer;
+  // 显示计时器
   Timer? _showTimer;
+  // 显示持续时间
   late Duration showDuration;
+  // 等待持续时间
   late Duration waitDuration;
+  // 鼠标是否连接
   late bool _mouseIsConnected;
+  // 是否通过长按激活
   bool _longPressActivated = false;
 
   @override
   void initState() {
     super.initState();
+    // 检查鼠标是否连接
     _mouseIsConnected = RendererBinding.instance.mouseTracker.mouseIsConnected;
+    // 初始化动画控制器
     _controller = AnimationController(
       duration: _fadeInDuration,
       reverseDuration: _fadeOutDuration,
       vsync: this,
     )..addStatusListener(_handleStatusChanged);
-    // Listen to see when a mouse is added.
+    // 监听鼠标连接状态变化
     RendererBinding.instance.mouseTracker
         .addListener(_handleMouseTrackerChange);
-    // Listen to global pointer events so that we can hide a tooltip immediately
-    // if some other control is clicked on.
+    // 监听全局指针事件，以便在点击其他控件时立即隐藏提示工具
     GestureBinding.instance.pointerRouter.addGlobalRoute(_handlePointerEvent);
   }
 
+  // 根据 Material 设计规范获取默认提示工具宽度
   // https://material.io/components/tooltips#specs
   double _getDefaultTooltipWidth() {
     final ThemeData theme = Theme.of(context);
@@ -303,6 +301,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     }
   }
 
+  // 获取默认内边距
   EdgeInsets _getDefaultPadding() {
     final ThemeData theme = Theme.of(context);
     switch (theme.platform) {
@@ -315,6 +314,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     }
   }
 
+  // 获取默认字体大小
   double _getDefaultFontSize() {
     final ThemeData theme = Theme.of(context);
     switch (theme.platform) {
@@ -327,13 +327,12 @@ class _MongolTooltipState extends State<MongolTooltip>
     }
   }
 
-  // Forces a rebuild if a mouse has been added or removed.
+  // 如果添加或移除了鼠标，则强制重建
   void _handleMouseTrackerChange() {
     if (!mounted) {
       return;
     }
-    final bool mouseIsConnected =
-        RendererBinding.instance.mouseTracker.mouseIsConnected;
+    final bool mouseIsConnected = RendererBinding.instance.mouseTracker.mouseIsConnected;
     if (mouseIsConnected != _mouseIsConnected) {
       setState(() {
         _mouseIsConnected = mouseIsConnected;
@@ -341,12 +340,14 @@ class _MongolTooltipState extends State<MongolTooltip>
     }
   }
 
+  // 处理动画状态变化
   void _handleStatusChanged(AnimationStatus status) {
     if (status == AnimationStatus.dismissed) {
       _hideTooltip(immediately: true);
     }
   }
 
+  // 隐藏提示工具
   void _hideTooltip({bool immediately = false}) {
     _showTimer?.cancel();
     _showTimer = null;
@@ -355,16 +356,16 @@ class _MongolTooltipState extends State<MongolTooltip>
       return;
     }
     if (_longPressActivated) {
-      // Tool tips activated by long press should stay around for the showDuration.
+      // 通过长按激活的提示工具应在 showDuration 时间内保持显示
       _hideTimer ??= Timer(showDuration, _controller.reverse);
     } else {
-      // Tool tips activated by hover should disappear as soon as the mouse
-      // leaves the control.
+      // 通过悬停激活的提示工具应在鼠标离开控件时立即消失
       _controller.reverse();
     }
     _longPressActivated = false;
   }
 
+  // 显示提示工具
   void _showTooltip({bool immediately = false}) {
     _hideTimer?.cancel();
     _hideTimer = null;
@@ -375,25 +376,25 @@ class _MongolTooltipState extends State<MongolTooltip>
     _showTimer ??= Timer(waitDuration, ensureTooltipVisible);
   }
 
-  /// Shows the tooltip if it is not already visible.
+  /// 如果提示工具尚未可见，则显示它。
   ///
-  /// Returns `false` when the tooltip was already visible or if the context has
-  /// become null.
+  /// 当提示工具已经可见或上下文变为 null 时返回 `false`。
   bool ensureTooltipVisible() {
     _showTimer?.cancel();
     _showTimer = null;
     if (_entry != null) {
-      // Stop trying to hide, if we were.
+      // 如果我们正在尝试隐藏，则停止
       _hideTimer?.cancel();
       _hideTimer = null;
       _controller.forward();
-      return false; // Already visible.
+      return false; // 已经可见
     }
     _createNewEntry();
     _controller.forward();
     return true;
   }
 
+  // 创建新的覆盖条目
   void _createNewEntry() {
     final OverlayState overlayState = Overlay.of(
       context,
@@ -406,9 +407,7 @@ class _MongolTooltipState extends State<MongolTooltip>
       ancestor: overlayState.context.findRenderObject(),
     );
 
-    // We create this widget outside of the overlay entry's builder to prevent
-    // updated values from happening to leak into the overlay when the overlay
-    // rebuilds.
+    // 我们在覆盖条目构建器外部创建此小部件，以防止更新的值在覆盖重建时泄漏到覆盖中
     final Widget overlay = Directionality(
       textDirection: TextDirection.ltr,
       child: _MongolTooltipOverlay(
@@ -432,6 +431,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     SemanticsService.tooltip(widget.message);
   }
 
+  // 移除覆盖条目
   void _removeEntry() {
     _hideTimer?.cancel();
     _hideTimer = null;
@@ -441,6 +441,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     _entry = null;
   }
 
+  // 处理指针事件
   void _handlePointerEvent(PointerEvent event) {
     if (_entry == null) {
       return;
@@ -474,6 +475,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     super.dispose();
   }
 
+  // 处理长按事件
   void _handleLongPress() {
     _longPressActivated = true;
     final bool tooltipCreated = ensureTooltipVisible();
@@ -508,7 +510,8 @@ class _MongolTooltipState extends State<MongolTooltip>
       );
     }
 
-    width = widget.width ?? tooltipTheme.height ?? _getDefaultTooltipWidth();
+    // 设置各种属性的值，优先使用 widget 提供的值，然后是主题提供的值，最后是默认值
+    width = widget.width ?? tooltipTheme.constraints?.minHeight ?? _getDefaultTooltipWidth();
     padding = widget.padding ?? tooltipTheme.padding ?? _getDefaultPadding();
     margin = widget.margin ?? tooltipTheme.margin ?? _defaultMargin;
     horizontalOffset = widget.horizontalOffset ??
@@ -529,6 +532,7 @@ class _MongolTooltipState extends State<MongolTooltip>
         tooltipTheme.showDuration ??
         _defaultShowDuration;
 
+    // 创建一个 GestureDetector 来处理长按事件
     Widget result = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onLongPress: _handleLongPress,
@@ -539,7 +543,7 @@ class _MongolTooltipState extends State<MongolTooltip>
       ),
     );
 
-    // Only check for hovering if there is a mouse connected.
+    // 只有在鼠标连接时才检查悬停
     if (_mouseIsConnected) {
       result = MouseRegion(
         onEnter: (PointerEnterEvent event) => _showTooltip(),
@@ -552,30 +556,26 @@ class _MongolTooltipState extends State<MongolTooltip>
   }
 }
 
-/// A delegate for computing the layout of a tooltip to be displayed left or
-/// right of a target specified in the global coordinate system.
+/// 用于计算提示工具布局的委托，提示工具将显示在全局坐标系中指定目标的左侧或右侧
 class _MongolTooltipPositionDelegate extends SingleChildLayoutDelegate {
-  /// Creates a delegate for computing the layout of a tooltip.
+  /// 创建一个用于计算提示工具布局的委托
   ///
-  /// The arguments must not be null.
+  /// 参数不能为空
   _MongolTooltipPositionDelegate({
     required this.target,
     required this.horizontalOffset,
     required this.preferRight,
   });
 
-  /// The offset of the target the tooltip is positioned near in the global
-  /// coordinate system.
+  /// 提示工具在全局坐标系中定位的目标偏移量
   final Offset target;
 
-  /// The amount of horizontal distance between the target and the displayed
-  /// tooltip.
+  /// 目标和显示的提示工具之间的水平距离
   final double horizontalOffset;
 
-  /// Whether the tooltip is displayed to the right of its widget by default.
+  /// 提示工具是否默认显示在其小部件的右侧
   ///
-  /// If there is insufficient space to display the tooltip in the preferred
-  /// direction, the tooltip will be displayed in the opposite direction.
+  /// 如果在首选方向显示提示工具的空间不足，提示工具将在相反方向显示
   final bool preferRight;
 
   @override
@@ -601,9 +601,9 @@ class _MongolTooltipPositionDelegate extends SingleChildLayoutDelegate {
   }
 }
 
+/// 蒙古文提示工具覆盖层
 class _MongolTooltipOverlay extends StatelessWidget {
   const _MongolTooltipOverlay({
-    Key? key,
     required this.message,
     required this.width,
     this.padding,
@@ -614,17 +614,27 @@ class _MongolTooltipOverlay extends StatelessWidget {
     required this.target,
     required this.horizontalOffset,
     required this.preferRight,
-  }) : super(key: key);
+  });
 
+  /// 提示消息
   final String message;
+  /// 提示工具宽度
   final double width;
+  /// 内边距
   final EdgeInsetsGeometry? padding;
+  /// 外边距
   final EdgeInsetsGeometry? margin;
+  /// 装饰
   final Decoration? decoration;
+  /// 文本样式
   final TextStyle? textStyle;
+  /// 动画
   final Animation<double> animation;
+  /// 目标偏移量
   final Offset target;
+  /// 水平偏移量
   final double horizontalOffset;
+  /// 是否优先显示在右侧
   final bool preferRight;
 
   @override
@@ -665,36 +675,27 @@ class _MongolTooltipOverlay extends StatelessWidget {
   }
 }
 
-/// Position a child box within a container box, either left or right of a target
-/// point.
+/// 在容器框内定位子框，位于目标点的左侧或右侧
 ///
-/// The container's size is described by `size`.
+/// 容器的大小由 `size` 描述。
 ///
-/// The target point is specified by `target`, as an offset from the top left of
-/// the container.
+/// 目标点由 `target` 指定，作为从容器左上角开始的偏移量。
 ///
-/// The child box's size is given by `childSize`.
+/// 子框的大小由 `childSize` 给出。
 ///
-/// The return value is the suggested distance from the top left of the
-/// container box to the top left of the child box.
+/// 返回值是从容器框左上角到子框左上角的建议距离。
 ///
-/// The suggested position will be to the left of the target point if `preferRight` is
-/// false, and to the right of the target point if it is true, unless it wouldn't fit on
-/// the preferred side but would fit on the other side.
+/// 如果 `preferRight` 为 false，建议的位置将在目标点的左侧；如果为 true，建议的位置将在目标点的右侧，
+/// 除非它无法适应首选侧但可以适应另一侧。
 ///
-/// The suggested position will place the nearest side of the child to the
-/// target point `horizontalOffset` from the target point (even if it cannot fit
-/// given that constraint).
+/// 建议的位置将使子框的最近一侧距离目标点 `horizontalOffset`（即使在给定该约束的情况下无法适应）。
 ///
-/// The suggested position will be at least `margin` away from the edge of the
-/// container. If possible, the child will be positioned so that its center is
-/// aligned with the target point. If the child cannot fit vertically within
-/// the container given the margin, then the child will be centered in the
-/// container.
+/// 建议的位置将至少距离容器边缘 `margin`。如果可能，子框将被定位为使其中心与目标点对齐。
+/// 如果子框在给定边距的情况下无法垂直适应容器，则子框将在容器中居中。
 ///
-/// Used by [MongolTooltip] to position a tooltip relative to its parent.
+/// 由 [MongolTooltip] 用于相对于其父级定位提示工具。
 ///
-/// The arguments must not be null.
+/// 参数不能为空。
 Offset positionMongolDependentBox({
   required Size size,
   required Size childSize,
@@ -703,7 +704,7 @@ Offset positionMongolDependentBox({
   double horizontalOffset = 0.0,
   double margin = 10.0,
 }) {
-  // HORIZONTAL DIRECTION
+  // 水平方向
   final bool fitsRight =
       target.dx + horizontalOffset + childSize.width <= size.width - margin;
   final bool fitsLeft =
@@ -716,7 +717,7 @@ Offset positionMongolDependentBox({
   } else {
     x = math.max(target.dx - horizontalOffset - childSize.width, margin);
   }
-  // VERTICAL DIRECTION
+  // 垂直方向
   double y;
   if (size.height - margin * 2.0 < childSize.height) {
     y = (size.height - childSize.height) / 2.0;
