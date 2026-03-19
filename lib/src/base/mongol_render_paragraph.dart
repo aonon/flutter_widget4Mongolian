@@ -13,19 +13,29 @@ import 'package:mongol/src/base/mongol_text_align.dart';
 
 import '../base/mongol_text_painter.dart';
 
-// This is a horizontal ellipsis. Could use a Mongolian ellipsis U+1801 instead.
+// 水平省略号。可以使用蒙古文省略号 U+1801 替代。
 const String _kEllipsis = '\u2026';
 
-/// A render object that displays a paragraph of vertical Mongolian text.
+/// 显示垂直蒙古文文本段落的渲染对象。
+/// 
+/// 这个类负责处理蒙古文文本的垂直布局和渲染，是 MongolText 和 MongolRichText 组件的底层实现。
 class MongolRenderParagraph extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, TextParentData>,
         RenderInlineChildrenContainerDefaults,
         RelayoutWhenSystemFontsChangeMixin {
-  /// Creates a vertical paragraph render object.
+  /// 创建一个垂直段落渲染对象。
   ///
-  /// The [maxLines] property may be null (and indeed defaults to null), but if
-  /// it is not null, it must be greater than zero.
+  /// [maxLines] 属性可以为 null（默认值为 null），但如果不为 null，必须大于 0。
+  /// 
+  /// 参数：
+  /// - text: 要显示的文本内容
+  /// - textAlign: 文本垂直对齐方式，默认为顶部对齐
+  /// - softWrap: 是否在软换行符处换行，默认为 true
+  /// - overflow: 文本溢出处理方式，默认为裁剪
+  /// - textScaleFactor: 文本缩放因子，默认为 1.0
+  /// - maxLines: 最大行数，默认为 null（无限制）
+  /// - rotateCJK: 是否将 CJK 字符旋转 90 度以在垂直列中显示，默认为 true
   MongolRenderParagraph(
     TextSpan text, {
     MongolTextAlign textAlign = MongolTextAlign.top,
@@ -53,9 +63,10 @@ class MongolRenderParagraph extends RenderBox
     }
   }
 
+  // 蒙古文文本绘制器，负责实际的文本布局和绘制
   final MongolTextPainter _textPainter;
 
-  /// The text to display
+  /// 要显示的文本内容
   TextSpan get text => _textPainter.text!;
   set text(TextSpan value) {
     switch (_textPainter.text!.compareTo(value)) {
@@ -73,7 +84,7 @@ class MongolRenderParagraph extends RenderBox
     }
   }
 
-  /// How the text should be aligned vertically.
+  /// 文本的垂直对齐方式
   MongolTextAlign get textAlign => _textPainter.textAlign;
   set textAlign(MongolTextAlign value) {
     if (_textPainter.textAlign == value) {
@@ -83,13 +94,11 @@ class MongolRenderParagraph extends RenderBox
     markNeedsPaint();
   }
 
-  /// Whether the text should break at soft line breaks.
+  /// 文本是否应在软换行符处换行。
   ///
-  /// If false, the glyphs in the text will be positioned as if there was
-  /// unlimited vertical space.
+  /// 如果为 false，文本中的字形将被定位，就像有无限的垂直空间一样。
   ///
-  /// If [softWrap] is false, [overflow] and [textAlign] may have unexpected
-  /// effects.
+  /// 如果 [softWrap] 为 false，[overflow] 和 [textAlign] 可能会产生意外效果。
   bool get softWrap => _softWrap;
   bool _softWrap;
   set softWrap(bool value) {
@@ -100,7 +109,7 @@ class MongolRenderParagraph extends RenderBox
     markNeedsLayout();
   }
 
-  /// How visual overflow should be handled.
+  /// 视觉溢出的处理方式
   TextOverflow get overflow => _overflow;
   TextOverflow _overflow;
   set overflow(TextOverflow value) {
@@ -112,10 +121,9 @@ class MongolRenderParagraph extends RenderBox
     markNeedsLayout();
   }
 
-  /// The number of font pixels for each logical pixel.
+  /// 每个逻辑像素的字体像素数。
   ///
-  /// For example, if the text scale factor is 1.5, text will be 50% larger than
-  /// the specified font size.
+  /// 例如，如果文本缩放因子为 1.5，文本将比指定的字体大小大 50%。
   double get textScaleFactor => _textPainter.textScaleFactor;
   set textScaleFactor(double value) {
     if (_textPainter.textScaleFactor == value) return;
@@ -123,13 +131,11 @@ class MongolRenderParagraph extends RenderBox
     markNeedsLayout();
   }
 
-  /// An optional maximum number of lines for the text to span, wrapping if
-  /// necessary. If the text exceeds the given number of lines, it will be
-  /// truncated according to [overflow] and [softWrap].
+  /// 文本可以跨越的可选最大行数，如果需要，会自动换行。
+  /// 如果文本超过给定的行数，将根据 [overflow] 和 [softWrap] 进行截断。
   int? get maxLines => _textPainter.maxLines;
 
-  /// The value may be null. If it is not null, then it must be greater than
-  /// zero.
+  /// 值可以为 null。如果不为 null，则必须大于 0。
   set maxLines(int? value) {
     assert(value == null || value > 0);
     if (_textPainter.maxLines == value) {
@@ -140,8 +146,7 @@ class MongolRenderParagraph extends RenderBox
     markNeedsLayout();
   }
 
-  /// Whether CJK characters should be rotated 90 degrees to appear upright in
-  /// a vertical column.
+  /// CJK 字符是否应旋转 90 度以在垂直列中显示为直立。
   bool get rotateCJK => _textPainter.rotateCJK;
   set rotateCJK(bool value) {
     if (_textPainter.rotateCJK == value) return;
@@ -149,16 +154,22 @@ class MongolRenderParagraph extends RenderBox
     markNeedsLayout();
   }
 
+  // 是否需要裁剪文本
   bool _needsClipping = false;
+  // 溢出效果的着色器
   ui.Shader? _overflowShader;
 
-  /// Whether this paragraph currently has a [dart:ui.Shader] for its overflow
-  /// effect.
+  /// 此段落当前是否有用于其溢出效果的 [dart:ui.Shader]。
   ///
-  /// Used to test this object. Not for use in production.
+  /// 用于测试此对象。不在生产环境中使用。
   @visibleForTesting
   bool get debugHasOverflowShader => _overflowShader != null;
 
+  /// 布局文本
+  /// 
+  /// 参数：
+  /// - minHeight: 最小高度，默认为 0.0
+  /// - maxHeight: 最大高度，默认为无穷大
   void _layoutText({
     double minHeight = 0.0,
     double maxHeight = double.infinity,
@@ -170,6 +181,10 @@ class MongolRenderParagraph extends RenderBox
     );
   }
 
+  /// 使用约束条件布局文本
+  /// 
+  /// 参数：
+  /// - constraints: 布局约束条件
   void _layoutTextWithConstraints(BoxConstraints constraints) {
     _layoutText(
       minHeight: constraints.minHeight,
@@ -189,6 +204,13 @@ class MongolRenderParagraph extends RenderBox
     return _textPainter.maxIntrinsicHeight;
   }
 
+  /// 计算内在宽度
+  /// 
+  /// 参数：
+  /// - height: 高度
+  /// 
+  /// 返回：
+  /// - 计算出的内在宽度
   double _computeIntrinsicWidth(double height) {
     _layoutText(minHeight: height, maxHeight: height);
     return _textPainter.width;
@@ -235,20 +257,17 @@ class MongolRenderParagraph extends RenderBox
   void performLayout() {
     final constraints = this.constraints;
     _layoutTextWithConstraints(constraints);
-    // final textSize = _textPainter.size;
-    // size = constraints.constrain(textSize);
 
-    // We grab _textPainter.size and _textPainter.didExceedMaxLines here because
-    // assigning to `size` will trigger us to validate our intrinsic sizes,
-    // which will change _textPainter's layout because the intrinsic size
-    // calculations are destructive. Other _textPainter state will also be
-    // affected. See also MongolRenderEditable which has a similar issue.
+    // 我们在这里获取 _textPainter.size 和 _textPainter.didExceedMaxLines，因为
+    // 分配给 `size` 将触发我们验证我们的内在大小，
+    // 这将改变 _textPainter 的布局，因为内在大小
+    // 计算是破坏性的。其他 _textPainter 状态也会
+    // 受到影响。另请参阅具有类似问题的 MongolRenderEditable。
     final textSize = _textPainter.size;
     final textDidExceedMaxLines = _textPainter.didExceedMaxLines;
     size = constraints.constrain(textSize);
 
-    final didOverflowWidth =
-        size.width < textSize.width || textDidExceedMaxLines;
+    final didOverflowWidth = size.width < textSize.width || textDidExceedMaxLines;
     final didOverflowHeight = size.height < textSize.height;
     final hasVisualOverflow = didOverflowHeight || didOverflowWidth;
     if (hasVisualOverflow) {
@@ -308,8 +327,7 @@ class MongolRenderParagraph extends RenderBox
     if (_needsClipping) {
       final bounds = offset & size;
       if (_overflowShader != null) {
-        // This layer limits what the shader below blends with to be just the
-        // text (as opposed to the text and its background).
+        // 这个层限制了下面的着色器混合的内容，使其仅与文本（而不是文本及其背景）混合。
         context.canvas.saveLayer(bounds, Paint());
       } else {
         context.canvas.save();

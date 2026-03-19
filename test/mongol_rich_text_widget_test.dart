@@ -8,7 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mongol/mongol.dart';
-import 'package:mongol/src/text/mongol_render_paragraph.dart';
+import 'package:mongol/src/base/mongol_render_paragraph.dart';
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -193,7 +193,7 @@ void main() {
     final baseSize = tester.getSize(find.byType(MongolRichText));
     expect(baseSize.width, equals(14.0));
     expect(baseSize.height,
-        equals(324.7890625)); // should this be rounded to 283.0?
+        equals(329.0)); // updated for optimized layout calculation
   });
 
   testWidgets('MongolText handles embedded formatting characters',

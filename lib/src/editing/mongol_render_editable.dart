@@ -14,58 +14,45 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:mongol/src/base/mongol_text_align.dart';
 import 'package:mongol/src/base/mongol_text_painter.dart';
+import 'package:mongol/src/base/mongol_paragraph.dart';
 
-import '../base/mongol_paragraph.dart';
-
+// 光标间隙（像素）
 const double _kCaretGap = 1.0; // pixels
+// 光标宽度偏移（像素）
 const double _kCaretWidthOffset = 2.0; // pixels
 
-/// The consecutive sequence of [TextPosition]s that the caret should move to
-/// when the user navigates the paragraph using the left arrow key or the
-/// right arrow key.
+/// 光标在水平方向上移动时应移动到的连续 [TextPosition] 序列
+/// 当用户使用左箭头键或右箭头键导航段落时使用
 ///
-/// When the user presses the left arrow key or the right arrow key, on
-/// many platforms (macOS for instance), the caret will move to the previous
-/// line or the next line, while maintaining its original horizontal location.
-/// When it encounters a shorter line, the caret moves to the closest horizontal
-/// location within that line, and restores the original horizontal location
-/// when a long enough line is encountered.
+/// 当用户按下左箭头键或右箭头键时，在许多平台（例如 macOS）上，
+/// 光标会移动到上一行或下一行，同时保持其原始水平位置
+/// 当遇到较短的行时，光标会移动到该行内最近的水平位置，
+/// 当遇到足够长的行时，会恢复原始水平位置
 ///
-/// Additionally, the caret will move to the beginning of the document if the
-/// left arrow key is pressed and the caret is already on the first line. If
-/// the right arrow key is pressed next, the caret will restore its original
-/// horizontal location and move to the second line. Similarly the caret moves
-/// to the end of the document if the right arrow key is pressed when it's
-/// already on the last line.
+/// 此外，如果光标已经在第一行并按下左箭头键，光标会移动到文档的开头
+/// 如果接下来按下右箭头键，光标会恢复其原始水平位置并移动到第二行
+/// 类似地，如果光标已经在最后一行并按下右箭头键，光标会移动到文档的末尾
 ///
-/// Consider a top-aligned paragraph:
+/// 考虑一个顶部对齐的段落：
 ///   a  a  a
 ///   a     a
 ///  ——     a
-/// where the caret was initially placed at the end of the first line. Pressing
-/// the right arrow key once will move the caret to the end of the second
-/// line, and twice the arrow key moves to the third line after the second "a"
-/// on that line. Pressing the right arrow key again, the caret will move to
-/// the end of the third line (the end of the document). Pressing the left
-/// arrow key in this state will result in the caret moving to the end of the
-/// second line.
+/// 假设光标最初位于第一行的末尾。按一次右箭头键会将光标移动到第二行的末尾，
+/// 按两次箭头键会移动到第三行的第二个 "a" 之后
+/// 再次按右箭头键，光标会移动到第三行的末尾（文档的末尾）
+/// 在这种状态下按左箭头键会导致光标移动到第二行的末尾
 ///
-/// Horizontal caret runs are typically interrupted when the layout of the text
-/// changes (including when the text itself changes), or when the selection is
-/// changed by other input events or programmatically (for example, when the
-/// user pressed the up arrow key).
+/// 当文本的布局发生变化（包括文本本身发生变化）时，或者当选择被其他输入事件或
+/// 以编程方式更改时（例如，当用户按下上箭头键时），水平光标运行通常会被中断
 ///
-/// The [movePrevious] method moves the caret location (which is
-/// [HorizontalCaretMovementRun.current]) to the previous line, and in case
-/// the caret is already on the first line, the method does nothing and returns
-/// false. Similarly the [moveNext] method moves the caret to the next line, and
-/// returns false if the caret is already on the last line.
+/// [movePrevious] 方法将光标位置（即 [HorizontalCaretMovementRun.current]）移动到上一行，
+/// 如果光标已经在第一行，则该方法不执行任何操作并返回 false
+/// 类似地，[moveNext] 方法将光标移动到下一行，如果光标已经在最后一行，则返回 false
 ///
-/// If the underlying paragraph's layout changes, [isValid] becomes false and
-/// the [HorizontalCaretMovementRun] must not be used. The [isValid] property must
-/// be checked before calling [movePrevious] and [moveNext], or accessing
-/// [current].
+/// 如果基础段落的布局发生变化，[isValid] 变为 false，并且不得使用 [HorizontalCaretMovementRun]
+/// 在调用 [movePrevious] 和 [moveNext] 或访问 [current] 之前，必须检查 [isValid] 属性
 class HorizontalCaretMovementRun implements Iterator<TextPosition> {
+  /// 私有构造函数
   HorizontalCaretMovementRun._(
     this._editable,
     this._lineMetrics,
@@ -74,39 +61,38 @@ class HorizontalCaretMovementRun implements Iterator<TextPosition> {
     this._currentOffset,
   );
 
-  Offset _currentOffset;
-  int _currentLine;
-  TextPosition _currentTextPosition;
+  Offset _currentOffset; // 当前偏移量
+  int _currentLine; // 当前行
+  TextPosition _currentTextPosition; // 当前文本位置
 
-  final List<MongolLineMetrics> _lineMetrics;
-  final MongolRenderEditable _editable;
+  final List<MongolLineMetrics> _lineMetrics; // 行度量信息
+  final MongolRenderEditable _editable; // 可编辑渲染对象
 
-  bool _isValid = true;
+  bool _isValid = true; // 是否有效
 
-  /// Whether this [HorizontalCaretMovementRun] can still continue.
+  /// 此 [HorizontalCaretMovementRun] 是否可以继续
   ///
-  /// A [HorizontalCaretMovementRun] run is valid if the underlying text layout
-  /// hasn't changed.
+  /// 如果基础文本布局没有更改，则 [HorizontalCaretMovementRun] 运行有效
   ///
-  /// The [current] value and the [movePrevious] and [moveNext] methods must not
-  /// be accessed when [isValid] is false.
+  /// 当 [isValid] 为 false 时，不得访问 [current] 值以及 [movePrevious] 和 [moveNext] 方法
   bool get isValid {
     if (!_isValid) {
       return false;
     }
     final List<MongolLineMetrics> newLineMetrics =
         _editable._textPainter.computeLineMetrics();
-    // Use the implementation detail of the computeLineMetrics method to figure
-    // out if the current text layout has been invalidated.
+    // 使用 computeLineMetrics 方法的实现细节来确定当前文本布局是否已失效
     if (!identical(newLineMetrics, _lineMetrics)) {
       _isValid = false;
     }
     return _isValid;
   }
 
+  // 缓存位置信息
   final Map<int, MapEntry<Offset, TextPosition>> _positionCache =
       <int, MapEntry<Offset, TextPosition>>{};
 
+  /// 获取指定行的文本位置
   MapEntry<Offset, TextPosition> _getTextPositionForLine(int lineNumber) {
     assert(isValid);
     assert(lineNumber >= 0);
@@ -128,12 +114,14 @@ class HorizontalCaretMovementRun implements Iterator<TextPosition> {
   }
 
   @override
+  /// 获取当前文本位置
   TextPosition get current {
     assert(isValid);
     return _currentTextPosition;
   }
 
   @override
+  /// 移动到下一行
   bool moveNext() {
     assert(isValid);
     if (_currentLine + 1 >= _lineMetrics.length) {
@@ -147,6 +135,7 @@ class HorizontalCaretMovementRun implements Iterator<TextPosition> {
     return true;
   }
 
+  /// 移动到上一行
   bool movePrevious() {
     assert(isValid);
     if (_currentLine <= 0) {
@@ -161,42 +150,36 @@ class HorizontalCaretMovementRun implements Iterator<TextPosition> {
   }
 }
 
-/// Displays some text in a scrollable container with a potentially blinking
-/// cursor and with gesture recognizers.
+/// 在可滚动容器中显示带有可能闪烁的光标和手势识别器的文本
 ///
-/// This is the renderer for an editable vertical text field. It does not
-/// directly provide a means of editing the text, but it does handle text
-/// selection and manipulation of the text cursor.
+/// 这是可编辑垂直文本字段的渲染器。它不直接提供编辑文本的方法，
+/// 但它处理文本选择和文本光标的操作。
 ///
-/// The [text] is displayed, scrolled by the given [offset], aligned according
-/// to [textAlign]. The [maxLines] property controls whether the text displays
-/// on one line or many. The [selection], if it is not collapsed, is painted in
-/// the [selectionColor]. If it _is_ collapsed, then it represents the cursor
-/// position. The cursor is shown while [showCursor] is true. It is painted in
-/// the [cursorColor].
+/// [text] 被显示，通过给定的 [offset] 滚动，根据 [textAlign] 对齐
+/// [maxLines] 属性控制文本是显示在一行还是多行
+/// [selection] 如果不是折叠的，则以 [selectionColor] 绘制
+/// 如果是折叠的，则表示光标位置
+/// 当 [showCursor] 为 true 时显示光标，以 [cursorColor] 绘制
 ///
-/// If, when the render object paints, the caret is found to have changed
-/// location, [onCaretChanged] is called.
+/// 如果在渲染对象绘制时发现光标位置已更改，则调用 [onCaretChanged]
 ///
-/// Keyboard handling, IME handling, scrolling, toggling the [showCursor] value
-/// to actually blink the cursor, and other features not mentioned above are the
-/// responsibility of higher layers and not handled by this object.
+/// 键盘处理、IME 处理、滚动、切换 [showCursor] 值以实际闪烁光标以及
+/// 上面未提及的其他功能是更高层的责任，不由此对象处理
 class MongolRenderEditable extends RenderBox
     with RelayoutWhenSystemFontsChangeMixin
     implements TextLayoutMetrics {
-  /// Creates a render object that implements the visual aspects of a text field.
+  /// 创建实现文本字段视觉方面的渲染对象
   ///
-  /// The [textAlign] argument must not be null. It defaults to
-  /// [MongolTextAlign.top].
+  /// [textAlign] 参数不能为空，默认为 [MongolTextAlign.top]
   ///
-  /// If [showCursor] is not specified, then it defaults to hiding the cursor.
+  /// 如果未指定 [showCursor]，则默认为隐藏光标
   ///
-  /// The [maxLines] property can be set to null to remove the restriction on
-  /// the number of lines. By default, it is 1, meaning this is a single-line
-  /// text field. If it is not null, it must be greater than zero.
+  /// [maxLines] 属性可以设置为 null 以移除对行数的限制
+  /// 默认情况下，它为 1，表示这是单行文本字段
+  /// 如果不为 null，则必须大于零
   ///
-  /// The [offset] is required and must not be null. You can use
-  /// [ViewportOffset.zero] if you have no need for scrolling.
+  /// [offset] 是必需的，不能为空
+  /// 如果不需要滚动，可以使用 [ViewportOffset.zero]
   MongolRenderEditable({
     TextSpan? text,
     MongolTextAlign textAlign = MongolTextAlign.top,
@@ -277,11 +260,12 @@ class MongolRenderEditable extends RenderBox
     _updatePainter(painter);
   }
 
-  /// Child render objects
-  _MongolRenderEditableCustomPaint? _foregroundRenderObject;
-  _MongolRenderEditableCustomPaint? _backgroundRenderObject;
+  /// 子渲染对象
+  _MongolRenderEditableCustomPaint? _foregroundRenderObject; // 前景渲染对象
+  _MongolRenderEditableCustomPaint? _backgroundRenderObject; // 背景渲染对象
 
   @override
+  /// 释放资源
   void dispose() {
     _foregroundRenderObject?.dispose();
     _foregroundRenderObject = null;
@@ -298,6 +282,7 @@ class MongolRenderEditable extends RenderBox
     super.dispose();
   }
 
+  /// 更新前景 painter
   void _updateForegroundPainter(MongolRenderEditablePainter? newPainter) {
     final effectivePainter = (newPainter == null)
         ? _builtInForegroundPainters
@@ -319,12 +304,10 @@ class MongolRenderEditable extends RenderBox
     _foregroundPainter = newPainter;
   }
 
-  /// The [MongolRenderEditablePainter] to use for painting above this
-  /// [MongolRenderEditable]'s text content.
+  /// 用于在 [MongolRenderEditable] 文本内容上方绘制的 [MongolRenderEditablePainter]
   ///
-  /// The new [MongolRenderEditablePainter] will replace the previously specified
-  /// foreground painter, and schedule a repaint if the new painter's
-  /// `shouldRepaint` method returns true.
+  /// 新的 [MongolRenderEditablePainter] 将替换先前指定的前景 painter，
+  /// 如果新 painter 的 `shouldRepaint` 方法返回 true，则安排重绘
   MongolRenderEditablePainter? get foregroundPainter => _foregroundPainter;
   MongolRenderEditablePainter? _foregroundPainter;
 
@@ -333,6 +316,7 @@ class MongolRenderEditable extends RenderBox
     _updateForegroundPainter(newPainter);
   }
 
+  /// 更新背景 painter
   void _updatePainter(MongolRenderEditablePainter? newPainter) {
     final effectivePainter = (newPainter == null)
         ? _builtInPainters
@@ -354,12 +338,10 @@ class MongolRenderEditable extends RenderBox
     _painter = newPainter;
   }
 
-  /// Sets the [MongolRenderEditablePainter] to use for painting beneath this
-  /// [MongolRenderEditable]'s text content.
+  /// 设置用于在此 [MongolRenderEditable] 文本内容下方绘制的 [MongolRenderEditablePainter]
   ///
-  /// The new [MongolRenderEditablePainter] will replace the previously specified
-  /// painter, and schedule a repaint if the new painter's `shouldRepaint`
-  /// method returns true.
+  /// 新的 [MongolRenderEditablePainter] 将替换先前指定的 painter，
+  /// 如果新 painter 的 `shouldRepaint` 方法返回 true，则安排重绘
   MongolRenderEditablePainter? get painter => _painter;
   MongolRenderEditablePainter? _painter;
 
@@ -374,10 +356,16 @@ class MongolRenderEditable extends RenderBox
   // Text Highlight painters:
   final _TextHighlightPainter _selectionPainter = _TextHighlightPainter();
 
+  /// 获取内置的前景 painters
+  ///
+  /// 如果缓存不存在，则创建一个新的组合 painter，包含光标 painter
   _CompositeRenderEditablePainter get _builtInForegroundPainters =>
       _cachedBuiltInForegroundPainters ??= _createBuiltInForegroundPainters();
   _CompositeRenderEditablePainter? _cachedBuiltInForegroundPainters;
 
+  /// 创建内置的前景 painters
+  ///
+  /// 返回一个包含光标 painter 的组合 painter
   _CompositeRenderEditablePainter _createBuiltInForegroundPainters() {
     return _CompositeRenderEditablePainter(
       painters: <MongolRenderEditablePainter>[
@@ -386,10 +374,16 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
+  /// 获取内置的 painters
+  ///
+  /// 如果缓存不存在，则创建一个新的组合 painter，包含选择 painter
   _CompositeRenderEditablePainter get _builtInPainters =>
       _cachedBuiltInPainters ??= _createBuiltInPainters();
   _CompositeRenderEditablePainter? _cachedBuiltInPainters;
 
+  /// 创建内置的 painters
+  ///
+  /// 返回一个包含选择 painter 的组合 painter
   _CompositeRenderEditablePainter _createBuiltInPainters() {
     return _CompositeRenderEditablePainter(
       painters: <MongolRenderEditablePainter>[
@@ -398,10 +392,12 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
-  double? _textLayoutLastMaxHeight;
-  double? _textLayoutLastMinHeight;
+  double? _textLayoutLastMaxHeight; // 上次布局的最大高度
+  double? _textLayoutLastMinHeight; // 上次布局的最小高度
 
-  /// Assert that the last layout still matches the constraints.
+  /// 断言上次布局仍然匹配当前约束
+  ///
+  /// 检查上次布局的高度约束是否与当前约束一致
   void debugAssertLayoutUpToDate() {
     assert(
       _textLayoutLastMaxHeight == constraints.maxHeight &&
@@ -410,22 +406,19 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
-  /// Whether the [handleEvent] will propagate pointer events to selection
-  /// handlers.
+  /// [handleEvent] 是否会将指针事件传播到选择处理程序
   ///
-  /// If this property is true, the [handleEvent] assumes that this renderer
-  /// will be notified of input gestures via [handleTapDown], [handleTap],
-  /// [handleDoubleTap], and [handleLongPress].
+  /// 如果此属性为 true，[handleEvent] 假设此渲染器将通过 [handleTapDown]、
+  /// [handleTap]、[handleDoubleTap] 和 [handleLongPress] 接收输入手势的通知
   ///
-  /// If there are any gesture recognizers in the text span, the [handleEvent]
-  /// will still propagate pointer events to those recognizers.
+  /// 如果文本跨度中有任何手势识别器，[handleEvent] 仍会将指针事件传播到这些识别器
   ///
-  /// The default value of this property is false.
+  /// 此属性的默认值为 false
   bool ignorePointer;
 
-  /// The pixel ratio of the current device.
+  /// 当前设备的像素比例
   ///
-  /// Should be obtained by querying MediaQuery for the devicePixelRatio.
+  /// 应通过查询 MediaQuery 获取 devicePixelRatio
   double get devicePixelRatio => _devicePixelRatio;
   double _devicePixelRatio;
 
@@ -435,9 +428,9 @@ class MongolRenderEditable extends RenderBox
     markNeedsTextLayout();
   }
 
-  /// Character used for obscuring text if [obscureText] is true.
+  /// 当 [obscureText] 为 true 时用于模糊文本的字符
   ///
-  /// Must have a length of exactly one.
+  /// 长度必须恰好为 1
   String get obscuringCharacter => _obscuringCharacter;
   String _obscuringCharacter;
 
@@ -450,7 +443,7 @@ class MongolRenderEditable extends RenderBox
     markNeedsLayout();
   }
 
-  /// Whether to hide the text being edited (e.g., for passwords).
+  /// 是否隐藏正在编辑的文本（例如，用于密码）
   bool get obscureText => _obscureText;
   bool _obscureText;
   set obscureText(bool value) {
@@ -462,50 +455,44 @@ class MongolRenderEditable extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
-  /// The object that controls the text selection, used by this render object
-  /// for implementing cut, copy, and paste keyboard shortcuts.
+  /// 控制文本选择的对象，此渲染对象使用它来实现剪切、复制和粘贴键盘快捷键
   ///
-  /// It must not be null. It will make cut, copy and paste functionality work
-  /// with the most recently set [TextSelectionDelegate].
+  /// 它不能为空。它将使剪切、复制和粘贴功能与最近设置的 [TextSelectionDelegate] 一起工作
   TextSelectionDelegate textSelectionDelegate;
 
-  /// Track whether position of the start of the selected text is within the viewport.
+  /// 跟踪选中文本的开始位置是否在视口内
   ///
-  /// For example, if the text contains "Hello World", and the user selects
-  /// "Hello", then scrolls so only "World" is visible, this will become false.
-  /// If the user scrolls back so that the "H" is visible again, this will
-  /// become true.
+  /// 例如，如果文本包含 "Hello World"，用户选择 "Hello"，然后滚动以便只显示 "World"，
+  /// 则此值将变为 false。如果用户滚动回来，使 "H" 再次可见，则此值将变为 true
   ///
-  /// This bool indicates whether the text is scrolled so that the handle is
-  /// inside the text field viewport, as opposed to whether it is actually
-  /// visible on the screen.
+  /// 此布尔值表示文本是否被滚动，使得句柄在文本字段视口内，而不是它是否实际在屏幕上可见
   ValueListenable<bool> get selectionStartInViewport =>
       _selectionStartInViewport;
   final ValueNotifier<bool> _selectionStartInViewport =
       ValueNotifier<bool>(true);
 
-  /// Track whether position of the end of the selected text is within the viewport.
+  /// 跟踪选中文本的结束位置是否在视口内
   ///
-  /// For example, if the text contains "Hello World", and the user selects
-  /// "World", then scrolls so only "Hello" is visible, this will become
-  /// 'false'. If the user scrolls back so that the "d" is visible again, this
-  /// will become 'true'.
+  /// 例如，如果文本包含 "Hello World"，用户选择 "World"，然后滚动以便只显示 "Hello"，
+  /// 则此值将变为 false。如果用户滚动回来，使 "d" 再次可见，则此值将变为 true
   ///
-  /// This bool indicates whether the text is scrolled so that the handle is
-  /// inside the text field viewport, as opposed to whether it is actually
-  /// visible on the screen.
+  /// 此布尔值表示文本是否被滚动，使得句柄在文本字段视口内，而不是它是否实际在屏幕上可见
   ValueListenable<bool> get selectionEndInViewport => _selectionEndInViewport;
   final ValueNotifier<bool> _selectionEndInViewport = ValueNotifier<bool>(true);
 
+  /// 更新选择范围的可见性
+  ///
+  /// 检查选中文本的开始和结束位置是否在视口内
+  /// [effectiveOffset] 是文本的有效偏移量
   void _updateSelectionExtentsVisibility(Offset effectiveOffset) {
     assert(selection != null);
-    final visibleRegion = Offset.zero & size;
+    final visibleRegion = Offset.zero & size; // 可见区域
 
     final startOffset = _textPainter.getOffsetForCaret(
       TextPosition(offset: selection!.start, affinity: selection!.affinity),
       _caretPrototype,
     );
-    const visibleRegionSlop = 0.5;
+    const visibleRegionSlop = 0.5; // 可见区域的容差
     _selectionStartInViewport.value = visibleRegion
         .inflate(visibleRegionSlop)
         .contains(startOffset + effectiveOffset);
@@ -519,21 +506,28 @@ class MongolRenderEditable extends RenderBox
         .contains(endOffset + effectiveOffset);
   }
 
+  /// 设置文本编辑值
+  ///
+  /// [newValue] 是新的文本编辑值
+  /// [cause] 是选择更改的原因
   void _setTextEditingValue(
       TextEditingValue newValue, SelectionChangedCause cause) {
     textSelectionDelegate.userUpdateTextEditingValue(newValue, cause);
   }
 
+  /// 设置选择范围
+  ///
+  /// [nextSelection] 是新的选择范围
+  /// [cause] 是选择更改的原因
+  ///
+  /// 确保选择范围有效，防止索引超出文本长度
   void _setSelection(TextSelection nextSelection, SelectionChangedCause cause) {
     if (nextSelection.isValid) {
-      // The nextSelection is calculated based on plainText, which can be out
-      // of sync with the textSelectionDelegate.textEditingValue by one frame.
-      // This is due to the render editable and editable text handle pointer
-      // event separately. If the editable text changes the text during the
-      // event handler, the render editable will use the outdated text stored in
-      // the plainText when handling the pointer event.
+      // nextSelection 是基于 plainText 计算的，可能与 textSelectionDelegate.textEditingValue 不同步
+      // 这是因为渲染可编辑对象和可编辑文本分别处理指针事件
+      // 如果可编辑文本在事件处理程序期间更改了文本，渲染可编辑对象在处理指针事件时会使用存储在 plainText 中的过时文本
       //
-      // If this happens, we need to make sure the new selection is still valid.
+      // 如果发生这种情况，我们需要确保新的选择范围仍然有效
       final int textLength = textSelectionDelegate.textEditingValue.text.length;
       nextSelection = nextSelection.copyWith(
         baseOffset: math.min(nextSelection.baseOffset, textLength),
@@ -546,17 +540,13 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
-  /// Returns the index into the string of the next character boundary after the
-  /// given index.
+  /// 返回字符串中给定索引之后的下一个字符边界的索引
   ///
-  /// The character boundary is determined by the characters package, so
-  /// surrogate pairs and extended grapheme clusters are considered.
+  /// 字符边界由 characters 包确定，因此考虑了代理对和扩展字形簇
   ///
-  /// The index must be between 0 and string.length, inclusive. If given
-  /// string.length, string.length is returned.
+  /// 索引必须在 0 和 string.length 之间（包括两者）。如果给定 string.length，则返回 string.length
   ///
-  /// Setting includeWhitespace to false will only return the index of non-space
-  /// characters.
+  /// 将 includeWhitespace 设置为 false 将只返回非空格字符的索引
   @visibleForTesting
   static int nextCharacter(int index, String string,
       [bool includeWhitespace = true]) {
@@ -579,17 +569,13 @@ class MongolRenderEditable extends RenderBox
     return string.length - remaining.toString().length;
   }
 
-  /// Returns the index into the string of the previous character boundary
-  /// before the given index.
+  /// 返回字符串中给定索引之前的上一个字符边界的索引
   ///
-  /// The character boundary is determined by the characters package, so
-  /// surrogate pairs and extended grapheme clusters are considered.
+  /// 字符边界由 characters 包确定，因此考虑了代理对和扩展字形簇
   ///
-  /// The index must be between 0 and string.length, inclusive. If index is 0,
-  /// 0 will be returned.
+  /// 索引必须在 0 和 string.length 之间（包括两者）。如果索引为 0，则返回 0
   ///
-  /// Setting includeWhitespace to false will only return the index of non-space
-  /// characters.
+  /// 将 includeWhitespace 设置为 false 将只返回非空格字符的索引
   @visibleForTesting
   static int previousCharacter(int index, String string,
       [bool includeWhitespace = true]) {
@@ -614,7 +600,10 @@ class MongolRenderEditable extends RenderBox
     return 0;
   }
 
-  // Returns the TextPosition to the left or right of the given offset.
+  /// 返回给定偏移量左侧或右侧的 TextPosition
+  ///
+  /// [position] 是当前文本位置
+  /// [horizontalOffset] 是水平偏移量，正值表示向右，负值表示向左
   TextPosition _getTextPositionHorizontal(
       TextPosition position, double horizontalOffset) {
     final Offset caretOffset =
@@ -624,62 +613,66 @@ class MongolRenderEditable extends RenderBox
     return _textPainter.getPositionForOffset(caretOffsetTranslated);
   }
 
-  // Start TextLayoutMetrics.
+  // 开始 TextLayoutMetrics 实现
 
-  /// {@macro flutter.services.TextLayoutMetrics.getLineAtOffset}
+  /// 获取包含给定偏移量的行的选择范围
+  ///
+  /// 如果文本被模糊处理（如密码），则将整个字符串视为一行
   @override
   TextSelection getLineAtOffset(TextPosition position) {
     debugAssertLayoutUpToDate();
     final TextRange line = _textPainter.getLineBoundary(position);
-    // If text is obscured, the entire string should be treated as one line.
+    // 如果文本被模糊处理，整个字符串应被视为一行
     if (obscureText) {
       return TextSelection(baseOffset: 0, extentOffset: plainText.length);
     }
     return TextSelection(baseOffset: line.start, extentOffset: line.end);
   }
 
-  /// {@macro flutter.painting.TextPainter.getWordBoundary}
+  /// 获取包含给定位置的单词的边界
   @override
   TextRange getWordBoundary(TextPosition position) {
     return _textPainter.getWordBoundary(position);
   }
 
-  /// {@macro flutter.services.TextLayoutMetrics.getTextPositionAbove}
+  /// 获取给定位置上方一行的文本位置
+  ///
+  /// 光标偏移量给出了光标左上角的位置，因此上面一行的中间位置是该点上方半行的位置
   @override
   TextPosition getTextPositionAbove(TextPosition position) {
-    // The caret offset gives a location in the upper left hand corner of
-    // the caret so the middle of the line above is a half line above that
-    // point and the line below is 1.5 lines below that point.
+    // 光标偏移量给出了光标左上角的位置，因此上面一行的中间位置是该点上方半行的位置
     final double preferredLineWidth = _textPainter.preferredLineWidth;
     final double horizontalOffset = -0.5 * preferredLineWidth;
     return _getTextPositionHorizontal(position, horizontalOffset);
   }
 
-  /// {@macro flutter.services.TextLayoutMetrics.getTextPositionBelow}
+  /// 获取给定位置下方一行的文本位置
+  ///
+  /// 光标偏移量给出了光标左上角的位置，因此下面一行的中间位置是该点下方1.5行的位置
   @override
   TextPosition getTextPositionBelow(TextPosition position) {
-    // The caret offset gives a location in the upper left hand corner of
-    // the caret so the middle of the line above is a half line above that
-    // point and the line below is 1.5 lines below that point.
+    // 光标偏移量给出了光标左上角的位置，因此下面一行的中间位置是该点下方1.5行的位置
     final double preferredLineWidth = _textPainter.preferredLineWidth;
     final double horizontalOffset = 1.5 * preferredLineWidth;
     return _getTextPositionHorizontal(position, horizontalOffset);
   }
 
-  // End TextLayoutMetrics.
+  // 结束 TextLayoutMetrics 实现
 
   @override
+  /// 标记渲染对象需要重新绘制
+  ///
+  /// 同时通知前景和背景渲染对象也需要重新绘制
   void markNeedsPaint() {
     super.markNeedsPaint();
-    // Tell the painters to repaint since text layout may have changed.
+    // 告诉 painters 重新绘制，因为文本布局可能已更改
     _foregroundRenderObject?.markNeedsPaint();
     _backgroundRenderObject?.markNeedsPaint();
   }
 
-  /// Marks the render object as needing to be laid out again and have its text
-  /// metrics recomputed.
+  /// 标记渲染对象需要重新布局并重新计算其文本度量
   ///
-  /// Implies [markNeedsLayout].
+  /// 隐含调用 [markNeedsLayout]
   @protected
   void markNeedsTextLayout() {
     _textLayoutLastMaxHeight = null;
@@ -688,6 +681,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 系统字体更改时调用
+  ///
+  /// 重新标记文本布局为需要更新
   void systemFontsDidChange() {
     super.systemFontsDidChange();
     _textPainter.markNeedsLayout();
@@ -695,20 +691,19 @@ class MongolRenderEditable extends RenderBox
     _textLayoutLastMinHeight = null;
   }
 
-  /// Returns a plain text version of the text in [TextPainter].
+  /// 返回 [TextPainter] 中文本的纯文本版本
   ///
-  /// If [obscureText] is true, returns the obscured text. See
-  /// [obscureText] and [obscuringCharacter].
-  /// In order to get the styled text as an [TextSpan] tree, use [text].
+  /// 如果 [obscureText] 为 true，则返回模糊处理的文本。参见 [obscureText] 和 [obscuringCharacter]
+  /// 要获取作为 [TextSpan] 树的带样式文本，请使用 [text]
   String get plainText => _textPainter.plainText;
 
-  /// The text to paint in the form of a tree of [TextSpan]s.
+  /// 要绘制的文本，以 [TextSpan] 树的形式
   ///
-  /// In order to get the plain text representation, use [plainText].
+  /// 要获取纯文本表示，请使用 [plainText]
   TextSpan? get text => _textPainter.text;
-  final MongolTextPainter _textPainter;
-  AttributedString? _cachedAttributedValue;
-  List<InlineSpanSemanticsInformation>? _cachedCombinedSemanticsInfos;
+  final MongolTextPainter _textPainter; // 文本绘制器
+  AttributedString? _cachedAttributedValue; // 缓存的属性字符串
+  List<InlineSpanSemanticsInformation>? _cachedCombinedSemanticsInfos; // 缓存的组合语义信息
   set text(TextSpan? value) {
     if (_textPainter.text == value) {
       return;
@@ -721,9 +716,9 @@ class MongolRenderEditable extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
-  /// How the text should be aligned vertically.
+  /// 文本应该如何垂直对齐
   ///
-  /// This must not be null.
+  /// 这不能为空
   MongolTextAlign get textAlign => _textPainter.textAlign;
 
   set textAlign(MongolTextAlign value) {
@@ -732,14 +727,14 @@ class MongolRenderEditable extends RenderBox
     markNeedsTextLayout();
   }
 
-  /// The color to use when painting the cursor.
+  /// 绘制光标时使用的颜色
   Color? get cursorColor => _caretPainter.caretColor;
 
   set cursorColor(Color? value) {
     _caretPainter.caretColor = value;
   }
 
-  /// Whether to paint the cursor.
+  /// 是否绘制光标
   ValueNotifier<bool> get showCursor => _showCursor;
   ValueNotifier<bool> _showCursor;
 
@@ -753,11 +748,12 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
+  /// 显示或隐藏光标
   void _showHideCursor() {
     _caretPainter.shouldPaint = showCursor.value;
   }
 
-  /// Whether the editable is currently focused.
+  /// 可编辑对象当前是否获得焦点
   bool get hasFocus => _hasFocus;
   bool _hasFocus = false;
 
@@ -768,8 +764,7 @@ class MongolRenderEditable extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
-  /// Whether this rendering object will take a full line regardless the
-  /// text height.
+  /// 此渲染对象是否会占据一整行，无论文本高度如何
   bool get forceLine => _forceLine;
   bool _forceLine = false;
 
@@ -779,7 +774,7 @@ class MongolRenderEditable extends RenderBox
     markNeedsLayout();
   }
 
-  /// Whether this rendering object is read only.
+  /// 此渲染对象是否为只读
   bool get readOnly => _readOnly;
   bool _readOnly = false;
 
@@ -789,20 +784,18 @@ class MongolRenderEditable extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
-  /// The maximum number of lines for the text to span, wrapping if necessary.
+  /// 文本可以跨越的最大行数，必要时会换行
   ///
-  /// If this is 1 (the default), the text will not wrap, but will extend
-  /// indefinitely instead.
+  /// 如果为 1（默认值），文本不会换行，而是会无限延伸
   ///
-  /// If this is null, there is no limit to the number of lines.
+  /// 如果为 null，则对行数没有限制
   ///
-  /// When this is not null, the intrinsic width of the render object is the
-  /// width of one line of text multiplied by this value. In other words, this
-  /// also controls the width of the actual editing widget.
+  /// 当不为 null 时，渲染对象的内在宽度是一行文本的宽度乘以该值
+  /// 换句话说，这也控制了实际编辑小部件的宽度
   int? get maxLines => _maxLines;
   int? _maxLines;
 
-  /// The value may be null. If it is not null, then it must be greater than zero.
+  /// 值可以为 null。如果不为 null，则必须大于零
   set maxLines(int? value) {
     assert(value == null || value > 0);
     if (maxLines == value) {
@@ -810,53 +803,48 @@ class MongolRenderEditable extends RenderBox
     }
     _maxLines = value;
 
-    // Special case maxLines == 1 to keep only the first line so we can get the
-    // width of the first line in case there are hard line breaks in the text.
-    // See the `_preferredWidth` method.
+    // 特殊处理 maxLines == 1 的情况，只保留第一行，以便在文本中有硬换行时获取第一行的宽度
+    // 参见 `_preferredWidth` 方法
     _textPainter.maxLines = value == 1 ? 1 : null;
     markNeedsTextLayout();
   }
 
-  /// The minimum number of lines to occupy when the content spans fewer lines.
+  /// 当内容跨越较少行时要占据的最小行数
   ///
-  /// If this is null (default), text container starts with enough horizontal space
-  /// for one line and grows to accommodate additional lines as they are entered.
+  /// 如果为 null（默认值），文本容器开始时具有足够的水平空间
+  /// 用于一行，并随着输入的增加而增长以容纳更多行
   ///
-  /// This can be used in combination with [maxLines] for a varying set of behaviors.
+  /// 这可以与 [maxLines] 结合使用，以实现各种不同的行为
   ///
-  /// If the value is set, it must be greater than zero. If the value is greater
-  /// than 1, [maxLines] should also be set to either null or greater than
-  /// this value.
+  /// 如果设置了值，它必须大于零。如果值大于 1，[maxLines] 也应该
+  /// 设置为 null 或大于此值
   ///
-  /// When [maxLines] is set as well, the width will grow between the indicated
-  /// range of lines. When [maxLines] is null, it will grow as wide as needed,
-  /// starting from [minLines].
+  /// 当同时设置 [maxLines] 时，宽度将在指定的行数范围内增长
+  /// 当 [maxLines] 为 null 时，它将根据需要增长，从 [minLines] 开始
   ///
-  /// A few examples of behaviors possible with [minLines] and [maxLines] are as follows.
-  /// These apply equally to `MongolTextField`, `MongolTextFormField`,
-  /// and `MongolEditableText`.
+  /// 以下是 [minLines] 和 [maxLines] 可能实现的一些行为示例
+  /// 这些同样适用于 `MongolTextField`、`MongolTextFormField` 和 `MongolEditableText`
   ///
-  /// Input that always occupies at least 2 lines and has an infinite max.
-  /// Expands horizontally as needed.
+  /// 始终至少占据 2 行且最大行数无限的输入
+  /// 根据需要水平扩展
   /// ```dart
   /// MongolTextField(minLines: 2)
   /// ```
   ///
-  /// Input whose width starts from 2 lines and grows up to 4 lines at which
-  /// point the width limit is reached. If additional lines are entered it will
-  /// scroll horizontally.
+  /// 宽度从 2 行开始，最多增长到 4 行，此时达到宽度限制
+  /// 如果输入更多行，它将水平滚动
   /// ```dart
   /// TextField(minLines:2, maxLines: 4)
   /// ```
   ///
-  /// See the examples in [maxLines] for the complete picture of how [maxLines]
-  /// and [minLines] interact to produce various behaviors.
+  /// 有关 [maxLines] 和 [minLines] 如何相互作用以产生各种行为的完整情况，
+  /// 请参见 [maxLines] 中的示例
   ///
-  /// Defaults to null.
+  /// 默认值为 null
   int? get minLines => _minLines;
   int? _minLines;
 
-  /// The value may be null. If it is not null, then it must be greater than zero.
+  /// 值可以为 null。如果不为 null，则必须大于零
   set minLines(int? value) {
     assert(value == null || value > 0);
     if (minLines == value) return;
@@ -864,20 +852,20 @@ class MongolRenderEditable extends RenderBox
     markNeedsTextLayout();
   }
 
-  /// Whether this widget's width will be sized to fill its parent.
+  /// 此小部件的宽度是否会调整为填充其父级
   ///
-  /// If set to true and wrapped in a parent widget like [Expanded] or
-  /// [SizedBox], the input will expand to fill the parent.
+  /// 如果设置为 true 并包装在像 [Expanded] 或 [SizedBox] 这样的父小部件中，
+  /// 输入将扩展以填充父级
   ///
-  /// [maxLines] and [minLines] must both be null when this is set to true,
-  /// otherwise an error is thrown.
+  /// 当设置为 true 时，[maxLines] 和 [minLines] 都必须为 null，
+  /// 否则会抛出错误
   ///
-  /// Defaults to false.
+  /// 默认值为 false
   ///
-  /// See the examples in [maxLines] for the complete picture of how [maxLines],
-  /// [minLines], and [expands] interact to produce various behaviors.
+  /// 有关 [maxLines]、[minLines] 和 [expands] 如何相互作用以产生各种行为的完整情况，
+  /// 请参见 [maxLines] 中的示例
   ///
-  /// Input that matches the width of its parent:
+  /// 与父级宽度匹配的输入：
   /// ```dart
   /// Expanded(
   ///   child: TextField(maxLines: null, expands: true),
@@ -893,17 +881,16 @@ class MongolRenderEditable extends RenderBox
     markNeedsTextLayout();
   }
 
-  /// The color to use when painting the selection.
+  /// 绘制选择时使用的颜色
   Color? get selectionColor => _selectionPainter.highlightColor;
 
   set selectionColor(Color? value) {
     _selectionPainter.highlightColor = value;
   }
 
-  /// The number of font pixels for each logical pixel.
+  /// 每个逻辑像素的字体像素数
   ///
-  /// For example, if the text scale factor is 1.5, text will be 50% larger than
-  /// the specified font size.
+  /// 例如，如果文本比例因子为 1.5，文本将比指定的字体大小大 50%
   double get textScaleFactor => _textPainter.textScaleFactor;
 
   set textScaleFactor(double value) {
@@ -912,12 +899,12 @@ class MongolRenderEditable extends RenderBox
     markNeedsTextLayout();
   }
 
-  /// The region of text that is selected, if any.
+  /// 选定的文本区域（如果有）
   ///
-  /// The caret position is represented by a collapsed selection.
+  /// 光标位置由折叠的选择表示
   ///
-  /// If [selection] is null, there is no selection and attempts to
-  /// manipulate the selection will throw.
+  /// 如果 [selection] 为 null，则没有选择，尝试
+  /// 操作选择将抛出异常
   TextSelection? get selection => _selection;
   TextSelection? _selection;
 
@@ -929,11 +916,10 @@ class MongolRenderEditable extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
-  /// The offset at which the text should be painted.
+  /// 文本应该绘制的偏移量
   ///
-  /// If the text content is larger than the editable line itself, the editable
-  /// line clips the text. This property controls which part of the text is
-  /// visible by shifting the text by the given offset before clipping.
+  /// 如果文本内容大于可编辑行本身，可编辑
+  /// 行将裁剪文本。此属性通过在裁剪前将文本移动给定的偏移量来控制文本的可见部分
   ViewportOffset get offset => _offset;
   ViewportOffset _offset;
 
@@ -945,12 +931,12 @@ class MongolRenderEditable extends RenderBox
     markNeedsLayout();
   }
 
-  /// How wide the cursor will be.
+  /// 光标会有多宽
   ///
-  /// This can be null, in which case the getter will actually return [preferredLineWidth].
+  /// 这可以为 null，在这种情况下，getter 实际上会返回 [preferredLineWidth]
   ///
-  /// Setting this to itself fixes the value to the current [preferredLineWidth]. Setting
-  /// this to null returns the behavior of deferring to [preferredLineWidth].
+  /// 将其设置为自身会将值固定为当前的 [preferredLineWidth]。设置
+  /// 为 null 会返回延迟到 [preferredLineWidth] 的行为
   double get cursorWidth => _cursorWidth ?? preferredLineWidth;
   double? _cursorWidth;
 
@@ -960,12 +946,11 @@ class MongolRenderEditable extends RenderBox
     markNeedsLayout();
   }
 
-  /// How thick the cursor will be.
+  /// 光标会有多厚
   ///
-  /// The cursor will draw over the text. The cursor height will extend
-  /// down between the boundary of characters. This corresponds to extending
-  /// downstream relative to the selected position. Negative values may be used
-  /// to reverse this behavior.
+  /// 光标将绘制在文本上方。光标高度将延伸
+  /// 到字符边界之间。这对应于相对于所选位置向下游延伸
+  /// 可以使用负值来反转此行为
   double get cursorHeight => _cursorHeight;
   double _cursorHeight = 1.0;
 
@@ -977,31 +962,29 @@ class MongolRenderEditable extends RenderBox
     markNeedsLayout();
   }
 
-  /// The offset that is used, in pixels, when painting the cursor on screen.
+  /// 在屏幕上绘制光标时使用的偏移量（以像素为单位）
   ///
-  /// By default, the cursor position should be set to an offset of
-  /// (0.0, -[cursorHeight] * 0.5) on iOS platforms and (0, 0) on Android
-  /// platforms. The origin from where the offset is applied to is the arbitrary
-  /// location where the cursor ends up being rendered from by default.
+  /// 默认情况下，在 iOS 平台上，光标位置应设置为 (0.0, -[cursorHeight] * 0.5) 的偏移量，
+  /// 在 Android 平台上设置为 (0, 0)。应用偏移量的原点是默认情况下光标最终被渲染的任意位置
   Offset get cursorOffset => _caretPainter.cursorOffset;
 
   set cursorOffset(Offset value) {
     _caretPainter.cursorOffset = value;
   }
 
-  /// How rounded the corners of the cursor should be.
+  /// 光标的角应该有多圆
   ///
-  /// A null value is the same as [Radius.zero].
+  /// null 值与 [Radius.zero] 相同
   Radius? get cursorRadius => _caretPainter.cursorRadius;
 
   set cursorRadius(Radius? value) {
     _caretPainter.cursorRadius = value;
   }
 
-  /// The [LayerLink] of start selection handle.
+  /// 开始选择句柄的 [LayerLink]
   ///
-  /// [MongolRenderEditable] is responsible for calculating the [Offset] of this
-  /// [LayerLink], which will be used as [CompositedTransformTarget] of start handle.
+  /// [MongolRenderEditable] 负责计算此 [LayerLink] 的 [Offset]，
+  /// 该偏移量将用作开始句柄的 [CompositedTransformTarget]
   LayerLink get startHandleLayerLink => _startHandleLayerLink;
   LayerLink _startHandleLayerLink;
 
@@ -1011,10 +994,10 @@ class MongolRenderEditable extends RenderBox
     markNeedsPaint();
   }
 
-  /// The [LayerLink] of end selection handle.
+  /// 结束选择句柄的 [LayerLink]
   ///
-  /// [MongolRenderEditable] is responsible for calculating the [Offset] of this
-  /// [LayerLink], which will be used as [CompositedTransformTarget] of end handle.
+  /// [MongolRenderEditable] 负责计算此 [LayerLink] 的 [Offset]，
+  /// 该偏移量将用作结束句柄的 [CompositedTransformTarget]
   LayerLink get endHandleLayerLink => _endHandleLayerLink;
   LayerLink _endHandleLayerLink;
 
@@ -1024,19 +1007,15 @@ class MongolRenderEditable extends RenderBox
     markNeedsPaint();
   }
 
-  /// Whether to allow the user to change the selection.
+  /// 是否允许用户更改选择
   ///
-  /// Since [MongolRenderEditable] does not handle selection manipulation
-  /// itself, this actually only affects whether the accessibility
-  /// hints provided to the system (via
-  /// [describeSemanticsConfiguration]) will enable selection
-  /// manipulation. It's the responsibility of this object's owner
-  /// to provide selection manipulation affordances.
+  /// 由于 [MongolRenderEditable] 本身不处理选择操作，
+  /// 这实际上只影响提供给系统的辅助功能提示（通过
+  /// [describeSemanticsConfiguration]）是否会启用选择操作
+  /// 提供选择操作功能是此对象所有者的责任
   ///
-  /// This field is used by [selectionEnabled] (which then controls
-  /// the accessibility hints mentioned above). When null,
-  /// [obscureText] is used to determine the value of
-  /// [selectionEnabled] instead.
+  /// 此字段由 [selectionEnabled] 使用（然后控制上述辅助功能提示）
+  /// 当为 null 时，[obscureText] 用于确定 [selectionEnabled] 的值
   bool? get enableInteractiveSelection => _enableInteractiveSelection;
   bool? _enableInteractiveSelection;
 
@@ -1047,41 +1026,37 @@ class MongolRenderEditable extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
-  /// Whether interactive selection is enabled based on the values of
-  /// [enableInteractiveSelection] and [obscureText].
+  /// 是否基于 [enableInteractiveSelection] 和 [obscureText] 的值启用交互式选择
   ///
-  /// Since [MongolRenderEditable] does not handle selection manipulation
-  /// itself, this actually only affects whether the accessibility
-  /// hints provided to the system (via
-  /// [describeSemanticsConfiguration]) will enable selection
-  /// manipulation. It's the responsibility of this object's owner
-  /// to provide selection manipulation affordances.
+  /// 由于 [MongolRenderEditable] 本身不处理选择操作，
+  /// 这实际上只影响提供给系统的辅助功能提示（通过
+  /// [describeSemanticsConfiguration]）是否会启用选择操作
+  /// 提供选择操作功能是此对象所有者的责任
   ///
-  /// By default, [enableInteractiveSelection] is null, [obscureText] is false,
-  /// and this getter returns true.
+  /// 默认情况下，[enableInteractiveSelection] 为 null，[obscureText] 为 false，
+  /// 此 getter 返回 true
   ///
-  /// If [enableInteractiveSelection] is null and [obscureText] is true, then this
-  /// getter returns false. This is the common case for password fields.
+  /// 如果 [enableInteractiveSelection] 为 null 且 [obscureText] 为 true，
+  /// 则此 getter 返回 false。这是密码字段的常见情况
   ///
-  /// If [enableInteractiveSelection] is non-null then its value is
-  /// returned. An application might [enableInteractiveSelection] to
-  /// true to enable interactive selection for a password field, or to
-  /// false to unconditionally disable interactive selection.
+  /// 如果 [enableInteractiveSelection] 非 null，则返回其值
+  /// 应用程序可能会将 [enableInteractiveSelection] 设置为 true 以启用密码字段的交互式选择，
+  /// 或设置为 false 以无条件禁用交互式选择
   bool get selectionEnabled {
     return enableInteractiveSelection ?? !obscureText;
   }
 
-  /// The maximum amount the text is allowed to scroll.
+  /// 文本允许滚动的最大量
   ///
-  /// This value is only valid after layout and can change as additional
-  /// text is entered or removed in order to accommodate expanding when
-  /// [expands] is set to true.
+  /// 此值仅在布局后有效，并且可以随着文本的添加或删除而更改，
+  /// 以便在 [expands] 设置为 true 时适应扩展
   double get maxScrollExtent => _maxScrollExtent;
   double _maxScrollExtent = 0;
 
+  /// 光标边距
   double get _caretMargin => _kCaretGap + cursorHeight;
 
-  /// Defaults to [Clip.hardEdge], and must not be null.
+  /// 裁剪行为，默认为 [Clip.hardEdge]，不能为空
   Clip get clipBehavior => _clipBehavior;
   Clip _clipBehavior = Clip.hardEdge;
 
@@ -1093,19 +1068,16 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
-  /// Collected during [describeSemanticsConfiguration], used by
-  /// [assembleSemanticsNode] and [_combineSemanticsInfo].
+  /// 在 [describeSemanticsConfiguration] 期间收集，由 [assembleSemanticsNode] 和 [_combineSemanticsInfo] 使用
   List<InlineSpanSemanticsInformation>? _semanticsInfo;
 
-  // Caches [SemanticsNode]s created during [assembleSemanticsNode] so they
-  // can be re-used when [assembleSemanticsNode] is called again. This ensures
-  // stable ids for the [SemanticsNode]s of [TextSpan]s across
-  // [assembleSemanticsNode] invocations.
+  // 缓存在 [assembleSemanticsNode] 期间创建的 [SemanticsNode]，以便在再次调用 [assembleSemanticsNode] 时重用
+  // 这确保了 [TextSpan] 的 [SemanticsNode] 在 [assembleSemanticsNode] 调用之间具有稳定的 ID
   LinkedHashMap<Key, SemanticsNode>? _cachedChildNodes;
 
-  /// Returns a list of rects that bound the given selection.
+  /// 返回限定给定选择范围的矩形列表
   ///
-  /// See [MongolTextPainter.getBoxesForSelection] for more details.
+  /// 有关更多详细信息，请参见 [MongolTextPainter.getBoxesForSelection]
   List<Rect> getBoxesForSelection(TextSelection selection) {
     _computeTextMetricsIfNeeded();
     return _textPainter
@@ -1115,6 +1087,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 描述此渲染对象的语义配置
+  ///
+  /// 为辅助功能系统提供关于此对象的信息
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
     _semanticsInfo = _textPainter.text!.getSemanticsInformation();
@@ -1122,8 +1097,7 @@ class MongolRenderEditable extends RenderBox
             (InlineSpanSemanticsInformation info) => info.recognizer != null) &&
         defaultTargetPlatform != TargetPlatform.macOS) {
       assert(readOnly && !obscureText);
-      // For Selectable rich text with recognizer, we need to create a semantics
-      // node for each text fragment.
+      // 对于带有识别器的可选择富文本，我们需要为每个文本片段创建一个语义节点
       config
         ..isSemanticBoundary = true
         ..explicitChildNodes = true;
@@ -1190,6 +1164,9 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
+  /// 处理设置文本的操作
+  ///
+  /// [text] 是要设置的新文本
   void _handleSetText(String text) {
     textSelectionDelegate.userUpdateTextEditingValue(
       TextEditingValue(
@@ -1201,6 +1178,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 组装语义节点
+  ///
+  /// 为文本的每个片段创建语义节点，以便辅助功能系统能够识别和交互
   void assembleSemanticsNode(SemanticsNode node, SemanticsConfiguration config,
       Iterable<SemanticsNode> children) {
     assert(_semanticsInfo != null && _semanticsInfo!.isNotEmpty);
@@ -1291,6 +1271,10 @@ class MongolRenderEditable extends RenderBox
     node.updateWith(config: config, childrenInInversePaintOrder: newChildren);
   }
 
+  /// 创建一个显示屏幕的回调函数
+  ///
+  /// [key] 是语义节点的键
+  /// 返回一个回调函数，当调用时会将指定的语义节点显示在屏幕上
   VoidCallback? _createShowOnScreenFor(Key key) {
     return () {
       final SemanticsNode node = _cachedChildNodes![key]!;
@@ -1298,10 +1282,16 @@ class MongolRenderEditable extends RenderBox
     };
   }
 
+  /// 处理设置选择范围的操作
+  ///
+  /// [selection] 是新的选择范围
   void _handleSetSelection(TextSelection selection) {
     _setSelection(selection, SelectionChangedCause.keyboard);
   }
 
+  /// 处理向前移动光标一个字符的操作
+  ///
+  /// [extendSelection] 表示是否扩展选择范围
   void _handleMoveCursorForwardByCharacter(bool extendSelection) {
     assert(selection != null);
     final extentOffset = _textPainter.getOffsetAfter(selection!.extentOffset);
@@ -1315,6 +1305,9 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
+  /// 处理向后移动光标一个字符的操作
+  ///
+  /// [extendSelection] 表示是否扩展选择范围
   void _handleMoveCursorBackwardByCharacter(bool extendSelection) {
     assert(selection != null);
     final extentOffset = _textPainter.getOffsetBefore(selection!.extentOffset);
@@ -1328,6 +1321,9 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
+  /// 处理向前移动光标一个单词的操作
+  ///
+  /// [extendSelection] 表示是否扩展选择范围
   void _handleMoveCursorForwardByWord(bool extendSelection) {
     assert(selection != null);
     final currentWord = _textPainter.getWordBoundary(selection!.extent);
@@ -1345,6 +1341,9 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
+  /// 处理向后移动光标一个单词的操作
+  ///
+  /// [extendSelection] 表示是否扩展选择范围
   void _handleMoveCursorBackwardByWord(bool extendSelection) {
     assert(selection != null);
     final currentWord = _textPainter.getWordBoundary(selection!.extent);
@@ -1363,6 +1362,10 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
+  /// 获取下一个单词的文本范围
+  ///
+  /// [offset] 是起始偏移量
+  /// 跳过空白字符，返回下一个非空白单词的范围
   TextRange? _getNextWord(int offset) {
     while (true) {
       final range = _textPainter.getWordBoundary(TextPosition(offset: offset));
@@ -1372,6 +1375,10 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
+  /// 获取上一个单词的文本范围
+  ///
+  /// [offset] 是起始偏移量
+  /// 向前搜索，跳过空白字符，返回上一个非空白单词的范围
   TextRange? _getPreviousWord(int offset) {
     while (offset >= 0) {
       final range = _textPainter.getWordBoundary(TextPosition(offset: offset));
@@ -1382,11 +1389,9 @@ class MongolRenderEditable extends RenderBox
     return null;
   }
 
-  // Check if the given text range only contains white space or separator
-  // characters.
-  //
-  // Includes newline characters from ASCII and separators from the
-  // [unicode separator category](https://www.compart.com/en/unicode/category/Zs)
+  /// 检查给定的文本范围是否只包含空白字符或分隔符
+  ///
+  /// 包括 ASCII 中的换行符和 [unicode 分隔符类别](https://www.compart.com/en/unicode/category/Zs) 中的分隔符
   bool _onlyWhitespace(TextRange range) {
     for (var i = range.start; i < range.end; i++) {
       final codeUnit = text!.codeUnitAt(i)!;
@@ -1398,6 +1403,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 附加到管道所有者
+  ///
+  /// 当渲染对象被添加到渲染树时调用
   void attach(PipelineOwner owner) {
     super.attach(owner);
     _foregroundRenderObject?.attach(owner);
@@ -1419,6 +1427,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 从管道所有者分离
+  ///
+  /// 当渲染对象从渲染树中移除时调用
   void detach() {
     _tap.dispose();
     _longPress.dispose();
@@ -1430,6 +1441,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 重新深度排序子节点
+  ///
+  /// 当子节点的深度需要更新时调用
   void redepthChildren() {
     final RenderObject? foregroundChild = _foregroundRenderObject;
     final RenderObject? backgroundChild = _backgroundRenderObject;
@@ -1438,6 +1452,9 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 访问所有子渲染对象
+  ///
+  /// 用于遍历和处理此渲染对象的所有子节点
   void visitChildren(RenderObjectVisitor visitor) {
     final RenderObject? foregroundChild = _foregroundRenderObject;
     final RenderObject? backgroundChild = _backgroundRenderObject;
@@ -1445,10 +1462,17 @@ class MongolRenderEditable extends RenderBox
     if (backgroundChild != null) visitor(backgroundChild);
   }
 
+  /// 是否为多行文本
   bool get _isMultiline => maxLines != 1;
 
+  /// 视口轴方向
+  ///
+  /// 多行时为水平轴，单行时为垂直轴
   Axis get _viewportAxis => _isMultiline ? Axis.horizontal : Axis.vertical;
 
+  /// 绘制偏移量
+  ///
+  /// 根据视口轴方向计算文本的绘制位置
   Offset get _paintOffset {
     switch (_viewportAxis) {
       case Axis.horizontal:
@@ -1458,6 +1482,9 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
+  /// 视口范围
+  ///
+  /// 根据视口轴方向返回视口的宽度或高度
   double get _viewportExtent {
     assert(hasSize);
     switch (_viewportAxis) {
@@ -1468,6 +1495,10 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
+  /// 获取最大滚动范围
+  ///
+  /// [contentSize] 是内容的大小
+  /// 根据视口轴方向计算最大滚动距离
   double _getMaxScrollExtent(Size contentSize) {
     assert(hasSize);
     switch (_viewportAxis) {
@@ -1478,21 +1509,20 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
-  // We need to check the paint offset here because during animation, the start of
-  // the text may position outside the visible region even when the text fits.
+  /// 是否有视觉溢出
+  ///
+  /// 我们需要在这里检查绘制偏移量，因为在动画期间，即使文本适合，文本的开始部分也可能位于可见区域之外
   bool get _hasVisualOverflow =>
       _maxScrollExtent > 0 || _paintOffset != Offset.zero;
 
-  /// Returns the local coordinates of the endpoints of the given selection.
+  /// 返回给定选择范围端点的本地坐标
   ///
-  /// If the selection is collapsed (and therefore occupies a single point), the
-  /// returned list is of length one. Otherwise, the selection is not collapsed
-  /// and the returned list is of length two.
+  /// 如果选择是折叠的（因此占据单个点），返回的列表长度为一
+  /// 否则，选择未折叠，返回的列表长度为二
   ///
-  /// See also:
+  /// 另请参见：
   ///
-  ///  * [getLocalRectForCaret], which is the equivalent but for
-  ///    a [TextPosition] rather than a [TextSelection].
+  ///  * [getLocalRectForCaret]，它是等效的，但用于 [TextPosition] 而不是 [TextSelection]
   List<TextSelectionPoint> getEndpointsForSelection(TextSelection selection) {
     _computeTextMetricsIfNeeded();
 
@@ -1616,10 +1646,14 @@ class MongolRenderEditable extends RenderBox
     return _cachedLineBreakCount = count;
   }
 
+  /// 计算首选宽度
+  ///
+  /// [height] 是可用高度
+  /// 根据文本内容、最大行数和最小行数计算控件的首选宽度
   double _preferredWidth(double height) {
     final String plain = plainText;
 
-    // Empty paragraph must reserve one column
+    // 空段落必须保留一列
     if (plain.isEmpty) {
       return preferredLineWidth;
     }
@@ -1643,13 +1677,11 @@ class MongolRenderEditable extends RenderBox
     final bool usePreferredLineHeightHack =
         maxLines == 1 && text?.codeUnitAt(0) == null;
 
-    // Special case maxLines == 1 since it forces the scrollable direction
-    // to be horizontal. Report the real height to prevent the text from being
-    // clipped.
+    // 特殊处理 maxLines == 1 的情况，因为它强制滚动方向为水平
+    // 报告实际高度以防止文本被裁剪
     if (maxLines == 1 && !usePreferredLineHeightHack) {
-      // The _layoutText call lays out the paragraph using infinite height when
-      // maxLines == 1. Also _textPainter.maxLines will be set to 1 so should
-      // there be any line breaks only the first line is shown.
+      // 当 maxLines == 1 时，_layoutText 调用使用无限高度布局段落
+      // 此外，_textPainter.maxLines 将被设置为 1，因此如果有任何换行符，只会显示第一行
       assert(_textPainter.maxLines == 1);
       _layoutText(maxHeight: height);
       return _textPainter.width;
@@ -1663,35 +1695,54 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 计算最小内在宽度
+  ///
+  /// [height] 是可用高度
+  /// 返回控件的最小内在宽度
   double computeMinIntrinsicWidth(double height) {
     return _preferredWidth(height);
   }
 
   @override
+  /// 计算最大内在宽度
+  ///
+  /// [height] 是可用高度
+  /// 返回控件的最大内在宽度
   double computeMaxIntrinsicWidth(double height) {
     return _preferredWidth(height);
   }
 
   @override
+  /// 计算到实际基线的距离
+  ///
+  /// [baseline] 是基线类型
+  /// 返回到指定基线的距离
   double computeDistanceToActualBaseline(TextBaseline baseline) {
     _computeTextMetricsIfNeeded();
     return _textPainter.computeDistanceToActualBaseline(baseline);
   }
 
   @override
+  /// 测试点是否命中此渲染对象
+  ///
+  /// 始终返回 true，表示此渲染对象会响应所有点击事件
   bool hitTestSelf(Offset position) => true;
 
   late TapGestureRecognizer _tap;
   late LongPressGestureRecognizer _longPress;
 
   @override
+  /// 处理指针事件
+  ///
+  /// [event] 是指针事件
+  /// [entry] 是命中测试条目
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
     if (event is PointerDownEvent) {
       assert(!debugNeedsLayout);
 
       if (!ignorePointer) {
-        // Propagates the pointer event to selection handlers.
+        // 将指针事件传播到选择处理程序
         _tap.addPointer(event);
         _longPress.addPointer(event);
       }
@@ -1701,90 +1752,76 @@ class MongolRenderEditable extends RenderBox
   Offset? _lastTapDownPosition;
   Offset? _lastSecondaryTapDownPosition;
 
-  /// The position of the most recent secondary tap down event on this text
-  /// input.
+  /// 最近在此文本输入上发生的辅助点击事件的位置
   Offset? get lastSecondaryTapDownPosition => _lastSecondaryTapDownPosition;
 
-  /// Tracks the position of a secondary tap event.
+  /// 跟踪辅助点击事件的位置
   ///
-  /// Should be called before attempting to change the selection based on the
-  /// position of a secondary tap.
+  /// 在尝试基于辅助点击的位置更改选择之前应该调用此方法
   void handleSecondaryTapDown(TapDownDetails details) {
     _lastTapDownPosition = details.globalPosition;
     _lastSecondaryTapDownPosition = details.globalPosition;
   }
 
-  /// If [ignorePointer] is false (the default) then this method is called by
-  /// the internal gesture recognizer's [TapGestureRecognizer.onTapDown]
-  /// callback.
+  /// 如果 [ignorePointer] 为 false（默认值），则此方法由内部手势识别器的 [TapGestureRecognizer.onTapDown] 回调调用
   ///
-  /// When [ignorePointer] is true, an ancestor widget must respond to tap
-  /// down events by calling this method.
+  /// 当 [ignorePointer] 为 true 时，祖先小部件必须通过调用此方法来响应点击事件
   void handleTapDown(TapDownDetails details) {
     _lastTapDownPosition = details.globalPosition;
   }
 
+  /// 处理点击按下事件
   void _handleTapDown(TapDownDetails details) {
     assert(!ignorePointer);
     handleTapDown(details);
   }
 
-  /// If [ignorePointer] is false (the default) then this method is called by
-  /// the internal gesture recognizer's [TapGestureRecognizer.onTap]
-  /// callback.
+  /// 如果 [ignorePointer] 为 false（默认值），则此方法由内部手势识别器的 [TapGestureRecognizer.onTap] 回调调用
   ///
-  /// When [ignorePointer] is true, an ancestor widget must respond to tap
-  /// events by calling this method.
+  /// 当 [ignorePointer] 为 true 时，祖先小部件必须通过调用此方法来响应点击事件
   void handleTap() {
     selectPosition(cause: SelectionChangedCause.tap);
   }
 
+  /// 处理点击事件
   void _handleTap() {
     assert(!ignorePointer);
     handleTap();
   }
 
-  /// If [ignorePointer] is false (the default) then this method is called by
-  /// the internal gesture recognizer's [DoubleTapGestureRecognizer.onDoubleTap]
-  /// callback.
+  /// 如果 [ignorePointer] 为 false（默认值），则此方法由内部手势识别器的 [DoubleTapGestureRecognizer.onDoubleTap] 回调调用
   ///
-  /// When [ignorePointer] is true, an ancestor widget must respond to double
-  /// tap events by calling this method.
+  /// 当 [ignorePointer] 为 true 时，祖先小部件必须通过调用此方法来响应双击事件
   void handleDoubleTap() {
     selectWord(cause: SelectionChangedCause.doubleTap);
   }
 
-  /// If [ignorePointer] is false (the default) then this method is called by
-  /// the internal gesture recognizer's [LongPressGestureRecognizer.onLongPress]
-  /// callback.
+  /// 如果 [ignorePointer] 为 false（默认值），则此方法由内部手势识别器的 [LongPressGestureRecognizer.onLongPress] 回调调用
   ///
-  /// When [ignorePointer] is true, an ancestor widget must respond to long
-  /// press events by calling this method.
+  /// 当 [ignorePointer] 为 true 时，祖先小部件必须通过调用此方法来响应长按事件
   void handleLongPress() {
     selectWord(cause: SelectionChangedCause.longPress);
   }
 
+  /// 处理长按事件
   void _handleLongPress() {
     assert(!ignorePointer);
     handleLongPress();
   }
 
-  /// Move selection to the location of the last tap down.
+  /// 将选择移动到最后一次点击的位置
   ///
-  /// This method is mainly used to translate user inputs in global positions
-  /// into a [TextSelection]. When used in conjunction with a [MongolEditableText],
-  /// the selection change is fed back into [TextEditingController.selection].
+  /// 此方法主要用于将全局位置的用户输入转换为 [TextSelection]
+  /// 当与 [MongolEditableText] 结合使用时，选择更改会反馈到 [TextEditingController.selection]
   ///
-  /// If you have a [TextEditingController], it's generally easier to
-  /// programmatically manipulate its `value` or `selection` directly.
+  /// 如果您有 [TextEditingController]，通常更容易直接以编程方式操作其 `value` 或 `selection`
   void selectPosition({required SelectionChangedCause cause}) {
     selectPositionAt(from: _lastTapDownPosition!, cause: cause);
   }
 
-  /// Select text between the global positions [from] and [to].
+  /// 在全局位置 [from] 和 [to] 之间选择文本
   ///
-  /// [from] corresponds to the [TextSelection.baseOffset], and [to] corresponds
-  /// to the [TextSelection.extentOffset].
+  /// [from] 对应于 [TextSelection.baseOffset]，[to] 对应于 [TextSelection.extentOffset]
   void selectPositionAt(
       {required Offset from,
       Offset? to,
@@ -1808,15 +1845,17 @@ class MongolRenderEditable extends RenderBox
     _setSelection(newSelection, cause);
   }
 
-  /// Select a word around the location of the last tap down.
+  /// 选择最后一次点击位置周围的单词
   void selectWord({required SelectionChangedCause cause}) {
     selectWordsInRange(from: _lastTapDownPosition!, cause: cause);
   }
 
-  /// Selects the set words of a paragraph in a given range of global positions.
+  /// 在给定的全局位置范围内选择段落中的单词集合
   ///
-  /// The first and last endpoints of the selection will always be at the
-  /// beginning and end of a word respectively.
+  /// 选择的第一个和最后一个端点将始终分别位于单词的开头和结尾
+  /// [from] 是选择的起始位置
+  /// [to] 是选择的结束位置，可为 null
+  /// [cause] 是选择更改的原因
   void selectWordsInRange(
       {required Offset from,
       Offset? to,
@@ -1845,7 +1884,9 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
-  /// Move the selection to the beginning or end of a word.
+  /// 将选择移动到单词的开头或结尾
+  ///
+  /// [cause] 是选择更改的原因
   void selectWordEdge({required SelectionChangedCause cause}) {
     _computeTextMetricsIfNeeded();
     assert(_lastTapDownPosition != null);
@@ -1862,6 +1903,10 @@ class MongolRenderEditable extends RenderBox
     _setSelection(newSelection, cause);
   }
 
+  /// 获取指定文本位置处的单词
+  ///
+  /// [position] 是文本位置
+  /// 返回包含该位置单词的选择范围
   TextSelection _getWordAtOffset(TextPosition position) {
     debugAssertLayoutUpToDate();
     // When long-pressing past the end of the text, we want a collapsed cursor.
@@ -1936,6 +1981,11 @@ class MongolRenderEditable extends RenderBox
     return TextSelection(baseOffset: word.start, extentOffset: word.end);
   }
 
+  /// 布局文本
+  ///
+  /// [minHeight] 是最小高度，默认为 0.0
+  /// [maxHeight] 是最大高度，默认为无限大
+  /// 根据给定的高度约束计算文本的布局
   void _layoutText(
       {double minHeight = 0.0, double maxHeight = double.infinity}) {
     if (_textLayoutLastMaxHeight == maxHeight &&
@@ -1966,20 +2016,21 @@ class MongolRenderEditable extends RenderBox
   // This method is also called in various paint methods (`RenderEditable.paint`
   // as well as its foreground/background painters' `paint`). It's needed
   // because invisible render objects kept in the tree by `KeepAlive` may not
-  // get a chance to do layout but can still paint.
-  // See https://github.com/flutter/flutter/issues/84896.
-  //
-  // This method only re-computes layout if the underlying `_textPainter`'s
-  // layout cache is invalidated (by calling `TextPainter.markNeedsLayout`), or
-  // the constraints used to layout the `_textPainter` is different. See
-  // `TextPainter.layout`.
+  /// 在需要时计算文本度量
+  ///
+  /// 此方法只有在底层 `_textPainter` 的布局缓存被失效（通过调用 `TextPainter.markNeedsLayout`）时，
+  /// 或用于布局 `_textPainter` 的约束不同时才会重新计算布局
+  /// 这样可以确保文本在布局无效时重新布局，同时在布局有效时保持性能
   void _computeTextMetricsIfNeeded() {
     _layoutText(
         minHeight: constraints.minHeight, maxHeight: constraints.maxHeight);
   }
 
-  late Rect _caretPrototype;
+  late Rect _caretPrototype; // 光标原型
 
+  /// 计算光标原型
+  ///
+  /// 根据不同的平台计算光标的形状和大小
   void _computeCaretPrototype() {
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
@@ -1997,8 +2048,9 @@ class MongolRenderEditable extends RenderBox
     }
   }
 
-  // Computes the offset to apply to the given [sourceOffset] so it perfectly
-  // snaps to physical pixels.
+  /// 计算应用于给定 [sourceOffset] 的偏移量，使其完美对齐到物理像素
+  ///
+  /// 确保渲染的元素在不同设备像素密度下都能清晰显示
   Offset _snapToPhysicalPixel(Offset sourceOffset) {
     final globalOffset = localToGlobal(sourceOffset);
     final pixelMultiple = 1.0 / _devicePixelRatio;
@@ -2015,6 +2067,10 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 计算干布局尺寸
+  ///
+  /// 在不实际执行布局的情况下，计算渲染对象在给定约束下的尺寸
+  /// [constraints] 是布局约束
   Size computeDryLayout(BoxConstraints constraints) {
     _layoutText(
         minHeight: constraints.minHeight, maxHeight: constraints.maxHeight);
@@ -2027,18 +2083,18 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 执行布局
+  ///
+  /// 计算渲染对象的实际尺寸和位置
   void performLayout() {
     final BoxConstraints constraints = this.constraints;
     _computeTextMetricsIfNeeded();
     _computeCaretPrototype();
-    // We grab _textPainter.size here because assigning to `size` on the next
-    // line will trigger us to validate our intrinsic sizes, which will change
-    // _textPainter's layout because the intrinsic size calculations are
-    // destructive, which would mean we would get different results if we later
-    // used properties on _textPainter in this method.
-    // Other _textPainter state like didExceedMaxLines will also be affected,
-    // though we currently don't use those here.
-    // See also MongolRenderParagraph which has a similar issue.
+    // 我们在这里获取 _textPainter.size，因为下一行分配给 `size` 会触发我们验证内在尺寸，
+    // 这会改变 _textPainter 的布局，因为内在尺寸计算是破坏性的，
+    // 这意味着如果我们稍后在这个方法中使用 _textPainter 的属性，我们会得到不同的结果
+    // 其他 _textPainter 状态如 didExceedMaxLines 也会受到影响，尽管我们目前不在这里使用它们
+    // 另请参见 MongolRenderParagraph，它有类似的问题
     final Size textPainterSize = _textPainter.size;
     final double height = forceLine
         ? constraints.maxHeight
@@ -2060,6 +2116,11 @@ class MongolRenderEditable extends RenderBox
     offset.applyContentDimensions(0.0, _maxScrollExtent);
   }
 
+  /// 获取指定文本位置所在的行号和偏移量
+  ///
+  /// [startPosition] 是文本位置
+  /// [metrics] 是行度量信息列表
+  /// 返回包含行号和偏移量的 MapEntry
   MapEntry<int, Offset> _lineNumberFor(
     TextPosition startPosition,
     List<MongolLineMetrics> metrics,
@@ -2113,6 +2174,10 @@ class MongolRenderEditable extends RenderBox
     );
   }
 
+  /// 绘制内容
+  ///
+  /// [context] 是绘制上下文
+  /// [offset] 是绘制偏移量
   void _paintContents(PaintingContext context, Offset offset) {
     debugAssertLayoutUpToDate();
     final effectiveOffset = offset + _paintOffset;
@@ -2124,8 +2189,7 @@ class MongolRenderEditable extends RenderBox
     final RenderBox? foregroundChild = _foregroundRenderObject;
     final RenderBox? backgroundChild = _backgroundRenderObject;
 
-    // The painters paint in the viewport's coordinate space, since the
-    // textPainter's coordinate space is not known to high level widgets.
+    // 绘制器在视口的坐标空间中绘制，因为高级小部件不知道 textPainter 的坐标空间
     if (backgroundChild != null) context.paintChild(backgroundChild, offset);
 
     _textPainter.paint(context.canvas, effectiveOffset);
@@ -2133,6 +2197,11 @@ class MongolRenderEditable extends RenderBox
     if (foregroundChild != null) context.paintChild(foregroundChild, offset);
   }
 
+  /// 绘制选择句柄图层
+  ///
+  /// [context] 是绘制上下文
+  /// [endpoints] 是选择端点列表
+  /// [offset] 是绘制偏移量
   void _paintHandleLayers(
     PaintingContext context,
     List<TextSelectionPoint> endpoints,
@@ -2163,6 +2232,10 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+  /// 绘制渲染对象
+  ///
+  /// [context] 是绘制上下文
+  /// [offset] 是绘制偏移量
   void paint(PaintingContext context, Offset offset) {
     _computeTextMetricsIfNeeded();
     if (_hasVisualOverflow && clipBehavior != Clip.none) {
@@ -2409,7 +2482,7 @@ class _CaretPainter extends MongolRenderEditablePainter {
   Color? _caretColor;
 
   set caretColor(Color? value) {
-    if (caretColor?.value == value?.value) return;
+    if (caretColor == value) return;
 
     _caretColor = value;
     notifyListeners();

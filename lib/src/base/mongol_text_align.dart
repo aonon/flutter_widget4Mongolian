@@ -4,24 +4,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Whether and how to align text vertically.
+/// 蒙古文文本垂直对齐方式枚举
 ///
-/// This is only used at the MongolTextPainter level and above. Below that the
-/// more primitive [TextAlign] enum is used and top is mapped to left and
-/// bottom is mapped to right.
+/// 蒙古文是从左到右垂直书写的，此枚举定义了垂直方向的对齐方式。
+/// 底层会映射到 [TextAlign] 枚举：top → left，bottom → right。
 enum MongolTextAlign {
-  /// Align the text on the top edge of the container.
+  /// 文本顶部对齐容器顶部
   top,
 
-  /// Align the text on the bottom edge of the container.
+  /// 文本底部对齐容器底部
   bottom,
 
-  /// Align the text in the center of the container.
+  /// 文本在容器中垂直居中
   center,
 
-  /// Stretch lines of text that end with a soft line break to fill the height
-  /// of the container.
-  ///
-  /// Lines that end with hard line breaks are aligned towards the [top] edge.
+  /// 拉伸软换行文本行以填充容器高度，硬换行文本行向上对齐
   justify,
 }

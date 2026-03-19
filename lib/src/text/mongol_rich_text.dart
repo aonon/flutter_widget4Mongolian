@@ -7,37 +7,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import 'mongol_render_paragraph.dart';
+import '../base/mongol_render_paragraph.dart';
 import '../base/mongol_text_align.dart';
 
-/// A string of rich text in vertical Mongolian layout.
+/// 用于显示垂直蒙古文富文本的组件
 ///
-/// Based on RichText of Flutter version 1.5. After that RichText became a
-/// MultiChildRenderObjectWidget in order to support InlineSpans.
+/// 显示使用多种不同样式的垂直文本，通过 [TextSpan] 对象树描述文本和样式关系。
+/// 支持自动换行和多行显示。
 ///
-/// The [MongolRichText] widget displays text that uses multiple different styles. The
-/// text to display is described using a tree of [TextSpan] objects, each of
-/// which has an associated style that is used for that subtree. The text might
-/// break across multiple lines or might all be displayed on the same line
-/// depending on the layout constraints.
-///
-/// Text displayed in a [MongolRichText] widget must be explicitly styled. When
-/// picking which style to use, consider using [DefaultTextStyle.of] the current
-/// [BuildContext] to provide defaults. For more details on how to style text in
-/// a [MongolRichText] widget, see the documentation for [TextStyle].
-///
-/// Consider using the [MongolText] widget to integrate with the [DefaultTextStyle]
-/// automatically. When all the text uses the same style, the default constructor
-/// is less verbose. The [MongolText.rich] constructor allows you to style multiple
-/// spans with the default text style while still allowing specified styles per
-/// span.
+/// 建议：
+/// - 当所有文本使用相同样式时，使用 [MongolText] 更简洁
+/// - 当需要混合多种样式时，使用 [MongolRichText] 或 [MongolText.rich]
 ///
 /// {@tool snippet}
-///
-/// This sample demonstrates how to mix and match text with different text
-/// styles using the [MongolRichText] Widget. It displays the text "Hello bold world,"
-/// emphasizing the word "bold" using a bold font weight.
-///
+/// 示例：显示混合样式的垂直文本
 /// ```dart
 /// MongolRichText(
 ///   text: TextSpan(
@@ -52,24 +35,15 @@ import '../base/mongol_text_align.dart';
 /// ```
 /// {@end-tool}
 ///
-/// See also:
-///
-///  * [TextStyle], which discusses how to style text.
-///  * [TextSpan], which is used to describe the text in a paragraph.
-///  * [MongolText], which automatically applies the ambient styles described by a
-///    [DefaultTextStyle] to a single string.
-///  * [MongolText.rich], a const text widget that provides similar functionality
-///    as [MongolRichText]. [MongokText.rich] will inherit [TextStyle] from [DefaultTextStyle].
+/// 另请参见：
+///  * [TextStyle] - 文本样式设置
+///  * [TextSpan] - 段落文本描述
+///  * [MongolText] - 单一样式垂直文本组件
+///  * [MongolText.rich] - 支持富文本的常量文本组件
 class MongolRichText extends LeafRenderObjectWidget {
-  /// Creates a paragraph of rich text in vertical orientation for traditional
-  /// Mongolian.
-  ///
-  /// The [maxLines] property may be null (and indeed defaults to null), but if
-  /// it is not null, it must be greater than zero.
-  ///
-  /// The [text] argument must not be null.
+  /// 创建垂直方向的蒙古文富文本段落
   const MongolRichText({
-    Key? key,
+    super.key,
     required this.text,
     this.textAlign = MongolTextAlign.top,
     this.softWrap = true,
@@ -77,42 +51,28 @@ class MongolRichText extends LeafRenderObjectWidget {
     this.textScaleFactor = 1.0,
     this.maxLines,
     this.rotateCJK = true,
-  })  : assert(maxLines == null || maxLines > 0),
-        super(key: key);
+  })  : assert(maxLines == null || maxLines > 0);
 
-  /// The text to display in this widget.
+  /// 要显示的富文本内容
   final TextSpan text;
 
-  /// How the text should be aligned vertically.
+  /// 文本垂直对齐方式
   final MongolTextAlign textAlign;
 
-  /// Whether the text should break at soft line breaks.
-  ///
-  /// If false, the glyphs in the text will be positioned as if there was
-  /// unlimited vertical space.
+  /// 是否允许文本在软换行处断开
   final bool softWrap;
 
-  /// How visual overflow should be handled.
+  /// 文本溢出时的处理方式
   final TextOverflow overflow;
 
-  /// The number of font pixels for each logical pixel.
-  ///
-  /// For example, if the text scale factor is 1.5, text will be 50% larger than
-  /// the specified font size.
+  /// 文本缩放因子
   final double textScaleFactor;
 
-  /// An optional maximum number of lines for the text to span, wrapping if
-  /// necessary. If the text exceeds the given number of lines, it will be
-  /// truncated according to [overflow].
-  ///
-  /// If this is 1, text will not wrap. Otherwise, text will be wrapped at the
-  /// edge of the box.
+  /// 文本最大行数
   final int? maxLines;
 
-  /// Whether Chinese, Japanese, and Korean characters should be rotated 90
-  /// degrees so that they are in correct orientation for a vertical column.
-  ///
-  /// Defaults to `true`.
+  /// 中文、日文和韩文字符是否旋转90度
+  /// 默认为 true
   final bool rotateCJK;
 
   @override

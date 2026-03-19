@@ -11,32 +11,15 @@ import 'mongol_rich_text.dart';
 import '../base/mongol_text_painter.dart';
 import '../base/mongol_text_align.dart';
 
-/// A run of vertical text with a single style.
+/// 用于显示垂直蒙古文文本的组件
 ///
-/// The [MongolText] widget displays a string of vertical text with single
-/// style. The string might break across multiple lines or might all be
-/// displayed on the same line depending on the layout constraints.
-///
-/// The [style] argument is optional. When omitted, the text will use the style
-/// from the closest enclosing [DefaultTextStyle]. If the given style's
-/// [TextStyle.inherit] property is true (the default), the given style will
-/// be merged with the closest enclosing [DefaultTextStyle]. This merging
-/// behavior is useful, for example, to make the text bold while using the
-/// default font family and size.
+/// 显示具有单一样式的垂直文本字符串，支持自动换行和多行显示。
+/// 当未指定样式时，会继承最近的 [DefaultTextStyle]。
 ///
 /// {@tool snippet}
-///
-/// This example shows how to display text using the [MongolText] widget with the
-/// [overflow] set to [TextOverflow.ellipsis].
-///
-/// If the text is shorter than the available space, it is displayed in full
-/// without an ellipsis.
-///
-/// If the text overflows, the Text widget displays an ellipsis to trim the
-/// overflowing text.
-///
+/// 示例：显示居中对齐的粗体文本，溢出时显示省略号
 /// ```dart
-/// Text(
+/// MongolText(
 ///   'Hello, $_name! How are you?',
 ///   textAlign: MongolTextAlign.center,
 ///   overflow: TextOverflow.ellipsis,
@@ -45,15 +28,12 @@ import '../base/mongol_text_align.dart';
 /// ```
 /// {@end-tool}
 ///
-/// Using the [MongolText.rich] constructor, the [MongolText] widget can
-/// display a paragraph with differently styled [TextSpan]s. The sample
-/// that follows displays "Hello beautiful world" with different styles
-/// for each word.
-///
+/// {@tool snippet}
+/// 示例：使用富文本显示不同样式的文本
 /// ```dart
 /// const MongolText.rich(
 ///   TextSpan(
-///     text: 'Hello', // default text style
+///     text: 'Hello',
 ///     children: <TextSpan>[
 ///       TextSpan(text: ' beautiful ', style: TextStyle(fontStyle: FontStyle.italic)),
 ///       TextSpan(text: 'world', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -61,24 +41,16 @@ import '../base/mongol_text_align.dart';
 ///   ),
 /// )
 /// ```
+/// {@end-tool}
 ///
-/// See also:
-///
-///  * [MongolRichText], which gives you more control over the text styles.
-///  * [DefaultTextStyle], which sets default styles for [MongolText] widgets.
+/// 另请参见：
+///  * [MongolRichText] - 提供更精细的文本样式控制
+///  * [DefaultTextStyle] - 为所有子级文本组件设置默认样式
 class MongolText extends StatelessWidget {
-  /// Creates a text widget for vertical Mongolian layout.
-  ///
-  /// If the [style] argument is null, the text will use the style from the
-  /// closest enclosing [DefaultTextStyle].
-  ///
-  /// The [overflow] property's behavior is affected by the [softWrap] argument.
-  /// If the [softWrap] is true or null, the glyph causing overflow, and those
-  /// that follow, will not be rendered. Otherwise, it will be shown with the
-  /// given overflow option.
+  /// 创建用于垂直蒙古文布局的文本小部件
   const MongolText(
     this.data, {
-    Key? key,
+    super.key,
     this.style,
     this.textAlign,
     this.softWrap,
@@ -91,17 +63,12 @@ class MongolText extends StatelessWidget {
           data != null,
           'A non-null String must be provided to a MongolText widget.',
         ),
-        textSpan = null,
-        super(key: key);
+        textSpan = null;
 
-  /// Creates a vertical Mongolian text widget with a [TextSpan].
-  ///
-  /// The [textSpan] parameter must not be null.
-  ///
-  /// See [MongolRichText] which provides a lower-level way to draw text.
+  /// 使用 [TextSpan] 创建垂直蒙古文文本小部件
   const MongolText.rich(
     this.textSpan, {
-    Key? key,
+    super.key,
     this.style,
     this.textAlign,
     this.softWrap,
@@ -114,74 +81,44 @@ class MongolText extends StatelessWidget {
           textSpan != null,
           'A non-null TextSpan must be provided to a Text.rich widget.',
         ),
-        data = null,
-        super(key: key);
+        data = null;
 
-  /// This is the text that the MongolText widget will display.
+  /// 要显示的文本内容
   final String? data;
 
-  /// The text to display as a [TextSpan].
-  ///
-  /// This will be null if [data] is provided instead.
+  /// 要显示的富文本内容
   final TextSpan? textSpan;
 
-  /// This is the style to use for the whole text string. If null a default
-  /// style will be used.
+  /// 文本样式
   final TextStyle? style;
 
-  /// How the text should be aligned vertically.
+  /// 文本垂直对齐方式
   final MongolTextAlign? textAlign;
 
-  /// Whether the text should break at soft line breaks.
-  ///
-  /// If false, the glyphs in the text will be positioned as if there were
-  /// unlimited vertical space.
+  /// 是否允许文本在软换行处断开
   final bool? softWrap;
 
-  /// How visual overflow should be handled.
-  ///
-  /// Defaults to retrieving the value from the nearest [DefaultTextStyle] ancestor.
+  /// 文本溢出时的处理方式
   final TextOverflow? overflow;
 
-  /// Font pixels per logical pixel
+  /// 文本缩放因子
   final double? textScaleFactor;
 
-  /// An optional maximum number of lines for the text to span, wrapping if
-  /// necessary. If the text exceeds the given number of lines, it will be
-  /// truncated according to [overflow].
-  ///
-  /// If this is 1, text will not wrap. Otherwise, text will be wrapped at the
-  /// edge of the box.
-  ///
-  /// If this is null, but there is an ambient [DefaultTextStyle] that specifies
-  /// an explicit number for its [DefaultTextStyle.maxLines], then the
-  /// [DefaultTextStyle] value will take precedence. You can use a
-  /// [MongolRichText] widget directly to entirely override the
-  /// [DefaultTextStyle].
+  /// 文本最大行数
   final int? maxLines;
 
-  /// An alternative semantics label for this text.
-  ///
-  /// If present, the semantics of this widget will contain this value instead
-  /// of the actual text. This will overwrite any of the semantics labels applied
-  /// directly to the [TextSpan]s.
-  ///
-  /// This is useful for replacing abbreviations or shorthands with the full
-  /// text value:
-  ///
-  /// ```dart
-  /// MongolText(r'$$', semanticsLabel: 'Double dollars')
-  /// ```
+  /// 语义化标签，用于辅助功能
   final String? semanticsLabel;
 
-  /// Whether Chinese, Japanese, and Korean characters should be rotated 90
-  /// degrees so that they are in correct orientation for a vertical column.
-  ///
-  /// Defaults to `true`.
+  /// 中文、日文和韩文字符是否旋转90度
+  /// 默认为 true
   final bool rotateCJK;
 
   @override
   Widget build(BuildContext context) {
+    // 验证参数合法性（防止传入非正的 maxLines）
+    // 使用 `maxLines!` 在断言里解除可空性，避免 analyzer 报错。
+    assert(maxLines == null || (maxLines! > 0));
     final defaultTextStyle = DefaultTextStyle.of(context);
     var effectiveTextStyle = style;
     if (style == null || style!.inherit) {
@@ -193,22 +130,30 @@ class MongolText extends StatelessWidget {
     }
     final defaultTextAlign =
         mapHorizontalToMongolTextAlign(defaultTextStyle.textAlign);
+    // Always wrap the provided text (or data) in a parent TextSpan that
+    // supplies the `effectiveTextStyle`. This mirrors Flutter's Text.rich
+    // behavior so that missing style properties (like fontFamily) inherit
+    // from the computed effective style (which itself merged DefaultTextStyle).
+    final TextSpan effectiveSpan = TextSpan(
+      style: effectiveTextStyle,
+      text: data,
+      children: textSpan != null ? <TextSpan>[textSpan!] : null,
+    );
+
     Widget result = MongolRichText(
       textAlign: textAlign ?? defaultTextAlign ?? MongolTextAlign.top,
       softWrap: softWrap ?? defaultTextStyle.softWrap,
       overflow: overflow ?? defaultTextStyle.overflow,
-      textScaleFactor: textScaleFactor ?? MediaQuery.textScaleFactorOf(context),
+      textScaleFactor: textScaleFactor ?? MediaQuery.textScalerOf(context).scale(1.0),
       maxLines: maxLines ?? defaultTextStyle.maxLines,
       rotateCJK: rotateCJK,
-      text: TextSpan(
-        style: effectiveTextStyle,
-        text: data,
-        children: textSpan != null ? <TextSpan>[textSpan!] : null,
-      ),
+      text: effectiveSpan,
     );
     if (semanticsLabel != null) {
       result = Semantics(
-        textDirection: TextDirection.ltr,
+        // Use the ambient directionality so semantics reflect the app's
+        // text direction (was previously hard-coded to LTR).
+        textDirection: Directionality.of(context),
         label: semanticsLabel,
         child: ExcludeSemantics(
           child: result,

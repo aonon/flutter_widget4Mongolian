@@ -8,53 +8,50 @@ import 'package:flutter/material.dart' show Theme, Brightness, Colors, IconButto
 import 'package:flutter/widgets.dart';
 
 enum _TextSelectionToolbarItemPosition {
-  /// The first item among multiple in the menu.
+  /// 菜单中多个项目中的第一个。
   first,
 
-  /// One of several items, not the first or last.
+  /// 多个项目中的一个，不是第一个或最后一个。
   middle,
 
-  /// The last item among multiple in the menu.
+  /// 菜单中多个项目中的最后一个。
   last,
 
-  /// The only item in the menu.
+  /// 菜单中的唯一项目。
   only,
 }
 
-/// A button styled like a Material native Android text selection menu button.
+/// 样式类似于 Material 原生 Android 文本选择菜单按钮的按钮。
 class MongolTextSelectionToolbarButton extends StatelessWidget {
-  /// Creates an instance of MongolTextSelectionToolbarButton.
+  /// 创建 MongolTextSelectionToolbarButton 的实例。
   const MongolTextSelectionToolbarButton({
-    Key? key,
+    super.key,
     required this.child,
     required this.padding,
     this.onPressed,
-  }) : super(key: key);
+  });
 
-  // These values were eyeballed to match the native text selection menu on a
-  // Pixel 2 running Android 10.
+  // 这些值是在运行 Android 10 的 Pixel 2 上目测以匹配原生文本选择菜单。
   static const double _kMiddlePadding = 9.5;
   static const double _kEndPadding = 14.5;
 
-  /// The child of this button.
+  /// 此按钮的子项。
   ///
-  /// Usually an [Icon].
+  /// 通常是一个 [Icon]。
   final Widget child;
 
-  /// Called when this button is pressed.
+  /// 当此按钮被按下时调用。
   final VoidCallback? onPressed;
 
-  /// The padding between the button's edge and its child.
+  /// 按钮边缘与其子项之间的填充。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [getPadding], which calculates the standard padding based on the
-  ///    button's position.
-  ///  * [ButtonStyle.padding], which is where this padding is applied.
+  ///  * [getPadding]，它根据按钮的位置计算标准填充。
+  ///  * [ButtonStyle.padding]，这是应用此填充的地方。
   final EdgeInsets padding;
 
-  /// Returns the standard padding for a button at index out of a total number
-  /// of buttons.
+  /// 返回基于总按钮数中索引位置的按钮的标准填充。
   static EdgeInsets getPadding(int index, int total) {
     assert(total > 0 && index >= 0 && index < total);
     final position = _getPosition(index, total);

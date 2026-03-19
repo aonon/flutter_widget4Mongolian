@@ -5,6 +5,8 @@
 // found in the LICENSE file.
 
 /// TODO: MongolMenuAnchor is not implemented yet.
+library;
+
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
@@ -51,76 +53,67 @@ const double _kMenuMinHeight = 2.0 * _kMenuHeightStep;
 const double _kMenuHeightStep = 56.0;
 const double _kMenuScreenPadding = 8.0;
 
-/// A base class for entries in a material design popup menu.
+/// 材料设计弹出菜单中条目的基类。
 ///
-/// The popup menu widget uses this interface to interact with the menu items.
-/// To show a popup menu, use the [showMongolMenu] function. To create a button that
-/// shows a popup menu, consider using [MongolPopupMenuButton].
+/// 弹出菜单小部件使用此接口与菜单项进行交互。
+/// 要显示弹出菜单，请使用 [showMongolMenu] 函数。要创建一个显示弹出菜单的按钮，
+/// 考虑使用 [MongolPopupMenuButton]。
 ///
-/// The type `T` is the type of the value(s) the entry represents. All the
-/// entries in a given menu must represent values with consistent types.
+/// 类型 `T` 是条目表示的值的类型。给定菜单中的所有条目必须表示具有一致类型的值。
 ///
-/// A [MongolPopupMenuEntry] may represent multiple values, for example a column
-/// with several icons, or a single entry, for example a menu item with an icon
-/// (see [MongolPopupMenuItem]), or no value at all (for example,
-/// [MongolPopupMenuDivider]).
+/// [MongolPopupMenuEntry] 可以表示多个值，例如带有几个图标的列，
+/// 或单个条目，例如带有图标的菜单项（请参阅 [MongolPopupMenuItem]），
+/// 或根本没有值（例如，[MongolPopupMenuDivider]）。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolPopupMenuItem], a popup menu entry for a single value.
-///  * [MongolPopupMenuDivider], a popup menu entry that is just a vertical line.
-///  * [MongolCheckedPopupMenuItem], a popup menu item with a checkmark.
-///  * [showMongolMenu], a method to dynamically show a popup menu at a given location.
-///  * [MongolPopupMenuButton], an [IconButton] that automatically shows a menu
-///    when it is tapped.
+///  * [MongolPopupMenuItem]，单个值的弹出菜单项。
+///  * [MongolPopupMenuDivider]，只是一条垂直线的弹出菜单项。
+///  * [MongolCheckedPopupMenuItem]，带有复选标记的弹出菜单项。
+///  * [showMongolMenu]，在给定位置动态显示弹出菜单的方法。
+///  * [MongolPopupMenuButton]，一个在点击时自动显示菜单的 [IconButton]。
 abstract class MongolPopupMenuEntry<T> extends StatefulWidget {
-  /// Abstract const constructor. This constructor enables subclasses to provide
-  /// const constructors so that they can be used in const expressions.
-  const MongolPopupMenuEntry({Key? key}) : super(key: key);
+  /// 抽象常量构造函数。此构造函数使子类能够提供常量构造函数，
+  /// 以便它们可以在常量表达式中使用。
+  const MongolPopupMenuEntry({super.key});
 
-  /// The amount of horizontal space occupied by this entry.
+  /// 此条目占用的水平空间量。
   ///
-  /// This value is used at the time the [showMongolMenu] method is called, if the
-  /// `initialValue` argument is provided, to determine the position of this
-  /// entry when aligning the selected entry over the given `position`. It is
-  /// otherwise ignored.
+  /// 如果提供了 `initialValue` 参数，此值在调用 [showMongolMenu] 方法时使用，
+  /// 以确定在将所选条目对齐到给定 `position` 时此条目的位置。
+  /// 否则，它将被忽略。
   double get width;
 
-  /// Whether this entry represents a particular value.
+  /// 此条目是否表示特定值。
   ///
-  /// This method is used by [showMongolMenu], when it is called, to align the entry
-  /// representing the `initialValue`, if any, to the given `position`, and then
-  /// later is called on each entry to determine if it should be highlighted (if
-  /// the method returns true, the entry will have its background color set to
-  /// the ambient [ThemeData.highlightColor]). If `initialValue` is null, then
-  /// this method is not called.
+  /// 此方法由 [showMongolMenu] 在调用时使用，以将表示 `initialValue`（如果有）的条目
+  /// 对齐到给定的 `position`，然后稍后在每个条目上调用以确定它是否应该被高亮显示
+  /// （如果方法返回 true，则条目的背景颜色将设置为环境 [ThemeData.highlightColor]）。
+  /// 如果 `initialValue` 为 null，则不调用此方法。
   ///
-  /// If the [MongolPopupMenuEntry] represents a single value, this should
-  /// return true if the argument matches that value. If it represents multiple
-  /// values, it should return true if the argument matches any of them.
+  /// 如果 [MongolPopupMenuEntry] 表示单个值，则如果参数与该值匹配，应返回 true。
+  /// 如果它表示多个值，则如果参数与其中任何一个匹配，应返回 true。
   bool represents(T? value);
 }
 
-/// A vertical divider in a material design popup menu.
+/// 材料设计弹出菜单中的垂直分隔线。
 ///
-/// This widget adapts the [Divider] for use in popup menus.
+/// 此小部件使 [Divider] 适用于弹出菜单。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolPopupMenuItem], for the kinds of items that this widget divides.
-///  * [showMongolMenu], a method to dynamically show a popup menu at a given location.
-///  * [MongolPopupMenuButton], an [IconButton] that automatically shows a menu
-///    when it is tapped.
+///  * [MongolPopupMenuItem]，此类部件分隔的项目类型。
+///  * [showMongolMenu]，在给定位置动态显示弹出菜单的方法。
+///  * [MongolPopupMenuButton]，一个在点击时自动显示菜单的 [IconButton]。
 class MongolPopupMenuDivider extends MongolPopupMenuEntry<Never> {
-  /// Creates a vertical divider for a popup menu.
+  /// 为弹出菜单创建一个垂直分隔线。
   ///
-  /// By default, the divider has a width of 16 logical pixels.
-  const MongolPopupMenuDivider({Key? key, this.width = _kMenuDividerWidth})
-      : super(key: key);
+  /// 默认情况下，分隔线的宽度为 16 逻辑像素。
+  const MongolPopupMenuDivider({super.key, this.width = _kMenuDividerWidth});
 
-  /// The width of the divider entry.
+  /// 分隔线条目的宽度。
   ///
-  /// Defaults to 16 pixels.
+  /// 默认为 16 像素。
   @override
   final double width;
 
@@ -136,10 +129,9 @@ class _MongolPopupMenuDividerState extends State<MongolPopupMenuDivider> {
   Widget build(BuildContext context) => VerticalDivider(width: widget.width);
 }
 
-// This widget only exists to enable _PopupMenuRoute to save the sizes of
-// each menu item. The sizes are used by _PopupMenuRouteLayout to compute the
-// x coordinate of the menu's origin so that the center of selected menu
-// item lines up with the center of its MongolPopupMenuButton.
+// 此小部件仅存在于启用 _PopupMenuRoute 保存每个菜单项的大小。
+// 这些大小由 _PopupMenuRouteLayout 用于计算菜单原点的 x 坐标，
+// 以便所选菜单项的中心与其 MongolPopupMenuButton 的中心对齐。
 class _MenuItem extends SingleChildRenderObjectWidget {
   const _MenuItem({
     required this.onLayout,
@@ -161,10 +153,13 @@ class _MenuItem extends SingleChildRenderObjectWidget {
 }
 
 class _RenderMenuItem extends RenderShiftedBox {
+  /// 创建一个渲染菜单项的对象，用于在布局时保存菜单项的大小。
   _RenderMenuItem(this.onLayout, [RenderBox? child]) : super(child);
 
+  /// 布局完成时调用的回调，用于保存菜单项的大小。
   ValueChanged<Size> onLayout;
 
+  /// 执行干布局计算，返回此渲染对象的大小，而不实际布局子级。
   @override
   Size computeDryLayout(BoxConstraints constraints) {
     if (child == null) {
@@ -173,6 +168,8 @@ class _RenderMenuItem extends RenderShiftedBox {
     return child!.getDryLayout(constraints);
   }
 
+  /// 执行实际布局，设置此渲染对象的大小，并布局其子级。
+  /// 布局完成后，调用 onLayout 回调保存菜单项的大小。
   @override
   void performLayout() {
     if (child == null) {
@@ -187,24 +184,22 @@ class _RenderMenuItem extends RenderShiftedBox {
   }
 }
 
-/// An item in a Mongol material design popup menu.
+/// 蒙古文材料设计弹出菜单中的一个项目。
 ///
-/// To show a popup menu, use the [showMongolMenu] function. To create a button that
-/// shows a popup menu, consider using [MongolPopupMenuButton].
+/// 要显示弹出菜单，请使用 [showMongolMenu] 函数。要创建一个显示弹出菜单的按钮，
+/// 考虑使用 [MongolPopupMenuButton]。
 ///
-/// To show a checkmark next to a popup menu item, consider using
-/// [MongolCheckedPopupMenuItem].
+/// 要在弹出菜单项旁边显示复选标记，考虑使用 [MongolCheckedPopupMenuItem]。
 ///
-/// Typically the [child] of a [MongolPopupMenuItem] is a [MongolText] widget.
-/// More elaborate menus with icons can use a [MongolListTile]. By default, a
-/// [MongolPopupMenuItem] is [kMinInteractiveDimension] pixels
-/// wide. If you use a widget with a different width, it must be specified in
-/// the [width] property.
+/// 通常，[MongolPopupMenuItem] 的 [child] 是一个 [MongolText] 小部件。
+/// 带有图标的更复杂菜单可以使用 [MongolListTile]。默认情况下，
+/// [MongolPopupMenuItem] 的宽度为 [kMinInteractiveDimension] 像素。
+/// 如果您使用不同宽度的小部件，则必须在 [width] 属性中指定。
 ///
-/// {@tool snippet}
+/// 示例：
 ///
-/// Here, a [MongolText] widget is used with a popup menu item. The
-/// `WhyFarther` type is an enum, not shown here.
+/// 这里，一个 [MongolText] 小部件与一个弹出菜单项一起使用。
+/// `WhyFarther` 类型是一个枚举，这里未显示。
 ///
 /// ```dart
 /// const MongolPopupMenuItem<WhyFarther>(
@@ -212,27 +207,24 @@ class _RenderMenuItem extends RenderShiftedBox {
 ///   child: MongolText('Working a lot harder'),
 /// )
 /// ```
-/// {@end-tool}
 ///
-/// See the example at [MongolPopupMenuButton] for how this example could be
-/// used in a complete menu, and see the example at [MongolCheckedPopupMenuItem] for one way to
-/// keep the text of [MongolPopupMenuItem]s that use [MongolText] widgets in their [child]
-/// slot aligned with the text of [MongolCheckedPopupMenuItem]s or of [MongolPopupMenuItem]
-/// that use a [MongolListTile] in their [child] slot.
+/// 有关如何在完整菜单中使用此示例，请参阅 [MongolPopupMenuButton] 中的示例，
+/// 有关如何使使用 [MongolText] 小部件作为 [child] 的 [MongolPopupMenuItem] 的文本
+/// 与 [MongolCheckedPopupMenuItem] 的文本或使用 [MongolListTile] 作为 [child] 的
+/// [MongolPopupMenuItem] 的文本对齐的一种方法，请参阅 [MongolCheckedPopupMenuItem] 中的示例。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolPopupMenuDivider], which can be used to divide items from each other.
-///  * [MongolCheckedPopupMenuItem], a variant of [MongolPopupMenuItem] with a checkmark.
-///  * [showMongolMenu], a method to dynamically show a popup menu at a given location.
-///  * [MongolPopupMenuButton], an [IconButton] that automatically shows a menu when
-///    it is tapped.
+///  * [MongolPopupMenuDivider]，可用于将项目彼此分开。
+///  * [MongolCheckedPopupMenuItem]，带有复选标记的 [MongolPopupMenuItem] 变体。
+///  * [showMongolMenu]，在给定位置动态显示弹出菜单的方法。
+///  * [MongolPopupMenuButton]，一个在点击时自动显示菜单的 [IconButton]。
 class MongolPopupMenuItem<T> extends MongolPopupMenuEntry<T> {
-  /// Creates an item for a popup menu.
+  /// 为弹出菜单创建一个项目。
   ///
-  /// By default, the item is [enabled].
+  /// 默认情况下，项目是 [enabled] 的。
   ///
-  /// The `enabled` and `width` arguments must not be null.
+  /// `enabled` 和 `width` 参数不能为空。
   const MongolPopupMenuItem({
     super.key,
     this.value,
@@ -246,75 +238,73 @@ class MongolPopupMenuItem<T> extends MongolPopupMenuEntry<T> {
     required this.child,
   });
 
-  /// The value that will be returned by [showMongolMenu] if this entry is selected.
+  /// 如果此条目被选中，[showMongolMenu] 将返回的值。
   final T? value;
 
-  /// Called when the menu item is tapped.
+  /// 当菜单项被点击时调用。
   final VoidCallback? onTap;
 
-  /// Whether the user is permitted to select this item.
+  /// 是否允许用户选择此项目。
   ///
-  /// Defaults to true. If this is false, then the item will not react to
-  /// touches.
+  /// 默认为 true。如果为 false，则项目不会对触摸做出反应。
   final bool enabled;
 
-  /// The minimum width of the menu item.
+  /// 菜单项的最小宽度。
   ///
-  /// Defaults to [kMinInteractiveDimension] pixels.
+  /// 默认为 [kMinInteractiveDimension] 像素。
   @override
   final double width;
 
-  /// The padding of the menu item.
+  /// 菜单项的内边距。
   ///
-  /// Note that [width] may interact with the applied padding. For example,
-  /// If a [width] greater than the width of the sum of the padding and [child]
-  /// is provided, then the padding's effect will not be visible.
+  /// 请注意，[width] 可能会与应用的内边距相互作用。例如，
+  /// 如果提供的 [width] 大于内边距和 [child] 之和的宽度，
+  /// 则内边距的效果将不可见。
   ///
-  /// If this is null and [ThemeData.useMaterial3] is true, the vertical padding
-  /// defaults to 12.0 on both sides.
+  /// 如果此值为 null 且 [ThemeData.useMaterial3] 为 true，
+  /// 则垂直内边距默认为两侧各 12.0。
   ///
-  /// If this is null and [ThemeData.useMaterial3] is false, the vertical padding
-  /// defaults to 16.0 on both sides.
+  /// 如果此值为 null 且 [ThemeData.useMaterial3] 为 false，
+  /// 则垂直内边距默认为两侧各 16.0。
   ///
-  /// When null, the vertical padding defaults to 16.0 on both sides.
+  /// 当为 null 时，垂直内边距默认为两侧各 16.0。
   final EdgeInsets? padding;
 
-  /// The text style of the popup menu item.
+  /// 弹出菜单项的文本样式。
   ///
-  /// If this property is null, then [PopupMenuThemeData.textStyle] is used.
-  /// If [PopupMenuThemeData.textStyle] is also null, then [TextTheme.titleMedium]
-  /// of [ThemeData.textTheme] is used.
+  /// 如果此属性为 null，则使用 [PopupMenuThemeData.textStyle]。
+  /// 如果 [PopupMenuThemeData.textStyle] 也为 null，则使用
+  /// [ThemeData.textTheme] 的 [TextTheme.titleMedium]。
   final TextStyle? textStyle;
 
-  /// The label style of the popup menu item.
+  /// 弹出菜单项的标签样式。
   ///
-  /// When [ThemeData.useMaterial3] is true, this styles the text of the popup menu item.
+  /// 当 [ThemeData.useMaterial3] 为 true 时，这会设置弹出菜单项文本的样式。
   ///
-  /// If this property is null, then [PopupMenuThemeData.labelTextStyle] is used.
-  /// If [PopupMenuThemeData.labelTextStyle] is also null, then [TextTheme.labelLarge]
-  /// is used with the [ColorScheme.onSurface] color when popup menu item is enabled and
-  /// the [ColorScheme.onSurface] color with 0.38 opacity when the popup menu item is disabled.
+  /// 如果此属性为 null，则使用 [PopupMenuThemeData.labelTextStyle]。
+  /// 如果 [PopupMenuThemeData.labelTextStyle] 也为 null，则使用
+  /// [TextTheme.labelLarge]，当弹出菜单项启用时使用 [ColorScheme.onSurface] 颜色，
+  /// 当弹出菜单项禁用时使用带有 0.38 不透明度的 [ColorScheme.onSurface] 颜色。
   final WidgetStateProperty<TextStyle?>? labelTextStyle;
 
-  /// The cursor for a mouse pointer when it enters or is hovering over the
-  /// widget.
+  /// 鼠标指针进入或悬停在小部件上时的光标。
   ///
-  /// If [mouseCursor] is a [MaterialStateProperty<MouseCursor>],
-  /// [WidgetStateProperty.resolve] is used for the following [WidgetState]:
+  /// 如果 [mouseCursor] 是 [MaterialStateProperty<MouseCursor>]，
+  /// 则 [WidgetStateProperty.resolve] 用于以下 [WidgetState]：
   ///
-  ///  * [WidgetState.hovered].
-  ///  * [WidgetState.focused].
-  ///  * [WidgetState.disabled].
+  ///  * [WidgetState.hovered]（悬停状态）。
+  ///  * [WidgetState.focused]（焦点状态）。
+  ///  * [WidgetState.disabled]（禁用状态）。
   ///
-  /// If null, then the value of [PopupMenuThemeData.mouseCursor] is used. If
-  /// that is also null, then [WidgetStateMouseCursor.clickable] is used.
+  /// 如果为 null，则使用 [PopupMenuThemeData.mouseCursor] 的值。
+  /// 如果这也是 null，则使用 [WidgetStateMouseCursor.clickable]。
   final MouseCursor? mouseCursor;
 
-  /// The widget below this widget in the tree.
+  /// 此小部件下方树中的小部件。
   ///
-  /// Typically a single-line [MongolListTile] (for menus with icons) or a
-  /// [MongolText]. An appropriate [DefaultTextStyle] is put in scope for the
-  /// child. In either case, the text should be short enough that it won't wrap.
+  /// 通常是单行 [MongolListTile]（用于带图标的菜单）或 [MongolText]。
+  /// 为子级设置了适当的 [DefaultTextStyle]。在任何情况下，
+  /// 文本都应该足够短，不会换行。
   final Widget? child;
 
   @override
@@ -325,39 +315,31 @@ class MongolPopupMenuItem<T> extends MongolPopupMenuEntry<T> {
       MongolPopupMenuItemState<T, MongolPopupMenuItem<T>>();
 }
 
-/// The [State] for [MongolPopupMenuItem] subclasses.
+/// [MongolPopupMenuItem] 子类的 [State]。
 ///
-/// By default this implements the basic styling and layout of Material Design
-/// popup menu items.
+/// 默认情况下，这实现了材料设计弹出菜单项的基本样式和布局。
 ///
-/// The [buildChild] method can be overridden to adjust exactly what gets placed
-/// in the menu. By default it returns [MongolPopupMenuItem.child].
+/// 可以重写 [buildChild] 方法来调整菜单中放置的内容。默认情况下，它返回 [MongolPopupMenuItem.child]。
 ///
-/// The [handleTap] method can be overridden to adjust exactly what happens when
-/// the item is tapped. By default, it uses [Navigator.pop] to return the
-/// [MongolPopupMenuItem.value] from the menu route.
+/// 可以重写 [handleTap] 方法来调整项目被点击时发生的情况。默认情况下，它使用 [Navigator.pop] 从菜单路由返回 [MongolPopupMenuItem.value]。
 ///
-/// This class takes two type arguments. The second, `W`, is the exact type of
-/// the [Widget] that is using this [State]. It must be a subclass of
-/// [MongolPopupMenuItem]. The first, `T`, must match the type argument of that widget
-/// class, and is the type of values returned from this menu.
+/// 此类采用两个类型参数。第二个 `W` 是使用此 [State] 的 [Widget] 的精确类型。它必须是 [MongolPopupMenuItem] 的子类。
+/// 第一个 `T` 必须与该小部件类的类型参数匹配，并且是从该菜单返回的值的类型。
 class MongolPopupMenuItemState<T, W extends MongolPopupMenuItem<T>>
     extends State<W> {
-  /// The menu item contents.
+  /// 菜单项内容。
   ///
-  /// Used by the [build] method.
+  /// 由 [build] 方法使用。
   ///
-  /// By default, this returns [MongolPopupMenuItem.child]. Override this to put
-  /// something else in the menu entry.
+  /// 默认情况下，这返回 [MongolPopupMenuItem.child]。重写此方法以在菜单项中放置其他内容。
   @protected
   Widget? buildChild() => widget.child;
 
-  /// The handler for when the user selects the menu item.
+  /// 当用户选择菜单项时的处理程序。
   ///
-  /// Used by the [InkWell] inserted by the [build] method.
+  /// 由 [build] 方法插入的 [InkWell] 使用。
   ///
-  /// By default, uses [Navigator.pop] to return the [MongolPopupMenuItem.value] from
-  /// the menu route.
+  /// 默认情况下，使用 [Navigator.pop] 从菜单路由返回 [MongolPopupMenuItem.value]。
   @protected
   void handleTap() {
     // Need to pop the navigator first in case onTap may push new route onto navigator.
@@ -429,25 +411,23 @@ class MongolPopupMenuItemState<T, W extends MongolPopupMenuItem<T>>
   }
 }
 
-/// An item with a checkmark in a Mongol Material Design popup menu.
+/// 蒙古文材料设计弹出菜单中带有复选标记的项目。
 ///
-/// To show a popup menu, use the [showMongolMenu] function. To create a button that
-/// shows a popup menu, consider using [MongolPopupMenuButton].
+/// 要显示弹出菜单，请使用 [showMongolMenu] 函数。要创建一个显示弹出菜单的按钮，
+/// 考虑使用 [MongolPopupMenuButton]。
 ///
-/// A [MongolCheckedPopupMenuItem] is kMinInteractiveDimension pixels high, which
-/// matches the default minimum height of a [MongolPopupMenuItem]. The horizontal
-/// layout uses [MongolListTile]; the checkmark is an [Icons.done] icon, shown in the
-/// [MongolListTile.leading] position.
+/// [MongolCheckedPopupMenuItem] 的高度为 kMinInteractiveDimension 像素，
+/// 与 [MongolPopupMenuItem] 的默认最小高度匹配。水平布局使用 [MongolListTile]；
+/// 复选标记是一个 [Icons.done] 图标，显示在 [MongolListTile.leading] 位置。
 ///
-/// {@tool snippet}
+/// 示例：
 ///
-/// Suppose a `Commands` enum exists that lists the possible commands from a
-/// particular popup menu, including `Commands.heroAndScholar` and
-/// `Commands.hurricaneCame`, and further suppose that there is a
-/// `_heroAndScholar` member field which is a boolean. The example below shows a
-/// menu with one menu item with a checkmark that can toggle the boolean, and
-/// one menu item without a checkmark for selecting the second option. (It also
-/// shows a divider placed between the two menu items.)
+/// 假设存在一个 `Commands` 枚举，列出了特定弹出菜单中的可能命令，
+/// 包括 `Commands.heroAndScholar` 和 `Commands.hurricaneCame`，
+/// 并且假设有一个 `_heroAndScholar` 成员字段，它是一个布尔值。
+/// 下面的示例显示了一个菜单，其中一个菜单项带有可以切换布尔值的复选标记，
+/// 一个菜单项没有复选标记用于选择第二个选项。
+/// （它还显示了放置在两个菜单项之间的分隔线。）
 ///
 /// ```dart
 /// MongolPopupMenuButton<Commands>(
@@ -476,25 +456,21 @@ class MongolPopupMenuItemState<T, W extends MongolPopupMenuItem<T>>
 ///   ],
 /// )
 /// ```
-/// {@end-tool}
 ///
-/// In particular, observe how the second menu item uses a [MongolListTile] with a
-/// blank [Icon] in the [MongolListTile.leading] position to get the same alignment as
-/// the item with the checkmark.
+/// 特别注意第二个菜单项如何使用带有空白 [Icon] 的 [MongolListTile] 在 [MongolListTile.leading] 位置
+/// 以获得与带有复选标记的项目相同的对齐方式。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolPopupMenuItem], a popup menu entry for picking a command (as opposed to
-///    toggling a value).
-///  * [MongolPopupMenuDivider], a popup menu entry that is just a horizontal line.
-///  * [showMongolMenu], a method to dynamically show a popup menu at a given location.
-///  * [MongolPopupMenuButton], an [MongolIconButton] that automatically shows a menu when
-///    it is tapped.
+///  * [MongolPopupMenuItem]，用于选择命令（而不是切换值）的弹出菜单项。
+///  * [MongolPopupMenuDivider]，只是一条水平线的弹出菜单项。
+///  * [showMongolMenu]，在给定位置动态显示弹出菜单的方法。
+///  * [MongolPopupMenuButton]，一个在点击时自动显示菜单的 [MongolIconButton]。
 class MongolCheckedPopupMenuItem<T> extends MongolPopupMenuItem<T> {
-  /// Creates a popup menu item with a checkmark.
+  /// 创建一个带有复选标记的弹出菜单项。
   ///
-  /// By default, the menu item is [enabled] but unchecked. To mark the item as
-  /// checked, set [checked] to true.
+  /// 默认情况下，菜单项是 [enabled] 的但未选中。要将项目标记为选中，
+  /// 请将 [checked] 设置为 true。
   const MongolCheckedPopupMenuItem({
     super.key,
     super.value,
@@ -508,23 +484,22 @@ class MongolCheckedPopupMenuItem<T> extends MongolPopupMenuItem<T> {
     super.onTap,
   });
 
-  /// Whether to display a checkmark next to the menu item.
+  /// 是否在菜单项旁边显示复选标记。
   ///
-  /// Defaults to false.
+  /// 默认为 false。
   ///
-  /// When true, an [Icons.done] checkmark is displayed.
+  /// 当为 true 时，显示 [Icons.done] 复选标记。
   ///
-  /// When this popup menu item is selected, the checkmark will fade in or out
-  /// as appropriate to represent the implied new state.
+  /// 当此弹出菜单项被选中时，复选标记将适当淡入或淡出，以表示隐含的新状态。
   final bool checked;
 
-  /// The widget below this widget in the tree.
+  /// 此小部件下方树中的小部件。
   ///
-  /// Typically a [Text]. An appropriate [DefaultTextStyle] is put in scope for
-  /// the child. The text should be short enough that it won't wrap.
+  /// 通常是 [Text]。为子级设置了适当的 [DefaultTextStyle]。
+  /// 文本应该足够短，不会换行。
   ///
-  /// This widget is placed in the [ListTile.title] slot of a [ListTile] whose
-  /// [ListTile.leading] slot is an [Icons.done] icon.
+  /// 此小部件放置在 [ListTile] 的 [ListTile.title] 插槽中，
+  /// 其 [ListTile.leading] 插槽是一个 [Icons.done] 图标。
   @override
   Widget? get child => super.child;
 
@@ -536,10 +511,14 @@ class MongolCheckedPopupMenuItem<T> extends MongolPopupMenuItem<T> {
 class _MongolCheckedPopupMenuItemState<T>
     extends MongolPopupMenuItemState<T, MongolCheckedPopupMenuItem<T>>
     with SingleTickerProviderStateMixin {
+  /// 复选标记淡入淡出动画的持续时间。
   static const Duration _fadeDuration = Duration(milliseconds: 150);
+  /// 控制复选标记淡入淡出动画的控制器。
   late AnimationController _controller;
+  /// 动画的不透明度值。
   Animation<double> get _opacity => _controller.view;
 
+  /// 初始化状态，创建并配置动画控制器。
   @override
   void initState() {
     super.initState();
@@ -548,12 +527,14 @@ class _MongolCheckedPopupMenuItemState<T>
       ..addListener(() => setState(() {/* animation changed */}));
   }
 
+  /// 清理资源，释放动画控制器。
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  /// 处理菜单项点击事件，根据当前选中状态控制复选标记的淡入淡出动画。
   @override
   void handleTap() {
     // This fades the checkmark in or out when tapped.
@@ -565,6 +546,7 @@ class _MongolCheckedPopupMenuItemState<T>
     super.handleTap();
   }
 
+  /// 构建菜单项的子部件，包含带有淡入淡出动画的复选标记和标题。
   @override
   Widget buildChild() {
     final ThemeData theme = Theme.of(context);
@@ -596,18 +578,29 @@ class _MongolCheckedPopupMenuItemState<T>
   }
 }
 
+/// 弹出菜单的内部实现类，负责构建菜单的 UI。
 class _PopupMenu<T> extends StatelessWidget {
+  /// 创建一个弹出菜单。
+  ///
+  /// [route] 是弹出菜单的路由，包含菜单项和其他配置。
+  /// [semanticLabel] 是用于辅助功能的语义标签。
+  /// [constraints] 是菜单的大小约束。
+  /// [clipBehavior] 是菜单的裁剪行为。
   const _PopupMenu({
-    Key? key,
+    super.key,
     required this.route,
     required this.semanticLabel,
     this.constraints,
     required this.clipBehavior,
-  }) : super(key: key);
+  });
 
+  /// 弹出菜单的路由，包含菜单项和其他配置。
   final _PopupMenuRoute<T> route;
+  /// 用于辅助功能的语义标签。
   final String? semanticLabel;
+  /// 菜单的大小约束。
   final BoxConstraints? constraints;
+  /// 菜单的裁剪行为。
   final Clip clipBehavior;
 
   @override
@@ -954,63 +947,45 @@ class _PopupMenuRoute<T> extends PopupRoute<T> {
   }
 }
 
-/// Show a popup menu that contains the `items` at `position`.
+/// 在 `position` 处显示包含 `items` 的弹出菜单。
 ///
-/// `items` should be non-null and not empty.
+/// `items` 应为非 null 且非空。
 ///
-/// If `initialValue` is specified then the first item with a matching value
-/// will be highlighted and the value of `position` gives the rectangle whose
-/// horizontal center will be aligned with the horizontal center of the highlighted
-/// item (when possible).
+/// 如果指定了 `initialValue`，则具有匹配值的第一个项目将被高亮显示，
+/// 并且 `position` 的值给出一个矩形，其水平中心将与高亮项目的水平中心对齐（如果可能）。
 ///
-/// If `initialValue` is not specified then the right side of the menu will be aligned
-/// with the right side of the `position` rectangle.
+/// 如果未指定 `initialValue`，则菜单的右侧将与 `position` 矩形的右侧对齐。
 ///
-/// In both cases, the menu position will be adjusted if necessary to fit on the
-/// screen.
+/// 在这两种情况下，如果需要，菜单位置将被调整以适应屏幕。
 ///
-/// Vertically, the menu is positioned so that it grows in the direction that
-/// has the most room. For example, if the `position` describes a rectangle on
-/// the top edge of the screen, then the top edge of the menu is aligned with
-/// the top edge of the `position`, and the menu grows to the bottom. If both
-/// edges of the `position` are equidistant from the opposite edge of the
-/// screen, then it grows down.
+/// 在垂直方向上，菜单的位置设置为向空间最大的方向增长。例如，如果 `position` 描述屏幕顶部边缘的矩形，
+/// 则菜单的顶部边缘与 `position` 的顶部边缘对齐，菜单向下增长。
+/// 如果 `position` 的两个边缘与屏幕的相对边缘等距，则菜单向下增长。
 ///
-/// The positioning of the `initialValue` at the `position` is implemented by
-/// iterating over the `items` to find the first whose
-/// [MongolPopupMenuEntry.represents] method returns true for `initialValue`, and then
-/// summing the values of [MongolPopupMenuEntry.width] for all the preceding widgets
-/// in the list.
+/// `initialValue` 在 `position` 处的定位是通过遍历 `items` 来找到第一个其
+/// [MongolPopupMenuEntry.represents] 方法对 `initialValue` 返回 true 的项目，
+/// 然后对列表中所有前面的小部件的 [MongolPopupMenuEntry.width] 值求和来实现的。
 ///
-/// The `elevation` argument specifies the z-coordinate at which to place the
-/// menu. The elevation defaults to 8, the appropriate elevation for popup
-/// menus.
+/// `elevation` 参数指定放置菜单的 z 坐标。海拔默认为 8，这是弹出菜单的适当海拔。
 ///
-/// The `context` argument is used to look up the [Navigator] and [Theme] for
-/// the menu. It is only used when the method is called. Its corresponding
-/// widget can be safely removed from the tree before the popup menu is closed.
+/// `context` 参数用于查找菜单的 [Navigator] 和 [Theme]。它仅在调用方法时使用。
+/// 其对应的小部件可以在弹出菜单关闭之前安全地从树中移除。
 ///
-/// The `useRootNavigator` argument is used to determine whether to push the
-/// menu to the [Navigator] furthest from or nearest to the given `context`. It
-/// is `false` by default.
+/// `useRootNavigator` 参数用于确定是将菜单推送到离给定 `context` 最远还是最近的 [Navigator]。
+/// 默认为 `false`。
 ///
-/// The `semanticLabel` argument is used by accessibility frameworks to
-/// announce screen transitions when the menu is opened and closed. If this
-/// label is not provided, it will default to
-/// [MaterialLocalizations.popupMenuLabel].
+/// `semanticLabel` 参数由辅助功能框架用于在菜单打开和关闭时宣布屏幕转换。
+/// 如果未提供此标签，它将默认为 [MaterialLocalizations.popupMenuLabel]。
 ///
-/// The `clipBehavior` argument is used to clip the shape of the menu. Defaults to
-/// [Clip.none].
+/// `clipBehavior` 参数用于裁剪菜单的形状。默认为 [Clip.none]。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolPopupMenuItem], a popup menu entry for a single value.
-///  * [MongolPopupMenuDivider], a popup menu entry that is just a vertical line.
-///  * [MongolCheckedPopupMenuItem], a popup menu item with a checkmark.
-///  * [MongolPopupMenuButton], which provides an [IconButton] that shows a menu by
-///    calling this method automatically.
-///  * [SemanticsConfiguration.namesRoute], for a description of edge triggered
-///    semantics.
+///  * [MongolPopupMenuItem]，单个值的弹出菜单项。
+///  * [MongolPopupMenuDivider]，只是一条垂直线的弹出菜单项。
+///  * [MongolCheckedPopupMenuItem]，带有复选标记的弹出菜单项。
+///  * [MongolPopupMenuButton]，提供一个通过自动调用此方法显示菜单的 [IconButton]。
+///  * [SemanticsConfiguration.namesRoute]，用于边缘触发语义的描述。
 Future<T?> showMongolMenu<T>({
   required BuildContext context,
   required RelativeRect position,
@@ -1084,27 +1059,23 @@ typedef MongolPopupMenuCanceled = void Function();
 typedef MongolPopupMenuItemBuilder<T> = List<MongolPopupMenuEntry<T>> Function(
     BuildContext context);
 
-/// Displays a menu when pressed and calls [onSelected] when the menu is dismissed
-/// because an item was selected. The value passed to [onSelected] is the value of
-/// the selected menu item.
+/// 当按下时显示菜单，并在菜单因项目被选中而被关闭时调用 [onSelected]。
+/// 传递给 [onSelected] 的值是所选菜单项的值。
 ///
-/// One of [child] or [icon] may be provided, but not both. If [icon] is provided,
-/// then [MongolPopupMenuButton] behaves like an [IconButton].
+/// 可以提供 [child] 或 [icon] 中的一个，但不能同时提供两者。如果提供了 [icon]，
+/// 则 [MongolPopupMenuButton] 的行为类似于 [IconButton]。
 ///
-/// If both are null, then a standard overflow icon is created (depending on the
-/// platform).
+/// 如果两者都为 null，则会创建一个标准的溢出图标（取决于平台）。
 ///
-/// {@tool snippet}
+/// 示例：
 ///
-/// This example shows a menu with four items, selecting between an enum's
-/// values and setting a `_selection` field based on the selection.
+/// 此示例显示了一个包含四个项目的菜单，在枚举的值之间选择，并根据选择设置 `_selection` 字段。
 ///
 /// ```dart
-/// // This is the type used by the popup menu below.
+/// // 这是下面弹出菜单使用的类型。
 /// enum WhyFarther { harder, smarter, selfStarter, tradingCharter }
 ///
-/// // This menu button widget updates a _selection field (of type WhyFarther,
-/// // not shown here).
+/// // 此菜单按钮小部件更新 _selection 字段（类型为 WhyFarther，此处未显示）。
 /// MongolPopupMenuButton<WhyFarther>(
 ///   onSelected: (WhyFarther result) { setState(() { _selection = result; }); },
 ///   itemBuilder: (BuildContext context) => <MongolPopupMenuEntry<WhyFarther>>[
@@ -1127,18 +1098,17 @@ typedef MongolPopupMenuItemBuilder<T> = List<MongolPopupMenuEntry<T>> Function(
 ///   ],
 /// )
 /// ```
-/// {@end-tool}
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolPopupMenuItem], a popup menu entry for a single value.
-///  * [MongolPopupMenuDivider], a popup menu entry that is just a vertical line.
-///  * [MongolCheckedPopupMenuItem], a popup menu item with a checkmark.
-///  * [showMongolMenu], a method to dynamically show a popup menu at a given location.
+///  * [MongolPopupMenuItem]，单个值的弹出菜单项。
+///  * [MongolPopupMenuDivider]，只是一条垂直线的弹出菜单项。
+///  * [MongolCheckedPopupMenuItem]，带有复选标记的弹出菜单项。
+///  * [showMongolMenu]，在给定位置动态显示弹出菜单的方法。
 class MongolPopupMenuButton<T> extends StatefulWidget {
-  /// Creates a button that shows a popup menu.
+  /// 创建一个显示弹出菜单的按钮。
   ///
-  /// The [itemBuilder] argument must not be null.
+  /// [itemBuilder] 参数不能为空。
   const MongolPopupMenuButton({
     super.key,
     required this.itemBuilder,
@@ -1170,70 +1140,64 @@ class MongolPopupMenuButton<T> extends StatefulWidget {
           'You can only pass [child] or [icon], not both.',
         );
 
-  /// Called when the button is pressed to create the items to show in the menu.
+  /// 当按钮被按下时调用，用于创建要在菜单中显示的项目。
   final MongolPopupMenuItemBuilder<T> itemBuilder;
 
-  /// The value of the menu item, if any, that should be highlighted when the menu opens.
+  /// 菜单项的值（如果有），在菜单打开时应被高亮显示。
   final T? initialValue;
 
-  /// Called when the popup menu is shown.
+  /// 当弹出菜单显示时调用。
   final VoidCallback? onOpened;
 
-  /// Called when the user selects a value from the popup menu created by this button.
+  /// 当用户从由此按钮创建的弹出菜单中选择值时调用。
   ///
-  /// If the popup menu is dismissed without selecting a value, [onCanceled] is
-  /// called instead.
+  /// 如果弹出菜单在未选择值的情况下被关闭，则调用 [onCanceled] 代替。
   final MongolPopupMenuItemSelected<T>? onSelected;
 
-  /// Called when the user dismisses the popup menu without selecting an item.
+  /// 当用户在未选择项目的情况下关闭弹出菜单时调用。
   ///
-  /// If the user selects a value, [onSelected] is called instead.
+  /// 如果用户选择了值，则调用 [onSelected] 代替。
   final MongolPopupMenuCanceled? onCanceled;
 
-  /// Text that describes the action that will occur when the button is pressed.
+  /// 描述按下按钮时将发生的操作的文本。
   ///
-  /// This text is displayed when the user long-presses on the button and is
-  /// used for accessibility.
+  /// 当用户长按按钮时显示此文本，并用于辅助功能。
   final String? tooltip;
 
-  /// The z-coordinate at which to place the menu when open. This controls the
-  /// size of the shadow below the menu.
+  /// 打开菜单时放置菜单的 z 坐标。这控制菜单下方阴影的大小。
   ///
-  /// Defaults to 8, the appropriate elevation for popup menus.
+  /// 默认为 8，这是弹出菜单的适当海拔。
   final double? elevation;
 
-  /// The color used to paint the shadow below the menu.
+  /// 用于绘制菜单下方阴影的颜色。
   ///
-  /// If null then the ambient [PopupMenuThemeData.shadowColor] is used.
-  /// If that is null too, then the overall theme's [ThemeData.shadowColor]
-  /// (default black) is used.
+  /// 如果为 null，则使用环境 [PopupMenuThemeData.shadowColor]。
+  /// 如果那也为 null，则使用整体主题的 [ThemeData.shadowColor]（默认黑色）。
   final Color? shadowColor;
 
-  /// The color used as an overlay on [color] to indicate elevation.
+  /// 用作 [color] 上的覆盖层以指示海拔的颜色。
   ///
-  /// If null, [PopupMenuThemeData.surfaceTintColor] is used. If that
-  /// is also null, the default value is [ColorScheme.surfaceTint].
+  /// 如果为 null，则使用 [PopupMenuThemeData.surfaceTintColor]。
+  /// 如果那也为 null，则默认值为 [ColorScheme.surfaceTint]。
   ///
-  /// See [Material.surfaceTintColor] for more details on how this
-  /// overlay is applied.
+  /// 有关如何应用此覆盖层的更多详细信息，请参阅 [Material.surfaceTintColor]。
   final Color? surfaceTintColor;
 
-  /// Matches IconButton's 8 dps padding by default. In some cases, notably where
-  /// this button appears as the trailing element of a list item, it's useful to be able
-  /// to set the padding to zero.
+  /// 默认匹配 IconButton 的 8 dps 内边距。在某些情况下，特别是当此按钮作为列表项的尾随元素出现时，
+  /// 能够将内边距设置为零是很有用的。
   final EdgeInsetsGeometry padding;
 
-  /// The splash radius.
+  /// 水波纹效果的半径。
   ///
-  /// If null, default splash radius of [InkWell] or [IconButton] is used.
+  /// 如果为 null，则使用 [InkWell] 或 [IconButton] 的默认水波纹半径。
   final double? splashRadius;
 
-  /// If provided, [child] is the widget used for this button
-  /// and the button will utilize an [InkWell] for taps.
+  /// 如果提供，[child] 是为此按钮使用的小部件，
+  /// 并且按钮将使用 [InkWell] 进行点击。
   final Widget? child;
 
-  /// If provided, the [icon] is used for this button
-  /// and the button will behave like an [IconButton].
+  /// 如果提供，[icon] 用于此按钮，
+  /// 并且按钮将表现得像 [IconButton]。
   final Widget? icon;
 
   /// The offset applied to the Popup Menu Button.
@@ -1288,14 +1252,14 @@ class MongolPopupMenuButton<T> extends StatefulWidget {
   ///  * [Feedback] for providing platform-specific feedback to certain actions.
   final bool? enableFeedback;
 
-  /// If provided, the size of the [Icon].
+  /// 如果提供，[Icon] 的大小。
   ///
-  /// If this property is null, the default size is 24.0 pixels.
+  /// 如果此属性为 null，默认大小为 24.0 像素。
   final double? iconSize;
 
-  /// Optional size constraints for the menu.
+  /// 菜单的可选大小约束。
   ///
-  /// When unspecified, defaults to:
+  /// 未指定时，默认为：
   /// ```dart
   /// const BoxConstraints(
   ///   minWidth: 2.0 * 56.0,
@@ -1303,41 +1267,36 @@ class MongolPopupMenuButton<T> extends StatefulWidget {
   /// )
   /// ```
   ///
-  /// The default constraints ensure that the menu width matches maximum width
-  /// recommended by the Material Design guidelines.
-  /// Specifying this parameter enables creation of menu wider than
-  /// the default maximum width.
+  /// 默认约束确保菜单宽度匹配材料设计指南推荐的最大宽度。
+  /// 指定此参数可以创建比默认最大宽度更宽的菜单。
   final BoxConstraints? constraints;
 
-  /// {@macro flutter.material.Material.clipBehavior}
+  /// 菜单的裁剪行为。
   ///
-  /// The [clipBehavior] argument is used the clip shape of the menu.
+  /// [clipBehavior] 参数用于裁剪菜单的形状。
   ///
-  /// Defaults to [Clip.none].
+  /// 默认为 [Clip.none]。
   final Clip clipBehavior;
 
-  /// Used to determine whether to push the menu to the [Navigator] furthest
-  /// from or nearest to the given `context`.
+  /// 用于确定是将菜单推送到离给定 `context` 最远还是最近的 [Navigator]。
   ///
-  /// Defaults to false.
+  /// 默认为 false。
   final bool useRootNavigator;
 
-  /// Used to override the default animation curves and durations of the popup
-  /// menu's open and close transitions.
+  /// 用于覆盖弹出菜单打开和关闭过渡的默认动画曲线和持续时间。
   ///
-  /// If [AnimationStyle.curve] is provided, it will be used to override
-  /// the default popup animation curve. Otherwise, defaults to [Curves.linear].
+  /// 如果提供了 [AnimationStyle.curve]，它将用于覆盖默认的弹出动画曲线。
+  /// 否则，默认为 [Curves.linear]。
   ///
-  /// If [AnimationStyle.reverseCurve] is provided, it will be used to
-  /// override the default popup animation reverse curve. Otherwise, defaults to
-  /// `Interval(0.0, 2.0 / 3.0)`.
+  /// 如果提供了 [AnimationStyle.reverseCurve]，它将用于覆盖默认的弹出动画反向曲线。
+  /// 否则，默认为 `Interval(0.0, 2.0 / 3.0)`。
   ///
-  /// If [AnimationStyle.duration] is provided, it will be used to override
-  /// the default popup animation duration. Otherwise, defaults to 300ms.
+  /// 如果提供了 [AnimationStyle.duration]，它将用于覆盖默认的弹出动画持续时间。
+  /// 否则，默认为 300ms。
   ///
-  /// To disable the theme animation, use [AnimationStyle.noAnimation].
+  /// 要禁用主题动画，请使用 [AnimationStyle.noAnimation]。
   ///
-  /// If this is null, then the default animation will be used.
+  /// 如果为 null，则使用默认动画。
   final AnimationStyle? popUpAnimationStyle;
 
   @override
@@ -1345,19 +1304,17 @@ class MongolPopupMenuButton<T> extends StatefulWidget {
       MongolPopupMenuButtonState<T>();
 }
 
-/// The [State] for a [MongolPopupMenuButton].
+/// [MongolPopupMenuButton] 的 [State]。
 ///
-/// See [showButtonMenu] for a way to programmatically open the popup menu
-/// of your button state.
+/// 有关如何以编程方式打开按钮状态的弹出菜单，请参阅 [showButtonMenu]。
 class MongolPopupMenuButtonState<T> extends State<MongolPopupMenuButton<T>> {
-  /// A method to show a popup menu with the items supplied to
-  /// [MongolPopupMenuButton.itemBuilder] at the position of your [MongolPopupMenuButton].
+  /// 一个在 [MongolPopupMenuButton] 的位置显示带有提供给 [MongolPopupMenuButton.itemBuilder] 的项目的弹出菜单的方法。
   ///
-  /// By default, it is called when the user taps the button and [MongolPopupMenuButton.enabled]
-  /// is set to `true`. Moreover, you can open the button by calling the method manually.
+  /// 默认情况下，当用户点击按钮且 [MongolPopupMenuButton.enabled] 设置为 `true` 时调用。
+  /// 此外，您可以通过手动调用此方法来打开按钮。
   ///
-  /// You would access your [MongolPopupMenuButtonState] using a [GlobalKey] and
-  /// show the menu of the button with `globalKey.currentState.showButtonMenu`.
+  /// 您可以使用 [GlobalKey] 访问 [MongolPopupMenuButtonState]，
+  /// 并使用 `globalKey.currentState.showButtonMenu` 显示按钮的菜单。
   void showButtonMenu() {
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
     final RenderBox button = context.findRenderObject()! as RenderBox;

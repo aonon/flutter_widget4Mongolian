@@ -35,23 +35,18 @@ import 'mongol_checkbox_list_tile.dart';
 import 'mongol_radio_list_tile.dart';
 import 'mongol_switch_list_tile.dart';
 
-/// Used with [MongolListTileTheme] to define default property values for
-/// descendant [MongolListTile] widgets.
+/// 与 [MongolListTileTheme] 一起使用，为后代 [MongolListTile] 小部件定义默认属性值
 ///
-/// as well as classes that build
-/// [MongolListTile]s, like [MongolCheckboxListTile], [MongolRadioListTile], and
-/// [MongolSwitchListTile].
+/// 以及构建 [MongolListTile] 的类，如 [MongolCheckboxListTile]、[MongolRadioListTile] 和
+/// [MongolSwitchListTile]。
 ///
-/// Descendant widgets obtain the current [MongolListTileThemeData] object
-/// using `MongolListTileTheme.of(context)`. Instances of
-/// [MongolListTileThemeData] can be customized with
-/// [MongolListTileThemeData.copyWith].
+/// 后代小部件使用 `MongolListTileTheme.of(context)` 获取当前的 [MongolListTileThemeData] 对象。
+/// [MongolListTileThemeData] 的实例可以通过 [MongolListTileThemeData.copyWith] 进行自定义。
 ///
-/// A [MongolListTileThemeData] is not specified as part of the
-/// overall [Theme] with [ThemeData.listTileTheme] like Flutter's [ListTileThemeData].
-/// Instead, [MongolListTileThemeData] is specified in the [MongolListTileTheme.data]
-/// and MongolListTileTheme place to the top of the widget tree to specify the
-/// theme for a subtree. See example code below.
+/// 与 Flutter 的 [ListTileThemeData] 不同，[MongolListTileThemeData] 不是通过 [ThemeData.listTileTheme]
+/// 作为整体 [Theme] 的一部分指定的。相反，[MongolListTileThemeData] 在 [MongolListTileTheme.data] 中指定，
+/// 并且 MongolListTileTheme 放置在小部件树的顶部，为子树指定主题。
+/// 请参阅下面的示例代码。
 /// ```dart
 /// return MaterialApp(
 ///   title: 'mongol',
@@ -67,16 +62,14 @@ import 'mongol_switch_list_tile.dart';
 /// );
 ///```
 ///
-/// All [MongolListTileThemeData] properties are `null` by default.
-/// When a theme property is null, the [MongolListTile] will provide its own
-/// default based on the overall [Theme]'s textTheme and
-/// colorScheme. See the individual [MongolListTile] properties for details.
+/// 所有 [MongolListTileThemeData] 属性默认为 `null`。
+/// 当主题属性为 null 时，[MongolListTile] 将根据整体 [Theme] 的 textTheme 和
+/// colorScheme 提供自己的默认值。有关详细信息，请参阅各个 [MongolListTile] 属性。
 ///
-/// The [Drawer] widget specifies a list tile theme for its children that
-/// defines [style] to be [ListTileStyle.drawer].
+/// [Drawer] 小部件为其子女指定了一个列表 tile 主题，将 [style] 定义为 [ListTileStyle.drawer]。
 @immutable
 class MongolListTileThemeData with Diagnosticable {
-  /// Creates a [MongolListTileThemeData].
+  /// 创建一个 [MongolListTileThemeData]。
   const MongolListTileThemeData({
     this.dense,
     this.shape,
@@ -99,65 +92,64 @@ class MongolListTileThemeData with Diagnosticable {
     this.titleAlignment,
   });
 
-  /// Overrides the default value of [MongolListTile.dense].
+  /// 覆盖 [MongolListTile.dense] 的默认值。
   final bool? dense;
 
-  /// Overrides the default value of [MongolListTile.shape].
+  /// 覆盖 [MongolListTile.shape] 的默认值。
   final ShapeBorder? shape;
 
-  /// Overrides the default value of [MongolListTile.style].
+  /// 覆盖 [MongolListTile.style] 的默认值。
   final ListTileStyle? style;
 
-  /// Overrides the default value of [MongolListTile.selectedColor].
+  /// 覆盖 [MongolListTile.selectedColor] 的默认值。
   final Color? selectedColor;
 
-  /// Overrides the default value of [MongolListTile.iconColor].
+  /// 覆盖 [MongolListTile.iconColor] 的默认值。
   final Color? iconColor;
 
-  /// Overrides the default value of [MongolListTile.textColor].
+  /// 覆盖 [MongolListTile.textColor] 的默认值。
   final Color? textColor;
 
-  /// Overrides the default value of [MongolListTile.titleTextStyle].
+  /// 覆盖 [MongolListTile.titleTextStyle] 的默认值。
   final TextStyle? titleTextStyle;
 
-  /// Overrides the default value of [MongolListTile.subtitleTextStyle].
+  /// 覆盖 [MongolListTile.subtitleTextStyle] 的默认值。
   final TextStyle? subtitleTextStyle;
 
-  /// Overrides the default value of [MongolListTile.leadingAndTrailingTextStyle].
+  /// 覆盖 [MongolListTile.leadingAndTrailingTextStyle] 的默认值。
   final TextStyle? leadingAndTrailingTextStyle;
 
-  /// Overrides the default value of [MongolListTile.contentPadding].
+  /// 覆盖 [MongolListTile.contentPadding] 的默认值。
   final EdgeInsetsGeometry? contentPadding;
 
-  /// Overrides the default value of [MongolListTile.tileColor].
+  /// 覆盖 [MongolListTile.tileColor] 的默认值。
   final Color? tileColor;
 
-  /// Overrides the default value of [MongolListTile.selectedTileColor].
+  /// 覆盖 [MongolListTile.selectedTileColor] 的默认值。
   final Color? selectedTileColor;
 
-  /// Overrides the default value of [MongolListTile.verticalTitleGap].
+  /// 覆盖 [MongolListTile.verticalTitleGap] 的默认值。
   final double? verticalTitleGap;
 
-  /// Overrides the default value of [MongolListTile.minHorizontalPadding].
+  /// 覆盖 [MongolListTile.minHorizontalPadding] 的默认值。
   final double? minHorizontalPadding;
 
-  /// Overrides the default value of [MongolListTile.minLeadingHeight].
+  /// 覆盖 [MongolListTile.minLeadingHeight] 的默认值。
   final double? minLeadingHeight;
 
-  /// Overrides the default value of [MongolListTile.enableFeedback].
+  /// 覆盖 [MongolListTile.enableFeedback] 的默认值。
   final bool? enableFeedback;
 
-  /// If specified, overrides the default value of [MongolListTile.mouseCursor].
+  /// 如果指定，覆盖 [MongolListTile.mouseCursor] 的默认值。
   final WidgetStateProperty<MouseCursor?>? mouseCursor;
 
-  /// If specified, overrides the default value of [MongolListTile.visualDensity].
+  /// 如果指定，覆盖 [MongolListTile.visualDensity] 的默认值。
   final VisualDensity? visualDensity;
 
-  /// If specified, overrides the default value of [MongolListTile.titleAlignment].
+  /// 如果指定，覆盖 [MongolListTile.titleAlignment] 的默认值。
   final MongolListTileTitleAlignment? titleAlignment;
 
-  /// Creates a copy of this object with the given fields replaced with the
-  /// new values.
+  /// 创建此对象的副本，并将给定字段替换为新值。
   MongolListTileThemeData copyWith({
     bool? dense,
     ShapeBorder? shape,
@@ -204,7 +196,7 @@ class MongolListTileThemeData with Diagnosticable {
     );
   }
 
-  /// Linearly interpolate between MongolListTileThemeData objects.
+  /// 在 MongolListTileThemeData 对象之间进行线性插值。
   static MongolListTileThemeData? lerp(
       MongolListTileThemeData? a, MongolListTileThemeData? b, double t) {
     if (identical(a, b)) {
@@ -339,20 +331,15 @@ class MongolListTileThemeData with Diagnosticable {
   }
 }
 
-/// An inherited widget that defines color and style parameters for [MongolListTile]s
-/// in this widget's subtree.
+/// 一个继承的小部件，为其子树中的 [MongolListTile] 定义颜色和样式参数
 ///
-/// Values specified here are used for [MongolListTile] properties that are not given
-/// an explicit non-null value.
+/// 这里指定的值用于 [MongolListTile] 未给出显式非空值的属性。
 ///
-/// The [MongolDrawer] widget specifies a tile theme for its children which sets
-/// [style] to [ListTileStyle.drawer].
+/// [MongolDrawer] 小部件为其子级指定了一个 tile 主题，将 [style] 设置为 [ListTileStyle.drawer]。
 class MongolListTileTheme extends InheritedTheme {
-  /// Creates a list tile theme that defines the color and style parameters for
-  /// descendant [MongolListTile]s.
+  /// 创建一个列表 tile 主题，为后代 [MongolListTile] 定义颜色和样式参数
   ///
-  /// Only the [data] parameter should be used. The other parameters are
-  /// redundant (are now obsolete) and will be deprecated in a future update.
+  /// 只应使用 [data] 参数。其他参数是冗余的（现在已过时），将在未来更新中被弃用。
   const MongolListTileTheme({
     Key? key,
     MongolListTileThemeData? data,
@@ -417,7 +404,7 @@ class MongolListTileTheme extends InheritedTheme {
   final bool? _enableFeedback;
   final WidgetStateProperty<MouseCursor?>? _mouseCursor;
 
-  /// The configuration of this theme.
+  /// 此主题的配置
   MongolListTileThemeData get data {
     return _data ??
         MongolListTileThemeData(
@@ -438,98 +425,83 @@ class MongolListTileTheme extends InheritedTheme {
         );
   }
 
-  /// Overrides the default value of [MongolListTile.dense].
+  /// 覆盖 [MongolListTile.dense] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.dense] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.dense] 属性代替。
   bool? get dense => _data != null ? _data?.dense : _dense;
 
-  /// Overrides the default value of [ListTile.shape].
+  /// 覆盖 [ListTile.shape] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.shape] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.shape] 属性代替。
   ShapeBorder? get shape => _data != null ? _data?.shape : _shape;
 
-  /// Overrides the default value of [ListTile.style].
+  /// 覆盖 [ListTile.style] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.style] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.style] 属性代替。
   ListTileStyle? get style => _data != null ? _data?.style : _style;
 
-  /// Overrides the default value of [MongolListTile.selectedColor].
+  /// 覆盖 [MongolListTile.selectedColor] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.selectedColor] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.selectedColor] 属性代替。
   Color? get selectedColor =>
       _data != null ? _data?.selectedColor : _selectedColor;
 
-  /// Overrides the default value of [MongolListTile.iconColor].
+  /// 覆盖 [MongolListTile.iconColor] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.iconColor] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.iconColor] 属性代替。
   Color? get iconColor => _data != null ? _data?.iconColor : _iconColor;
 
-  /// Overrides the default value of [MongolListTile.textColor].
+  /// 覆盖 [MongolListTile.textColor] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.textColor] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.textColor] 属性代替。
   Color? get textColor => _data != null ? _data?.textColor : _textColor;
 
-  /// Overrides the default value of [MongolListTile.contentPadding].
+  /// 覆盖 [MongolListTile.contentPadding] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.contentPadding] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.contentPadding] 属性代替。
   EdgeInsetsGeometry? get contentPadding =>
       _data != null ? _data?.contentPadding : _contentPadding;
 
-  /// Overrides the default value of [MongolListTile.tileColor].
+  /// 覆盖 [MongolListTile.tileColor] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.tileColor] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.tileColor] 属性代替。
   Color? get tileColor => _data != null ? _data?.tileColor : _tileColor;
 
-  /// Overrides the default value of [MongolListTile.selectedTileColor].
+  /// 覆盖 [MongolListTile.selectedTileColor] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.selectedTileColor] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.selectedTileColor] 属性代替。
   Color? get selectedTileColor =>
       _data != null ? _data?.selectedTileColor : _selectedTileColor;
 
-  /// Overrides the default value of [MongolListTile.verticalTitleGap].
+  /// 覆盖 [MongolListTile.verticalTitleGap] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.verticalTitleGap] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.verticalTitleGap] 属性代替。
   double? get verticalTitleGap =>
       _data != null ? _data?.verticalTitleGap : _verticalTitleGap;
 
-  /// Overrides the default value of [MongolListTile.minHorizontalPadding].
+  /// 覆盖 [MongolListTile.minHorizontalPadding] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.minHorizontalPadding] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.minHorizontalPadding] 属性代替。
   double? get minHorizontalPadding =>
       _data != null ? _data?.minHorizontalPadding : _minHorizontalPadding;
 
-  /// Overrides the default value of [MongolListTile.minLeadingHeight].
+  /// 覆盖 [MongolListTile.minLeadingHeight] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.minLeadingHeight] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.minLeadingHeight] 属性代替。
   double? get minLeadingHeight =>
       _data != null ? _data?.minLeadingHeight : _minLeadingHeight;
 
-  /// Overrides the default value of [MongolListTile.enableFeedback].
+  /// 覆盖 [MongolListTile.enableFeedback] 的默认值
   ///
-  /// This property is obsolete: please use the [data]
-  /// [MongolListTileThemeData.enableFeedback] property instead.
+  /// 此属性已过时：请使用 [data] 的 [MongolListTileThemeData.enableFeedback] 属性代替。
   bool? get enableFeedback =>
       _data != null ? _data?.enableFeedback : _enableFeedback;
 
-  /// The [data] property of the closest instance of this class that
-  /// encloses the given context.
+  /// 包围给定上下文的此类最近实例的 [data] 属性
   ///
-  /// If there is no enclosing [MongolListTileTheme] widget, then
-  /// const MongolListTileThemeData().
+  /// 如果没有包围的 [MongolListTileTheme] 小部件，则返回 const MongolListTileThemeData()。
   ///
-  /// Typical usage is as follows:
+  /// 典型用法如下：
   ///
   /// ```dart
   /// MongolListTileThemeData theme = MongolListTileTheme.of(context);
@@ -540,8 +512,7 @@ class MongolListTileTheme extends InheritedTheme {
     return result?.data ?? const MongolListTileThemeData();
   }
 
-  /// Creates a list tile theme that controls the color and style parameters for
-  /// [ListTile]s, and merges in the current list tile theme, if any.
+  /// 创建一个列表 tile 主题，控制 [ListTile] 的颜色和样式参数，并合并当前的列表 tile 主题（如果有）
   static Widget merge({
     Key? key,
     bool? dense,
@@ -626,86 +597,73 @@ class MongolListTileTheme extends InheritedTheme {
       data != oldWidget.data;
 }
 
-/// Defines how [MongolListTile.leading] and [MongolListTile.trailing] are
-/// horizontal aligned relative to the [MongolListTile]'s titles
-/// ([MongolListTile.title] and [MongolListTile.subtitle]).
+/// 定义 [MongolListTile.leading] 和 [MongolListTile.trailing] 相对于 [MongolListTile] 标题
+/// ([MongolListTile.title] 和 [MongolListTile.subtitle]) 的水平对齐方式。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolListTile.titleAlignment], to configure the title alignment for an
-///    individual [MongolListTile].
+///  * [MongolListTile.titleAlignment]，用于为单个 [MongolListTile] 配置标题对齐方式。
 enum MongolListTileTitleAlignment {
-  /// The left of the [MongolListTile.leading] and [MongolListTile.trailing] widgets are
-  /// placed [MongolListTile.minHorizontalPadding] right the left of the [MongolListTile.title]
-  /// if [MongolListTile.isThreeLine] is true, otherwise they're centered relative
-  /// to the [MongolListTile.title] and [MongolListTile.subtitle] widgets.
+  /// [MongolListTile.leading] 和 [MongolListTile.trailing] 小部件的左侧
+  /// 如果 [MongolListTile.isThreeLine] 为 true，则放置在 [MongolListTile.title] 左侧的 [MongolListTile.minHorizontalPadding] 处，
+  /// 否则它们相对于 [MongolListTile.title] 和 [MongolListTile.subtitle] 小部件居中。
   ///
-  /// This is the default when [ThemeData.useMaterial3] is true.
+  /// 当 [ThemeData.useMaterial3] 为 true 时，这是默认值。
   threeLine,
 
-  /// The lefts of the [MongolListTile.leading] and [MongolListTile.trailing] widgets are
-  /// placed 16 units right the left of the [MongolListTile.title]
-  /// if the titles' overall width is greater than 72, otherwise they're
-  /// centered relative to the [MongolListTile.title] and [MongolListTile.subtitle] widgets.
+  /// [MongolListTile.leading] 和 [MongolListTile.trailing] 小部件的左侧
+  /// 如果标题的整体宽度大于 72，则放置在 [MongolListTile.title] 左侧的 16 个单位处，
+  /// 否则它们相对于 [MongolListTile.title] 和 [MongolListTile.subtitle] 小部件居中。
   ///
-  /// This is the default when [ThemeData.useMaterial3] is false.
+  /// 当 [ThemeData.useMaterial3] 为 false 时，这是默认值。
   titleWidth,
 
-  /// The left of the [MongolListTile.leading] and [MongolListTile.trailing] widgets are
-  /// placed [MongolListTile.minHorizontalPadding] right the left of the [MongolListTile.title].
+  /// [MongolListTile.leading] 和 [MongolListTile.trailing] 小部件的左侧
+  /// 放置在 [MongolListTile.title] 左侧的 [MongolListTile.minHorizontalPadding] 处。
   left,
 
-  /// The [MongolListTile.leading] and [MongolListTile.trailing] widgets are
-  /// centered relative to the [MongolListTile]'s titles.
+  /// [MongolListTile.leading] 和 [MongolListTile.trailing] 小部件
+  /// 相对于 [MongolListTile] 的标题居中。
   center,
 
-  /// The right of the [MongolListTile.leading] and [MongolListTile.trailing] widgets are
-  /// placed [MongolListTile.minHorizontalPadding] left the right of the [MongolListTile]'s
-  /// titles.
+  /// [MongolListTile.leading] 和 [MongolListTile.trailing] 小部件的右侧
+  /// 放置在 [MongolListTile] 标题右侧的 [MongolListTile.minHorizontalPadding] 处。
   right,
 }
 
-/// A single fixed-width column that typically contains some text as well as
-/// a leading or trailing icon.
+/// 一个固定宽度的垂直列，通常包含一些文本以及前置或后置图标
 ///
-/// This widget is the vertical text version of [ListTile].
+/// 此小部件是 [ListTile] 的垂直文本版本。
 ///
 /// {@youtube 560 315 https://www.youtube.com/watch?v=l8dj0yPBvgQ}
 ///
-/// A list tile contains one to three lines of text optionally flanked by icons or
-/// other widgets, such as check boxes. The icons (or other widgets) for the
-/// tile are defined with the [leading] and [trailing] parameters. The first
-/// line of text is not optional and is specified with [title]. The value of
-/// [subtitle], which _is_ optional, will occupy the space allocated for an
-/// additional line of text, or two lines if [isThreeLine] is true. If [dense]
-/// is true then the overall width of this tile and the size of the
-/// [DefaultTextStyle]s that wrap the [title] and [subtitle] widget are reduced.
+/// 列表 tile 包含一到三行文本，可选地两侧带有图标或其他小部件，如复选框。
+/// tile 的图标（或其他小部件）由 [leading] 和 [trailing] 参数定义。
+/// 第一行文本是必需的，由 [title] 指定。[subtitle] 是可选的，
+/// 将占据为额外一行文本分配的空间，如果 [isThreeLine] 为 true，则占据两行。
+/// 如果 [dense] 为 true，则此 tile 的整体宽度以及包装 [title] 和 [subtitle] 小部件的
+/// [DefaultTextStyle] 的大小都会减小。
 ///
-/// It is the responsibility of the caller to ensure that [title] does not wrap,
-/// and to ensure that [subtitle] doesn't wrap (if [isThreeLine] is false) or
-/// wraps to two lines (if it is true).
+/// 调用者有责任确保 [title] 不换行，并确保 [subtitle] 不换行（如果 [isThreeLine] 为 false）
+/// 或换行到两行（如果为 true）。
 ///
-/// The widths of the [leading] and [trailing] widgets are constrained
-/// according to the
-/// [Material spec](https://material.io/design/components/lists.html).
-/// An exception is made for one-line MongolListTiles for accessibility. Please
-/// see the example below to see how to adhere to both Material spec and
-/// accessibility requirements.
+/// [leading] 和 [trailing] 小部件的宽度根据
+/// [Material 规范](https://material.io/design/components/lists.html) 进行约束。
+/// 为了可访问性，对单行 MongolListTile 做了例外处理。
+/// 请参阅下面的示例，了解如何同时遵守 Material 规范和可访问性要求。
 ///
-/// Note that [leading] and [trailing] widgets can expand as far as they wish
-/// vertically, so ensure that they are properly constrained.
+/// 请注意，[leading] 和 [trailing] 小部件可以在垂直方向上尽可能扩展，
+/// 因此请确保它们受到适当的约束。
 ///
-/// List tiles are typically used in horizontal [ListView]s, or arranged in [Rows]s in
-/// [MongolDrawer]s and [Card]s.
+/// 列表 tile 通常用于水平 [ListView] 中，或在 [MongolDrawer] 和 [Card] 中排列成行。
 ///
-/// Requires one of its ancestors to be a [Material] widget.
+/// 要求其祖先之一是 [Material] 小部件。
 ///
 /// {@tool snippet}
 ///
-/// This example uses a [ListView] to demonstrate different configurations of
-/// [MongolListTile]s in [Card]s.
+/// 此示例使用 [ListView] 演示 [Card] 中 [MongolListTile] 的不同配置。
 ///
-/// ![Different variations of ListTile](https://flutter.github.io/assets-for-api-docs/assets/material/list_tile.png)
+/// ![ListTile 的不同变体](https://flutter.github.io/assets-for-api-docs/assets/material/list_tile.png)
 ///
 /// ```dart
 /// ListView(
@@ -762,9 +720,8 @@ enum MongolListTileTitleAlignment {
 /// {@end-tool}
 /// {@tool snippet}
 ///
-/// To use a [MongolListTile] within a [Column], it needs to be wrapped in an
-/// [Expanded] widget. [MongolListTile] requires fixed height constraints,
-/// whereas a [Column] does not constrain its children.
+/// 要在 [Column] 中使用 [MongolListTile]，需要将其包装在 [Expanded] 小部件中。
+/// [MongolListTile] 需要固定的高度约束，而 [Column] 不会约束其子级。
 ///
 /// ```dart
 /// Column(
@@ -787,9 +744,8 @@ enum MongolListTileTitleAlignment {
 /// {@end-tool}
 /// {@tool snippet}
 ///
-/// Tiles can be much more elaborate. Here is a tile which can be tapped, but
-/// which is disabled when the `_act` variable is not 2. When the tile is
-/// tapped, the whole column has an ink splash effect (see [InkWell]).
+/// Tile 可以更加复杂。这是一个可以点击的 tile，但当 `_act` 变量不为 2 时会被禁用。
+/// 当 tile 被点击时，整个列会有墨水飞溅效果（请参阅 [InkWell]）。
 ///
 /// ```dart
 /// int _act = 1;
@@ -804,24 +760,19 @@ enum MongolListTileTitleAlignment {
 /// ```
 /// {@end-tool}
 ///
-/// To be accessible, tappable [leading] and [trailing] widgets have to
-/// be at least 48x48 in size. However, to adhere to the Material spec,
-/// [trailing] and [leading] widgets in one-line MongolListTiles should visually be
-/// at most 32 ([dense]: true) or 40 ([dense]: false) in width, which may
-/// conflict with the accessibility requirement.
+/// 为了可访问性，可点击的 [leading] 和 [trailing] 小部件的大小必须至少为 48x48。
+/// 然而，为了遵守 Material 规范，单行 MongolListTile 中的 [trailing] 和 [leading] 小部件
+/// 在视觉上的宽度最多应为 32（[dense]：true）或 40（[dense]：false），这可能与可访问性要求冲突。
 ///
-/// For this reason, a one-line MongolListTile allows the width of [leading]
-/// and [trailing] widgets to be constrained by the width of the MongolListTile.
-/// This allows for the creation of tappable [leading] and [trailing] widgets
-/// that are large enough, but it is up to the developer to ensure that
-/// their widgets follow the Material spec.
+/// 因此，单行 MongolListTile 允许 [leading] 和 [trailing] 小部件的宽度受 MongolListTile 宽度的约束。
+/// 这允许创建足够大的可点击 [leading] 和 [trailing] 小部件，
+/// 但开发人员有责任确保他们的小部件遵守 Material 规范。
 ///
 /// {@tool snippet}
 ///
-/// Here is an example of a one-line, non-[dense] MongolListTile with a
-/// tappable leading widget that adheres to accessibility requirements and
-/// the Material spec. To adjust the use case below for a one-line, [dense]
-/// MongolListTile, adjust the horizontal padding to 8.0.
+/// 以下是一个单行、非 [dense] 的 MongolListTile 示例，带有一个可点击的前置小部件，
+/// 该小部件符合可访问性要求和 Material 规范。要调整下面的用例以适应单行、[dense] 的
+/// MongolListTile，请将水平内边距调整为 8.0。
 ///
 /// ```dart
 /// MongolListTile(
@@ -842,26 +793,23 @@ enum MongolListTileTitleAlignment {
 /// ```
 /// {@end-tool}
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolListTileTheme], which defines visual properties for [MongolListTile]s.
-///  * [ListView], which can display an arbitrary number of [MongolListTile]s
-///    in a scrolling list.
-///  * [CircleAvatar], which shows an icon representing a person and is often
-///    used as the [leading] element of a MongolListTile.
-///  * [Card], which can be used with [Row] to show a few [MongolListTile]s.
-///  * [VerticalDivider], which can be used to separate [MongolListTile]s.
-///  * [MongolListTile.divideTiles], a utility for inserting [VerticalDivider]s
-///    in between [MongolListTile]s.
+///  * [MongolListTileTheme]，为 [MongolListTile] 定义视觉属性。
+///  * [ListView]，可以在滚动列表中显示任意数量的 [MongolListTile]。
+///  * [CircleAvatar]，显示代表人物的图标，通常用作 MongolListTile 的 [leading] 元素。
+///  * [Card]，可以与 [Row] 一起使用以显示几个 [MongolListTile]。
+///  * [VerticalDivider]，可用于分隔 [MongolListTile]。
+///  * [MongolListTile.divideTiles]，一个用于在 [MongolListTile] 之间插入 [VerticalDivider] 的实用程序。
 ///  * <https://material.io/design/components/lists.html>
-///  * Cookbook: [Use lists](https://flutter.dev/docs/cookbook/lists/basic-list)
-///  * Cookbook: [Implement swipe to dismiss](https://flutter.dev/docs/cookbook/gestures/dismissible)
+///  *  cookbook: [使用列表](https://flutter.dev/docs/cookbook/lists/basic-list)
+///  *  cookbook: [实现滑动删除](https://flutter.dev/docs/cookbook/gestures/dismissible)
 class MongolListTile extends StatelessWidget {
-  /// Creates a vertical list tile.
+  /// 创建一个垂直列表 tile
   ///
-  /// If [isThreeLine] is true, then [subtitle] must not be null.
+  /// 如果 [isThreeLine] 为 true，则 [subtitle] 不能为空。
   ///
-  /// Requires one of its ancestors to be a [Material] widget.
+  /// 要求其祖先之一是 [Material] 小部件。
   const MongolListTile({
     super.key,
     this.leading,
@@ -900,218 +848,199 @@ class MongolListTile extends StatelessWidget {
     this.titleAlignment,
   }) : assert(!isThreeLine || subtitle != null);
 
-  /// A widget to display above the title.
+  /// 显示在标题上方的小部件
   ///
-  /// Typically an [Icon] or a [CircleAvatar] widget.
+  /// 通常是 [Icon] 或 [CircleAvatar] 小部件。
   final Widget? leading;
 
-  /// The primary content of the list tile.
+  /// 列表 tile 的主要内容
   ///
-  /// Typically a [MongolText] widget.
+  /// 通常是 [MongolText] 小部件。
   ///
-  /// This should not wrap. To enforce the single line limit, use
-  /// [MongolText.maxLines].
+  /// 这不应该换行。要强制单行限制，请使用 [MongolText.maxLines]。
   final Widget? title;
 
-  /// Additional content displayed below the title.
+  /// 显示在标题下方的附加内容
   ///
-  /// Typically a [MongolText] widget.
+  /// 通常是 [MongolText] 小部件。
   ///
-  /// If [isThreeLine] is false, this should not wrap.
+  /// 如果 [isThreeLine] 为 false，这不应该换行。
   ///
-  /// If [isThreeLine] is true, this should be configured to take a maximum of
-  /// two lines. For example, you can use [MongolText.maxLines] to enforce the number
-  /// of lines.
+  /// 如果 [isThreeLine] 为 true，这应该配置为最多占用两行。
+  /// 例如，您可以使用 [MongolText.maxLines] 来强制行数。
   ///
-  /// The subtitle's default [TextStyle] depends on [TextTheme.bodyText2] except
-  /// [TextStyle.color]. The [TextStyle.color] depends on the value of [enabled]
-  /// and [selected].
+  /// 副标题的默认 [TextStyle] 依赖于 [TextTheme.bodyText2]，除了 [TextStyle.color]。
+  /// [TextStyle.color] 取决于 [enabled] 和 [selected] 的值。
   ///
-  /// When [enabled] is false, the text color is set to [ThemeData.disabledColor].
+  /// 当 [enabled] 为 false 时，文本颜色设置为 [ThemeData.disabledColor]。
   ///
-  /// When [selected] is false, the text color is set to [MongolListTileTheme.textColor]
-  /// if it's not null and to [TextTheme.caption]'s color if [MongolListTileTheme.textColor]
-  /// is null.
+  /// 当 [selected] 为 false 时，文本颜色设置为 [MongolListTileTheme.textColor]（如果不为 null），
+  /// 如果 [MongolListTileTheme.textColor] 为 null，则设置为 [TextTheme.caption] 的颜色。
   final Widget? subtitle;
 
-  /// A widget to display under the title.
+  /// 显示在标题下方的小部件
   ///
-  /// Typically an [Icon] widget.
+  /// 通常是 [Icon] 小部件。
   final Widget? trailing;
 
-  /// Whether this list tile is intended to display three lines of text.
+  /// 此列表 tile 是否旨在显示三行文本
   ///
-  /// If true, then [subtitle] must be non-null (since it is expected to give
-  /// the second and third lines of text).
+  /// 如果为 true，则 [subtitle] 必须非空（因为它预计会给出第二行和第三行文本）。
   ///
-  /// If false, the list tile is treated as having one line if the subtitle is
-  /// null and treated as having two lines if the subtitle is non-null.
+  /// 如果为 false，如果 subtitle 为 null，则列表 tile 被视为具有一行，
+  /// 如果 subtitle 非空，则被视为具有两行。
   ///
-  /// When using a [MongolText] widget for [title] and [subtitle], you can enforce
-  /// line limits using [MongolText.maxLines].
+  /// 当为 [title] 和 [subtitle] 使用 [MongolText] 小部件时，
+  /// 您可以使用 [MongolText.maxLines] 来强制行数限制。
   final bool isThreeLine;
 
-  /// Whether this list tile is part of a horizontally dense list.
+  /// 此列表 tile 是否是水平密集列表的一部分
   ///
-  /// If this property is null then its value is based on [MongolListTileTheme.dense].
+  /// 如果此属性为 null，则其值基于 [MongolListTileTheme.dense]。
   ///
-  /// Dense list tiles default to a smaller width.
+  /// 密集列表 tile 默认宽度较小。
   final bool? dense;
 
-  /// Defines how compact the list tile's layout will be.
+  /// 定义列表 tile 布局的紧凑程度
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [ThemeData.visualDensity], which specifies the [visualDensity] for all
-  ///    widgets within a [Theme].
+  ///  * [ThemeData.visualDensity]，为 [Theme] 中的所有小部件指定 [visualDensity]。
   final VisualDensity? visualDensity;
 
-  /// The tile's shape.
+  /// tile 的形状
   ///
-  /// Defines the tile's [InkWell.customBorder] and [Ink.decoration] shape.
+  /// 定义 tile 的 [InkWell.customBorder] 和 [Ink.decoration] 形状。
   ///
-  /// If this property is null then [MongolListTileTheme.shape] is used.
-  /// If that's null then a rectangular [Border] will be used.
+  /// 如果此属性为 null，则使用 [MongolListTileTheme.shape]。
+  /// 如果那也为 null，则使用矩形 [Border]。
   final ShapeBorder? shape;
 
-  /// Defines the color used for icons and text when the list tile is selected.
+  /// 定义列表 tile 被选中时用于图标和文本的颜色
   ///
-  /// If this property is null then [ListTileThemeData.selectedColor]
-  /// is used. If that is also null then [ColorScheme.primary] is used.
+  /// 如果此属性为 null，则使用 [ListTileThemeData.selectedColor]。
+  /// 如果那也为 null，则使用 [ColorScheme.primary]。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  /// * [ListTileTheme.of], which returns the nearest [ListTileTheme]'s
-  ///   [ListTileThemeData].
+  /// * [ListTileTheme.of]，返回最近的 [ListTileTheme] 的 [ListTileThemeData]。
   final Color? selectedColor;
 
-  /// Defines the default color for [leading] and [trailing] icons.
+  /// 定义 [leading] 和 [trailing] 图标的默认颜色
   ///
-  /// If this property is null and [selected] is false then [ListTileThemeData.iconColor]
-  /// is used. If that is also null and [ThemeData.useMaterial3] is true, [ColorScheme.onSurfaceVariant]
-  /// is used, otherwise if [ThemeData.brightness] is [Brightness.light], [Colors.black54] is used,
-  /// and if [ThemeData.brightness] is [Brightness.dark], the value is null.
+  /// 如果此属性为 null 且 [selected] 为 false，则使用 [ListTileThemeData.iconColor]。
+  /// 如果那也为 null 且 [ThemeData.useMaterial3] 为 true，则使用 [ColorScheme.onSurfaceVariant]，
+  /// 否则，如果 [ThemeData.brightness] 为 [Brightness.light]，则使用 [Colors.black54]，
+  /// 如果 [ThemeData.brightness] 为 [Brightness.dark]，则值为 null。
   ///
-  /// If this property is null and [selected] is true then [ListTileThemeData.selectedColor]
-  /// is used. If that is also null then [ColorScheme.primary] is used.
+  /// 如果此属性为 null 且 [selected] 为 true，则使用 [ListTileThemeData.selectedColor]。
+  /// 如果那也为 null，则使用 [ColorScheme.primary]。
   ///
-  /// If this color is a [WidgetStateColor] it will be resolved against
-  /// [WidgetState.selected] and [WidgetState.disabled] states.
+  /// 如果此颜色是 [WidgetStateColor]，它将根据 [WidgetState.selected] 和 [WidgetState.disabled] 状态进行解析。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  /// * [ListTileTheme.of], which returns the nearest [ListTileTheme]'s
-  ///   [ListTileThemeData].
+  /// * [ListTileTheme.of]，返回最近的 [ListTileTheme] 的 [ListTileThemeData]。
   final Color? iconColor;
 
-  /// Defines the text color for the [title], [subtitle], [leading], and [trailing].
+  /// 定义 [title]、[subtitle]、[leading] 和 [trailing] 的文本颜色
   ///
-  /// If this property is null and [selected] is false then [ListTileThemeData.textColor]
-  /// is used. If that is also null then default text color is used for the [title], [subtitle]
-  /// [leading], and [trailing]. Except for [subtitle], if [ThemeData.useMaterial3] is false,
-  /// [TextTheme.bodySmall] is used.
+  /// 如果此属性为 null 且 [selected] 为 false，则使用 [ListTileThemeData.textColor]。
+  /// 如果那也为 null，则为 [title]、[subtitle]、[leading] 和 [trailing] 使用默认文本颜色。
+  /// 除了 [subtitle]，如果 [ThemeData.useMaterial3] 为 false，则使用 [TextTheme.bodySmall]。
   ///
-  /// If this property is null and [selected] is true then [ListTileThemeData.selectedColor]
-  /// is used. If that is also null then [ColorScheme.primary] is used.
+  /// 如果此属性为 null 且 [selected] 为 true，则使用 [ListTileThemeData.selectedColor]。
+  /// 如果那也为 null，则使用 [ColorScheme.primary]。
   ///
-  /// If this color is a [WidgetStateColor] it will be resolved against
-  /// [WidgetState.selected] and [WidgetState.disabled] states.
+  /// 如果此颜色是 [WidgetStateColor]，它将根据 [WidgetState.selected] 和 [WidgetState.disabled] 状态进行解析。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  /// * [ListTileTheme.of], which returns the nearest [ListTileTheme]'s
-  ///   [ListTileThemeData].
+  /// * [ListTileTheme.of]，返回最近的 [ListTileTheme] 的 [ListTileThemeData]。
   final Color? textColor;
 
-  /// The text style for ListTile's [title].
+  /// ListTile 的 [title] 的文本样式
   ///
-  /// If this property is null, then [ListTileThemeData.titleTextStyle] is used.
-  /// If that is also null and [ThemeData.useMaterial3] is true, [TextTheme.bodyLarge]
-  /// with [ColorScheme.onSurface] will be used. Otherwise, If ListTile style is
-  /// [ListTileStyle.list], [TextTheme.titleMedium] will be used and if ListTile style
-  /// is [ListTileStyle.drawer], [TextTheme.bodyLarge] will be used.
+  /// 如果此属性为 null，则使用 [ListTileThemeData.titleTextStyle]。
+  /// 如果那也为 null 且 [ThemeData.useMaterial3] 为 true，则使用带有 [ColorScheme.onSurface] 的 [TextTheme.bodyLarge]。
+  /// 否则，如果 ListTile 样式为 [ListTileStyle.list]，则使用 [TextTheme.titleMedium]，
+  /// 如果 ListTile 样式为 [ListTileStyle.drawer]，则使用 [TextTheme.bodyLarge]。
   final TextStyle? titleTextStyle;
 
-  /// The text style for ListTile's [subtitle].
+  /// ListTile 的 [subtitle] 的文本样式
   ///
-  /// If this property is null, then [ListTileThemeData.subtitleTextStyle] is used.
-  /// If that is also null and [ThemeData.useMaterial3] is true, [TextTheme.bodyMedium]
-  /// with [ColorScheme.onSurfaceVariant] will be used, otherwise [TextTheme.bodyMedium]
-  /// with [TextTheme.bodySmall] color will be used.
+  /// 如果此属性为 null，则使用 [ListTileThemeData.subtitleTextStyle]。
+  /// 如果那也为 null 且 [ThemeData.useMaterial3] 为 true，则使用带有 [ColorScheme.onSurfaceVariant] 的 [TextTheme.bodyMedium]，
+  /// 否则使用带有 [TextTheme.bodySmall] 颜色的 [TextTheme.bodyMedium]。
   final TextStyle? subtitleTextStyle;
 
-  /// The text style for ListTile's [leading] and [trailing].
+  /// ListTile 的 [leading] 和 [trailing] 的文本样式
   ///
-  /// If this property is null, then [ListTileThemeData.leadingAndTrailingTextStyle] is used.
-  /// If that is also null and [ThemeData.useMaterial3] is true, [TextTheme.labelSmall]
-  /// with [ColorScheme.onSurfaceVariant] will be used, otherwise [TextTheme.bodyMedium]
-  /// will be used.
+  /// 如果此属性为 null，则使用 [ListTileThemeData.leadingAndTrailingTextStyle]。
+  /// 如果那也为 null 且 [ThemeData.useMaterial3] 为 true，则使用带有 [ColorScheme.onSurfaceVariant] 的 [TextTheme.labelSmall]，
+  /// 否则使用 [TextTheme.bodyMedium]。
   final TextStyle? leadingAndTrailingTextStyle;
 
-  /// Defines the font used for the [title].
+  /// 定义用于 [title] 的字体
   ///
-  /// If this property is null then [ListTileThemeData.style] is used. If that
-  /// is also null then [ListTileStyle.list] is used.
+  /// 如果此属性为 null，则使用 [ListTileThemeData.style]。
+  /// 如果那也为 null，则使用 [ListTileStyle.list]。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  /// * [ListTileTheme.of], which returns the nearest [ListTileTheme]'s
-  ///   [ListTileThemeData].
+  /// * [ListTileTheme.of]，返回最近的 [ListTileTheme] 的 [ListTileThemeData]。
   final ListTileStyle? style;
 
-  /// The tile's internal padding.
+  /// tile 的内部内边距
   ///
-  /// Insets a [MongolListTile]'s contents: its [leading], [title], [subtitle],
-  /// and [trailing] widgets.
+  /// 插入 [MongolListTile] 的内容：其 [leading]、[title]、[subtitle] 和 [trailing] 小部件。
   ///
-  /// If null, `EdgeInsets.symmetric(vertical: 16.0)` is used.
+  /// 如果为 null，则使用 `EdgeInsets.symmetric(vertical: 16.0)`。
   final EdgeInsetsGeometry? contentPadding;
 
-  /// Whether this list tile is interactive.
+  /// 此列表 tile 是否可交互
   ///
-  /// If false, this list tile is styled with the disabled color from the
-  /// current [Theme] and the [onTap] and [onLongPress] callbacks are
-  /// inoperative.
+  /// 如果为 false，则此列表 tile 使用当前 [Theme] 中的禁用颜色设置样式，
+  /// 并且 [onTap] 和 [onLongPress] 回调不起作用。
   final bool enabled;
 
-  /// Called when the user taps this list tile.
+  /// 当用户点击此列表 tile 时调用
   ///
-  /// Inoperative if [enabled] is false.
+  /// 如果 [enabled] 为 false，则不起作用。
   final GestureTapCallback? onTap;
 
-  /// Called when the user long-presses on this list tile.
+  /// 当用户长按此列表 tile 时调用
   ///
-  /// Inoperative if [enabled] is false.
+  /// 如果 [enabled] 为 false，则不起作用。
   final GestureLongPressCallback? onLongPress;
 
   /// {@macro flutter.material.inkwell.onFocusChange}
   final ValueChanged<bool>? onFocusChange;
 
-  /// The cursor for a mouse pointer when it enters or is hovering over the
-  /// widget.
+  /// 鼠标指针进入或悬停在小部件上时的光标
   ///
-  /// If [mouseCursor] is a [MaterialStateProperty<MouseCursor>],
-  /// [WidgetStateProperty.resolve] is used for the following [WidgetState]s:
+  /// 如果 [mouseCursor] 是 [MaterialStateProperty<MouseCursor>]，
+  /// 则 [WidgetStateProperty.resolve] 用于以下 [WidgetState]：
   ///
-  ///  * [WidgetState.selected].
-  ///  * [WidgetState.disabled].
+  ///  * [WidgetState.selected]。
+  ///  * [WidgetState.disabled]。
   ///
-  /// If this property is null, [WidgetStateMouseCursor.clickable] will be used.
+  /// 如果此属性为 null，则使用 [WidgetStateMouseCursor.clickable]。
   final MouseCursor? mouseCursor;
 
-  /// If this tile is also [enabled] then icons and text are rendered with the same color.
+  /// 如果此 tile 也 [enabled]，则图标和文本使用相同的颜色
   ///
-  /// By default the selected color is the theme's primary color. The selected color
-  /// can be overridden with a [MongolListTileTheme].
+  /// 默认情况下，选中颜色是主题的主色。
+  /// 选中颜色可以通过 [MongolListTileTheme] 覆盖。
   final bool selected;
 
-  /// The color for the tile's [Material] when it has the input focus.
+  /// tile 的 [Material] 获得输入焦点时的颜色
   final Color? focusColor;
 
-  /// The color for the tile's [Material] when a pointer is hovering over it.
+  /// 指针悬停在 tile 的 [Material] 上时的颜色
   final Color? hoverColor;
 
-  /// The color of splash for the tile's [Material].
+  /// tile 的 [Material] 的飞溅颜色
   final Color? splashColor;
 
   /// {@macro flutter.widgets.Focus.focusNode}
@@ -1120,70 +1049,64 @@ class MongolListTile extends StatelessWidget {
   /// {@macro flutter.widgets.Focus.autofocus}
   final bool autofocus;
 
-  /// Defines the background color of `MongolListTile` when [selected] is false.
+  /// 定义 [selected] 为 false 时 `MongolListTile` 的背景颜色
   ///
-  /// When the value is null, the `tileColor` is set to [MongolListTileTheme.tileColor]
-  /// if it's not null and to [Colors.transparent] if it's null.
+  /// 当值为 null 时，如果 [MongolListTileTheme.tileColor] 不为 null，则 `tileColor` 设置为它，
+  /// 如果为 null，则设置为 [Colors.transparent]。
   final Color? tileColor;
 
-  /// Defines the background color of ` MongolListTile` when [selected] is true.
+  /// 定义 [selected] 为 true 时 `MongolListTile` 的背景颜色
   ///
-  /// When the value if null, the `selectedTileColor` is set to
-  /// [MongolListTileTheme.selectedTileColor] if it's not null and to
-  /// [Colors.transparent] if it's null.
+  /// 当值为 null 时，如果 [MongolListTileTheme.selectedTileColor] 不为 null，则 `selectedTileColor` 设置为它，
+  /// 如果为 null，则设置为 [Colors.transparent]。
   final Color? selectedTileColor;
 
-  /// Whether detected gestures should provide acoustic and/or haptic feedback.
+  /// 检测到的手势是否应提供声音和/或触觉反馈
   ///
-  /// For example, on Android a tap will produce a clicking sound and a
-  /// long-press will produce a short vibration, when feedback is enabled.
+  /// 例如，在 Android 上，当启用反馈时，点击会产生点击声，长按会产生短暂的振动。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [Feedback] for providing platform-specific feedback to certain actions.
+  ///  * [Feedback]，用于为某些操作提供特定于平台的反馈。
   final bool? enableFeedback;
 
-  /// The vertical gap between the titles and the leading/trailing widgets.
+  /// 标题与前置/后置小部件之间的垂直间隙
   ///
-  /// If null, then the value of [MongolListTileTheme.verticalTitleGap] is used. If
-  /// that is also null, then a default value of 16 is used.
+  /// 如果为 null，则使用 [MongolListTileTheme.verticalTitleGap] 的值。
+  /// 如果那也为 null，则使用默认值 16。
   final double? verticalTitleGap;
 
-  /// The minimum padding on the left and right of the title and subtitle widgets.
+  /// 标题和副标题小部件左右两侧的最小内边距
   ///
-  /// If null, then the value of [MongolListTileTheme.minHorizontalPadding] is used. If
-  /// that is also null, then a default value of 4 is used.
+  /// 如果为 null，则使用 [MongolListTileTheme.minHorizontalPadding] 的值。
+  /// 如果那也为 null，则使用默认值 4。
   final double? minHorizontalPadding;
 
-  /// The minimum height allocated for the [MongolListTile.leading] widget.
+  /// 为 [MongolListTile.leading] 小部件分配的最小高度
   ///
-  /// If null, then the value of [MongolListTileTheme.minLeadingHeight] is used. If
-  /// that is also null, then a default value of 40 is used.
+  /// 如果为 null，则使用 [MongolListTileTheme.minLeadingHeight] 的值。
+  /// 如果那也为 null，则使用默认值 40。
   final double? minLeadingHeight;
 
-  /// Defines how [MongolListTile.leading] and [MongolListTile.trailing] are
-  /// horizontal aligned relative to the [MongolListTile]'s titles
-  /// ([MongolListTile.title] and [MongolListTile.subtitle]).
+  /// 定义 [MongolListTile.leading] 和 [MongolListTile.trailing] 相对于 [MongolListTile] 标题
+  /// ([MongolListTile.title] 和 [MongolListTile.subtitle]) 的水平对齐方式
   ///
-  /// If this property is null then [ListTileThemeData.titleAlignment]
-  /// is used. If that is also null then [ListTileTitleAlignment.threeLine]
-  /// is used.
+  /// 如果此属性为 null，则使用 [ListTileThemeData.titleAlignment]。
+  /// 如果那也为 null，则使用 [ListTileTitleAlignment.threeLine]。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  /// * [ListTileTheme.of], which returns the nearest [ListTileTheme]'s
-  ///   [ListTileThemeData].
+  /// * [ListTileTheme.of]，返回最近的 [ListTileTheme] 的 [ListTileThemeData]。
   final MongolListTileTitleAlignment? titleAlignment;
 
-  /// Add a one pixel border in between each tile. If color isn't specified the
-  /// [ThemeData.dividerColor] of the context's [Theme] is used.
+  /// 在每个 tile 之间添加一个像素的边框。如果未指定颜色，则使用上下文 [Theme] 的 [ThemeData.dividerColor]。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [VerticalDivider], which you can use to obtain this effect manually.
+  ///  * [VerticalDivider]，您可以使用它手动获得此效果。
   /// todo material make it equal to ListTile.divideTiles
-  static Iterable<Widget> divideTiles(
-      {BuildContext? context,
+  static Iterable<Widget> divideTiles({
+      BuildContext? context,
       required Iterable<Widget> tiles,
       Color? color}) sync* {
     assert(color != null || context != null);
@@ -1210,10 +1133,21 @@ class MongolListTile extends StatelessWidget {
     if (hasNext) yield tile;
   }
 
+  /// 检查是否为密集布局
+  ///
+  /// [theme]：当前主题
+  /// [tileTheme]：列表 tile 主题
+  /// 返回：是否为密集布局
   bool _isDenseLayout(ThemeData theme, MongolListTileThemeData? tileTheme) {
     return dense ?? tileTheme?.dense ?? theme.listTileTheme.dense ?? false;
   }
 
+  /// 获取 tile 的背景颜色
+  ///
+  /// [theme]：当前主题
+  /// [tileTheme]：列表 tile 主题
+  /// [defaults]：默认主题数据
+  /// 返回：计算后的背景颜色
   Color _tileBackgroundColor(ThemeData theme, MongolListTileThemeData tileTheme,
       MongolListTileThemeData defaults) {
     final Color? color = selected
@@ -1224,6 +1158,10 @@ class MongolListTile extends StatelessWidget {
     return color ?? defaults.tileColor!;
   }
 
+  /// 构建列表 tile 小部件
+  ///
+  /// [context]：构建上下文
+  /// 返回：构建好的列表 tile 小部件
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterial(context));
@@ -1241,6 +1179,7 @@ class MongolListTile extends StatelessWidget {
       if (selected) WidgetState.selected,
     };
 
+    // 解析颜色
     Color? resolveColor(
         Color? explicitColor, Color? selectedColor, Color? enabledColor,
         [Color? disabledColor]) {
@@ -1252,6 +1191,7 @@ class MongolListTile extends StatelessWidget {
       ).resolve(states);
     }
 
+    // 计算有效的图标颜色
     final Color? effectiveIconColor =
         resolveColor(iconColor, selectedColor, iconColor) ??
             resolveColor(tileTheme.iconColor, tileTheme.selectedColor,
@@ -1262,6 +1202,7 @@ class MongolListTile extends StatelessWidget {
                 theme.listTileTheme.iconColor) ??
             resolveColor(defaults.iconColor, defaults.selectedColor,
                 defaults.iconColor, theme.disabledColor);
+    // 计算有效的文本颜色
     final Color? effectiveColor =
         resolveColor(textColor, selectedColor, textColor) ??
             resolveColor(tileTheme.textColor, tileTheme.selectedColor,
@@ -1272,12 +1213,15 @@ class MongolListTile extends StatelessWidget {
                 theme.listTileTheme.textColor) ??
             resolveColor(defaults.textColor, defaults.selectedColor,
                 defaults.textColor, theme.disabledColor);
+    // 创建图标主题数据
     final IconThemeData iconThemeData =
         IconThemeData(color: effectiveIconColor);
+    // 创建图标按钮主题数据
     final IconButtonThemeData iconButtonThemeData = IconButtonThemeData(
       style: IconButton.styleFrom(foregroundColor: effectiveIconColor),
     );
 
+    // 处理前置和后置小部件的文本样式
     TextStyle? leadingAndTrailingStyle;
     if (leading != null || trailing != null) {
       leadingAndTrailingStyle = leadingAndTrailingTextStyle ??
@@ -1288,6 +1232,7 @@ class MongolListTile extends StatelessWidget {
           leadingAndTrailingStyle.copyWith(color: leadingAndTrailingTextColor);
     }
 
+    // 处理前置小部件
     Widget? leadingIcon;
     if (leading != null) {
       leadingIcon = AnimatedDefaultTextStyle(
@@ -1297,6 +1242,7 @@ class MongolListTile extends StatelessWidget {
       );
     }
 
+    // 处理标题样式
     TextStyle titleStyle =
         titleTextStyle ?? tileTheme.titleTextStyle ?? defaults.titleTextStyle!;
     final Color? titleColor = effectiveColor;
@@ -1310,6 +1256,7 @@ class MongolListTile extends StatelessWidget {
       child: title ?? const SizedBox(),
     );
 
+    // 处理副标题
     Widget? subtitleText;
     TextStyle? subtitleStyle;
     if (subtitle != null) {
@@ -1328,6 +1275,7 @@ class MongolListTile extends StatelessWidget {
       );
     }
 
+    // 处理后置小部件
     Widget? trailingIcon;
     if (trailing != null) {
       trailingIcon = AnimatedDefaultTextStyle(
@@ -1337,6 +1285,7 @@ class MongolListTile extends StatelessWidget {
       );
     }
 
+    // 处理内容内边距
     const EdgeInsets defaultContentPadding =
         EdgeInsets.symmetric(vertical: 16.0);
     const TextDirection textDirection = TextDirection.ltr;
@@ -1345,7 +1294,8 @@ class MongolListTile extends StatelessWidget {
             tileTheme.contentPadding?.resolve(textDirection) ??
             defaultContentPadding;
 
-    // Show basic cursor when MongolListTile isn't enabled or gesture callbacks are null.
+    // 处理鼠标光标
+    // 当 MongolListTile 未启用或手势回调为 null 时显示基本光标。
     final Set<WidgetState> mouseStates = <WidgetState>{
       if (!enabled || (onTap == null && onLongPress == null))
         WidgetState.disabled,
@@ -1356,6 +1306,7 @@ class MongolListTile extends StatelessWidget {
             tileTheme.mouseCursor?.resolve(mouseStates) ??
             WidgetStateMouseCursor.clickable.resolve(mouseStates);
 
+    // 处理标题对齐方式
     final MongolListTileTitleAlignment effectiveTitleAlignment =
         titleAlignment ??
             tileTheme.titleAlignment ??
@@ -1514,7 +1465,16 @@ class MongolListTile extends StatelessWidget {
   }
 }
 
+/// 用于根据小部件状态解析颜色的类
+///
+/// 处理颜色是 WidgetStateColor 或常规 Color 的情况
 class _IndividualOverrides extends WidgetStateProperty<Color?> {
+  /// 创建一个 _IndividualOverrides 实例
+  ///
+  /// [explicitColor]：显式指定的颜色
+  /// [enabledColor]：启用状态的颜色
+  /// [selectedColor]：选中状态的颜色
+  /// [disabledColor]：禁用状态的颜色
   _IndividualOverrides({
     this.explicitColor,
     this.enabledColor,
@@ -1522,11 +1482,19 @@ class _IndividualOverrides extends WidgetStateProperty<Color?> {
     this.disabledColor,
   });
 
+  /// 显式指定的颜色
   final Color? explicitColor;
+  /// 启用状态的颜色
   final Color? enabledColor;
+  /// 选中状态的颜色
   final Color? selectedColor;
+  /// 禁用状态的颜色
   final Color? disabledColor;
 
+  /// 根据小部件状态解析颜色
+  ///
+  /// [states]：小部件的状态集合
+  /// 返回：解析后的颜色
   @override
   Color? resolve(Set<WidgetState> states) {
     if (explicitColor is WidgetStateColor) {
@@ -1542,18 +1510,40 @@ class _IndividualOverrides extends WidgetStateProperty<Color?> {
   }
 }
 
-// Identifies the children of a _MongolListTileElement.
+/// 标识 _MongolListTileElement 的子部件
 enum _ListTileSlot {
+  /// 前置小部件
   leading,
+  /// 标题小部件
   title,
+  /// 副标题小部件
   subtitle,
+  /// 后置小部件
   trailing,
 }
 
+/// 蒙古文列表 tile 布局小部件
+///
+/// 负责管理列表 tile 的子部件布局
 class _MongolListTile
     extends SlottedMultiChildRenderObjectWidget<_ListTileSlot, RenderBox> {
+  /// 创建一个 _MongolListTile 实例
+  ///
+  /// [key]：小部件的唯一标识符
+  /// [leading]：前置小部件
+  /// [title]：标题小部件
+  /// [subtitle]：副标题小部件
+  /// [trailing]：后置小部件
+  /// [isThreeLine]：是否显示三行文本
+  /// [isDense]：是否为密集布局
+  /// [visualDensity]：视觉密度
+  /// [titleBaselineType]：标题的基线类型
+  /// [verticalTitleGap]：标题与前置/后置小部件之间的垂直间隙
+  /// [minHorizontalPadding]：标题和副标题左右两侧的最小内边距
+  /// [minLeadingHeight]：前置小部件的最小高度
+  /// [subtitleBaselineType]：副标题的基线类型
+  /// [titleAlignment]：标题对齐方式
   const _MongolListTile({
-    Key? key,
     this.leading,
     required this.title,
     this.subtitle,
@@ -1567,20 +1557,33 @@ class _MongolListTile
     required this.minLeadingHeight,
     this.subtitleBaselineType,
     required this.titleAlignment,
-  }) : super(key: key);
+  });
 
+  /// 前置小部件
   final Widget? leading;
+  /// 标题小部件
   final Widget title;
+  /// 副标题小部件
   final Widget? subtitle;
+  /// 后置小部件
   final Widget? trailing;
+  /// 是否显示三行文本
   final bool isThreeLine;
+  /// 是否为密集布局
   final bool isDense;
+  /// 视觉密度
   final VisualDensity visualDensity;
+  /// 标题的基线类型
   final TextBaseline titleBaselineType;
+  /// 副标题的基线类型
   final TextBaseline? subtitleBaselineType;
+  /// 标题与前置/后置小部件之间的垂直间隙
   final double verticalTitleGap;
+  /// 标题和副标题左右两侧的最小内边距
   final double minHorizontalPadding;
+  /// 前置小部件的最小高度
   final double minLeadingHeight;
+  /// 标题对齐方式
   final MongolListTileTitleAlignment titleAlignment;
 
   @override
@@ -1631,8 +1634,23 @@ class _MongolListTile
   }
 }
 
+/// 蒙古文列表 tile 的渲染对象
+///
+/// 负责处理蒙古文列表 tile 的布局计算、绘制和命中测试
+/// 继承自 RenderBox 并混合了 SlottedContainerRenderObjectMixin 以管理子部件
 class _MongolRenderListTile extends RenderBox
     with SlottedContainerRenderObjectMixin<_ListTileSlot, RenderBox> {
+  /// 创建一个 _MongolRenderListTile 实例
+  ///
+  /// [isDense]：是否为密集布局
+  /// [visualDensity]：视觉密度
+  /// [isThreeLine]：是否显示三行文本
+  /// [titleBaselineType]：标题的基线类型
+  /// [subtitleBaselineType]：副标题的基线类型
+  /// [verticalTitleGap]：标题与前置/后置小部件之间的垂直间隙
+  /// [minHorizontalPadding]：标题和副标题左右两侧的最小内边距
+  /// [minLeadingHeight]：前置小部件的最小高度
+  /// [titleAlignment]：标题对齐方式
   _MongolRenderListTile({
     required bool isDense,
     required VisualDensity visualDensity,
@@ -1653,12 +1671,16 @@ class _MongolRenderListTile extends RenderBox
         _minLeadingHeight = minLeadingHeight,
         _titleAlignment = titleAlignment;
 
+  /// 获取前置小部件
   RenderBox? get leading => childForSlot(_ListTileSlot.leading);
+  /// 获取标题小部件
   RenderBox? get title => childForSlot(_ListTileSlot.title);
+  /// 获取副标题小部件
   RenderBox? get subtitle => childForSlot(_ListTileSlot.subtitle);
+  /// 获取后置小部件
   RenderBox? get trailing => childForSlot(_ListTileSlot.trailing);
 
-  // The returned list is ordered for hit testing.
+  /// 返回用于命中测试的子部件列表（按顺序）
   @override
   Iterable<RenderBox> get children {
     return <RenderBox>[
@@ -1669,6 +1691,7 @@ class _MongolRenderListTile extends RenderBox
     ];
   }
 
+  /// 是否为密集布局
   bool get isDense => _isDense;
   bool _isDense;
   set isDense(bool value) {
@@ -1677,6 +1700,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 视觉密度
   VisualDensity get visualDensity => _visualDensity;
   VisualDensity _visualDensity;
   set visualDensity(VisualDensity value) {
@@ -1685,6 +1709,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 是否显示三行文本
   bool get isThreeLine => _isThreeLine;
   bool _isThreeLine;
   set isThreeLine(bool value) {
@@ -1693,6 +1718,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 标题的基线类型
   TextBaseline get titleBaselineType => _titleBaselineType;
   TextBaseline _titleBaselineType;
   set titleBaselineType(TextBaseline value) {
@@ -1701,6 +1727,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 副标题的基线类型
   TextBaseline? get subtitleBaselineType => _subtitleBaselineType;
   TextBaseline? _subtitleBaselineType;
   set subtitleBaselineType(TextBaseline? value) {
@@ -1709,8 +1736,10 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 标题与前置/后置小部件之间的垂直间隙
   double get verticalTitleGap => _verticalTitleGap;
   double _verticalTitleGap;
+  /// 考虑视觉密度后的有效垂直间隙
   double get _effectiveVerticalTitleGap =>
       _verticalTitleGap + visualDensity.vertical * 2.0;
 
@@ -1720,6 +1749,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 标题和副标题左右两侧的最小内边距
   double get minHorizontalPadding => _minHorizontalPadding;
   double _minHorizontalPadding;
 
@@ -1729,6 +1759,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 前置小部件的最小高度
   double get minLeadingHeight => _minLeadingHeight;
   double _minLeadingHeight;
 
@@ -1738,6 +1769,7 @@ class _MongolRenderListTile extends RenderBox
     markNeedsLayout();
   }
 
+  /// 标题对齐方式
   MongolListTileTitleAlignment get titleAlignment => _titleAlignment;
   MongolListTileTitleAlignment _titleAlignment;
   set titleAlignment(MongolListTileTitleAlignment value) {
@@ -1749,14 +1781,17 @@ class _MongolRenderListTile extends RenderBox
   @override
   bool get sizedByParent => false;
 
+  /// 获取小部件的最小内在高度
   static double _minHeight(RenderBox? box, double width) {
     return box == null ? 0.0 : box.getMinIntrinsicHeight(width);
   }
 
+  /// 获取小部件的最大内在高度
   static double _maxHeight(RenderBox? box, double width) {
     return box == null ? 0.0 : box.getMaxIntrinsicHeight(width);
   }
 
+  /// 计算最小内在高度
   @override
   double computeMinIntrinsicHeight(double width) {
     final double leadingHeight = leading != null
@@ -1768,6 +1803,7 @@ class _MongolRenderListTile extends RenderBox
         _maxHeight(trailing, width);
   }
 
+  /// 计算最大内在高度
   @override
   double computeMaxIntrinsicHeight(double width) {
     final double leadingHeight = leading != null
@@ -1779,6 +1815,7 @@ class _MongolRenderListTile extends RenderBox
         _maxHeight(trailing, width);
   }
 
+  /// 获取默认的 tile 宽度
   double get _defaultTileWidth {
     final bool hasSubtitle = subtitle != null;
     final bool isTwoLine = !isThreeLine && hasSubtitle;
@@ -1790,6 +1827,7 @@ class _MongolRenderListTile extends RenderBox
     return (isDense ? 76.0 : 88.0) + baseDensity.dx;
   }
 
+  /// 计算最小内在宽度
   @override
   double computeMinIntrinsicWidth(double height) {
     return math.max(
@@ -1799,11 +1837,13 @@ class _MongolRenderListTile extends RenderBox
     );
   }
 
+  /// 计算最大内在宽度
   @override
   double computeMaxIntrinsicWidth(double height) {
     return computeMinIntrinsicWidth(height);
   }
 
+  /// 计算到实际基线的距离
   @override
   double computeDistanceToActualBaseline(TextBaseline baseline) {
     assert(title != null);
@@ -1811,21 +1851,25 @@ class _MongolRenderListTile extends RenderBox
     return parentData.offset.dx + title!.getDistanceToActualBaseline(baseline)!;
   }
 
+  /// 获取小部件的基线
   static double? _boxBaseline(RenderBox box, TextBaseline baseline) {
     return box.getDistanceToBaseline(baseline);
   }
 
+  /// 布局小部件并返回其大小
   static Size _layoutBox(RenderBox? box, BoxConstraints constraints) {
     if (box == null) return Size.zero;
     box.layout(constraints, parentUsesSize: true);
     return box.size;
   }
 
+  /// 定位小部件
   static void _positionBox(RenderBox box, Offset offset) {
     final BoxParentData parentData = box.parentData! as BoxParentData;
     parentData.offset = offset;
   }
 
+  /// 计算干布局（不实际布局子部件）
   @override
   Size computeDryLayout(BoxConstraints constraints) {
     assert(debugCannotComputeDryLayout(
@@ -1835,8 +1879,9 @@ class _MongolRenderListTile extends RenderBox
     return Size.zero;
   }
 
-  // All of the dimensions below were taken from the Material Design spec:
+  // 以下所有尺寸均来自 Material Design 规范：
   // https://material.io/design/components/lists.html#specs
+  /// 执行布局计算
   @override
   void performLayout() {
     final BoxConstraints constraints = this.constraints;
@@ -2013,6 +2058,7 @@ class _MongolRenderListTile extends RenderBox
     assert(size.height == constraints.constrainHeight(tileHeight));
   }
 
+  /// 绘制子部件
   @override
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
@@ -2028,9 +2074,11 @@ class _MongolRenderListTile extends RenderBox
     doPaint(trailing);
   }
 
+  /// 测试自身是否被命中
   @override
   bool hitTestSelf(Offset position) => true;
 
+  /// 测试子部件是否被命中
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     for (final RenderBox child in children) {
@@ -2049,7 +2097,14 @@ class _MongolRenderListTile extends RenderBox
   }
 }
 
+/// Material 2 风格的列表 tile 默认值
+///
+/// 提供 Material 2 设计规范下的列表 tile 默认样式和颜色
 class _LisTileDefaultsM2 extends MongolListTileThemeData {
+  /// 创建一个 _LisTileDefaultsM2 实例
+  ///
+  /// [context]：构建上下文
+  /// [style]：列表 tile 样式
   _LisTileDefaultsM2(this.context, ListTileStyle style)
       : super(
           contentPadding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -2059,13 +2114,18 @@ class _LisTileDefaultsM2 extends MongolListTileThemeData {
           style: style,
         );
 
+  /// 构建上下文
   final BuildContext context;
+  /// 当前主题
   late final ThemeData _theme = Theme.of(context);
+  /// 当前文本主题
   late final TextTheme _textTheme = _theme.textTheme;
 
+  /// 获取 tile 背景颜色
   @override
   Color? get tileColor => Colors.transparent;
 
+  /// 获取标题文本样式
   @override
   TextStyle? get titleTextStyle {
     switch (style!) {
@@ -2076,25 +2136,29 @@ class _LisTileDefaultsM2 extends MongolListTileThemeData {
     }
   }
 
+  /// 获取副标题文本样式
   @override
   TextStyle? get subtitleTextStyle =>
       _textTheme.bodyMedium!.copyWith(color: _textTheme.bodySmall!.color);
 
+  /// 获取前置和后置小部件的文本样式
   @override
   TextStyle? get leadingAndTrailingTextStyle => _textTheme.bodyMedium;
 
+  /// 获取选中状态的颜色
   @override
   Color? get selectedColor => _theme.colorScheme.primary;
 
+  /// 获取图标颜色
   @override
   Color? get iconColor {
     switch (_theme.brightness) {
       case Brightness.light:
-        // For the sake of backwards compatibility, the default for unselected
-        // tiles is Colors.black45 rather than colorScheme.onSurface.withAlpha(0x73).
+        // 为了向后兼容，未选中 tile 的默认值是 Colors.black45
+        // 而不是 colorScheme.onSurface.withAlpha(0x73)。
         return Colors.black45;
       case Brightness.dark:
-        return null; // null, Use current icon theme color
+        return null; // null，使用当前图标主题颜色
     }
   }
 }
@@ -2106,7 +2170,13 @@ class _LisTileDefaultsM2 extends MongolListTileThemeData {
 // Design token database by the script:
 //   dev/tools/gen_defaults/bin/gen_defaults.dart.
 
+/// Material 3 风格的列表 tile 默认值
+///
+/// 提供 Material 3 设计规范下的列表 tile 默认样式和颜色
 class _LisTileDefaultsM3 extends MongolListTileThemeData {
+  /// 创建一个 _LisTileDefaultsM3 实例
+  ///
+  /// [context]：构建上下文
   _LisTileDefaultsM3(this.context)
       : super(
           contentPadding:
@@ -2116,29 +2186,39 @@ class _LisTileDefaultsM3 extends MongolListTileThemeData {
           shape: const RoundedRectangleBorder(),
         );
 
+  /// 构建上下文
   final BuildContext context;
+  /// 当前主题
   late final ThemeData _theme = Theme.of(context);
+  /// 当前颜色方案
   late final ColorScheme _colors = _theme.colorScheme;
+  /// 当前文本主题
   late final TextTheme _textTheme = _theme.textTheme;
 
+  /// 获取 tile 背景颜色
   @override
   Color? get tileColor => Colors.transparent;
 
+  /// 获取标题文本样式
   @override
   TextStyle? get titleTextStyle =>
       _textTheme.bodyLarge!.copyWith(color: _colors.onSurface);
 
+  /// 获取副标题文本样式
   @override
   TextStyle? get subtitleTextStyle =>
       _textTheme.bodyMedium!.copyWith(color: _colors.onSurfaceVariant);
 
+  /// 获取前置和后置小部件的文本样式
   @override
   TextStyle? get leadingAndTrailingTextStyle =>
       _textTheme.labelSmall!.copyWith(color: _colors.onSurfaceVariant);
 
+  /// 获取选中状态的颜色
   @override
   Color? get selectedColor => _colors.primary;
 
+  /// 获取图标颜色
   @override
   Color? get iconColor => _colors.onSurfaceVariant;
 }

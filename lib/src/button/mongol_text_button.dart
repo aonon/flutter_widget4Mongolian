@@ -30,40 +30,21 @@ import 'package:flutter/widgets.dart';
 
 import 'mongol_button_style_button.dart';
 
-/// A vertical Material Design "Text Button".
+/// 垂直方向的Material Design "文本按钮"
 ///
-/// Use text buttons on toolbars, in dialogs, or inline with other
-/// content but offset from that content with padding so that the
-/// button's presence is obvious. Text buttons do not have visible
-/// borders and must therefore rely on their position relative to
-/// other content for context. In dialogs and cards, they should be
-/// grouped together in one of the bottom corners. Avoid using text
-/// buttons where they would blend in with other content, for example
-/// in the middle of lists.
+/// 文本按钮没有可见边框，通过相对于其他内容的位置提供上下文。
+/// 适用于工具栏、对话框或与其他内容内联使用。
 ///
-/// A text button is a label [child] displayed on a (zero elevation)
-/// [Material] widget. The label's [MongolText] and [Icon] widgets are
-/// displayed in the [style]'s [ButtonStyle.foregroundColor]. The
-/// button reacts to touches by filling with the [style]'s
-/// [ButtonStyle.backgroundColor].
+/// 按钮标签以[ButtonStyle.foregroundColor]显示，触摸时填充[ButtonStyle.backgroundColor]。
 ///
-/// The text button's default style is defined by [defaultStyleOf].
-/// The style of this text button can be overridden with its [style]
-/// parameter. The style of all text buttons in a subtree can be
-/// overridden with the [TextButtonTheme] and the style of all of the
-/// text buttons in an app can be overridden with the [Theme]'s
-/// [ThemeData.textButtonTheme] property.
+/// 样式可通过[style]参数、[TextButtonTheme]或[ThemeData.textButtonTheme]覆盖。
+/// 静态[styleFrom]方法提供了从简单值创建样式的便捷方式。
 ///
-/// The static [styleFrom] method is a convenient way to create a
-/// text button [ButtonStyle] from simple values.
-///
-/// If the [onPressed] and [onLongPress] callbacks are null, then this
-/// button will be disabled, it will not react to touch.
+/// 如果[onPressed]和[onLongPress]都为null，按钮将被禁用。
 ///
 /// {@tool dartpad --template=stateless_widget_scaffold}
 ///
-/// This sample shows how to render a disabled TextButton, an enabled MongolTextButton
-/// and lastly a MongolTextButton with gradient background.
+/// 此示例显示如何渲染禁用的TextButton、启用的MongolTextButton以及带有渐变背景的MongolTextButton。
 ///
 /// ```dart
 /// Widget build(BuildContext context) {
@@ -76,7 +57,7 @@ import 'mongol_button_style_button.dart';
 ///              textStyle: const TextStyle(fontSize: 20),
 ///            ),
 ///            onPressed: null,
-///            child: const Text('Disabled'),
+///            child: const Text('禁用'),
 ///         ),
 ///         const SizedBox(height: 30),
 ///         MongolTextButton(
@@ -84,7 +65,7 @@ import 'mongol_button_style_button.dart';
 ///             textStyle: const TextStyle(fontSize: 20),
 ///           ),
 ///           onPressed: () {},
-///           child: const MongolText('Enabled'),
+///           child: const MongolText('启用'),
 ///         ),
 ///         const SizedBox(height: 30),
 ///         ClipRRect(
@@ -111,7 +92,7 @@ import 'mongol_button_style_button.dart';
 ///                   textStyle: const TextStyle(fontSize: 20),
 ///                 ),
 ///                 onPressed: () {},
-///                  child: const MongolText('Gradient'),
+///                  child: const MongolText('渐变'),
 ///               ),
 ///             ],
 ///           ),
@@ -124,16 +105,16 @@ import 'mongol_button_style_button.dart';
 /// ```
 /// {@end-tool}
 ///
-/// See also:
+/// 另请参见：
 ///
-///  * [MongolElevatedButton], a filled vertical button whose material elevates when pressed.
-///  * [MongolFilledButton], a filled vertical button that doesn't elevate when pressed.
-///  * [MongolFilledButton.tonal], a filled vertical button variant that uses a secondary fill color.
-///  * [MongolOutlinedButton], a vertical button with an outlined border and no fill color.
+///  * [MongolElevatedButton]，一种填充的垂直按钮，其材质在按下时会升高。
+///  * [MongolFilledButton]，一种填充的垂直按钮，按下时不会升高。
+///  * [MongolFilledButton.tonal]，一种填充的垂直按钮变体，使用次要填充颜色。
+///  * [MongolOutlinedButton]，一种带有轮廓边框且无填充颜色的垂直按钮。
 ///  * <https://material.io/design/components/buttons.html>
 ///  * <https://m3.material.io/components/buttons>
 class MongolTextButton extends MongolButtonStyleButton {
-  /// Create a MongolTextButton.
+  /// 创建一个MongolTextButton。
   const MongolTextButton({
     super.key,
     required super.onPressed,
@@ -149,11 +130,9 @@ class MongolTextButton extends MongolButtonStyleButton {
     required Widget super.child,
   });
 
-  /// Create a text button from a pair of widgets that serve as the button's
-  /// [icon] and [label].
+  /// 从一对用作按钮[icon]和[label]的小部件创建文本按钮。
   ///
-  /// The icon and label are arranged in a column and padded by 8 logical pixels
-  /// at the ends, with an 8 pixel gap in between.
+  /// 图标和标签排列在一列中，两端有8个逻辑像素的填充，中间有8个像素的间隙。
   factory MongolTextButton.icon({
     Key? key,
     required VoidCallback? onPressed,
@@ -169,30 +148,21 @@ class MongolTextButton extends MongolButtonStyleButton {
     required Widget label,
   }) = _MongolTextButtonWithIcon;
 
-  /// A static convenience method that constructs a text button
-  /// [ButtonStyle] given simple values.
+  /// 一个静态便捷方法，根据简单的值构造文本按钮[ButtonStyle]。
   ///
-  /// The [foregroundColor] and [disabledForegroundColor] colors are used
-  /// to create a [MaterialStateProperty] [ButtonStyle.foregroundColor], and
-  /// a derived [ButtonStyle.overlayColor].
+  /// [foregroundColor]和[disabledForegroundColor]颜色用于创建[MaterialStateProperty] [ButtonStyle.foregroundColor]，
+  /// 以及派生的[ButtonStyle.overlayColor]。
   ///
-  /// The [backgroundColor] and [disabledBackgroundColor] colors are
-  /// used to create a [MaterialStateProperty] [ButtonStyle.backgroundColor].
+  /// [backgroundColor]和[disabledBackgroundColor]颜色用于创建[MaterialStateProperty] [ButtonStyle.backgroundColor]。
   ///
-  /// Similarly, the [enabledMouseCursor] and [disabledMouseCursor]
-  /// parameters are used to construct [ButtonStyle.mouseCursor].
+  /// 类似地，[enabledMouseCursor]和[disabledMouseCursor]参数用于构造[ButtonStyle.mouseCursor]。
   ///
-  /// All of the other parameters are either used directly or used to
-  /// create a [WidgetStateProperty] with a single value for all
-  /// states.
+  /// 所有其他参数要么直接使用，要么用于为所有状态创建具有单个值的[WidgetStateProperty]。
   ///
-  /// All parameters default to null. By default this method returns
-  /// a [ButtonStyle] that doesn't override anything.
+  /// 所有参数默认为null。默认情况下此方法返回一个不覆盖任何内容的[ButtonStyle]。
   ///
-  /// For example, to override the default text and icon colors for a
-  /// [MongolTextButton], as well as its overlay color, with all of the
-  /// standard opacity adjustments for the pressed, focused, and
-  /// hovered states, one could write:
+  /// 例如，要覆盖[MongolTextButton]的默认文本和图标颜色及其覆盖颜色，以及按下、焦点和悬停状态的标准不透明度调整，
+  /// 可以编写：
   ///
   /// ```dart
   /// MongolTextButton(
@@ -274,34 +244,26 @@ class MongolTextButton extends MongolButtonStyleButton {
     );
   }
 
-  /// Defines the button's default appearance.
+  /// 定义按钮的默认外观。
   ///
-  /// The button [child]'s [MongolText] and [Icon] widgets are rendered with
-  /// the [ButtonStyle]'s foreground color. The button's [InkWell] adds
-  /// the style's overlay color when the button is focused, hovered
-  /// or pressed. The button's background color becomes its [Material]
-  /// color and is transparent by default.
+  /// 按钮[child]的[MongolText]和[Icon]小部件使用[ButtonStyle]的前景颜色渲染。
+  /// 当按钮获得焦点、悬停或按下时，按钮的[InkWell]会添加样式的覆盖颜色。
+  /// 按钮的背景颜色成为其[Material]颜色，默认情况下是透明的。
   ///
-  /// All of the ButtonStyle's defaults appear below.
+  /// 所有ButtonStyle的默认值如下。
   ///
-  /// In this list "Theme.foo" is shorthand for
-  /// `Theme.of(context).foo`. Color scheme values like
-  /// "onSurface(0.38)" are shorthand for
-  /// `onSurface.withValues(alpha: 0.38)`. [WidgetStateProperty] valued
-  /// properties that are not followed by a sublist have the same
-  /// value for all states, otherwise the values are as specified for
-  /// each state and "others" means all other states.
+  /// 在这个列表中，"Theme.foo"是`Theme.of(context).foo`的简写。
+  /// 颜色方案值如"onSurface(0.38)"是`onSurface.withValues(alpha: 0.38)`的简写。
+  /// 没有后跟子列表的[WidgetStateProperty]值属性对于所有状态都具有相同的值，
+  /// 否则值如为每个状态指定，"others"表示所有其他状态。
   ///
-  /// The "default font size" below refers to the font size specified in the
-  /// [defaultStyleOf] method (or 14.0 if unspecified), scaled by the
-  /// `MediaQuery.textScalerOf(context).scale` method. And the names of the
-  /// EdgeInsets constructors and `EdgeInsetsGeometry.lerp` have been abbreviated
-  /// for readability.
+  /// 下面的"默认字体大小"指的是在[defaultStyleOf]方法中指定的字体大小（如果未指定则为14.0），
+  /// 由`MediaQuery.textScalerOf(context).scale`方法缩放。
+  /// 为了可读性，EdgeInsets构造函数和`EdgeInsetsGeometry.lerp`的名称已被缩写。
   ///
-  /// The color of the [ButtonStyle.textStyle] is not used, the
-  /// [ButtonStyle.foregroundColor] color is used instead.
+  /// [ButtonStyle.textStyle]的颜色不使用，而是使用[ButtonStyle.foregroundColor]颜色。
   ///
-  /// ## Material 2 defaults
+  /// ## Material 2 默认值
   ///
   /// * `textStyle` - Theme.textTheme.button
   /// * `backgroundColor` - transparent
@@ -333,22 +295,19 @@ class MongolTextButton extends MongolButtonStyleButton {
   /// * `alignment` - Alignment.center
   /// * `splashFactory` - InkRipple.splashFactory
   ///
-  /// The default padding values for the [MongolTextButton.icon] factory are slightly different:
+  /// [MongolTextButton.icon]工厂的默认填充值略有不同：
   ///
   /// * `padding`
   ///   * `default font size <= 14` - all(8)
   ///   * `14 < default font size <= 28 `- lerp(all(8), vertical(4))
   ///   * `28 < default font size` - vertical(4)
   ///
-  /// The default value for `side`, which defines the appearance of the button's
-  /// outline, is null. That means that the outline is defined by the button
-  /// shape's [OutlinedBorder.side]. Typically the default value of an
-  /// [OutlinedBorder]'s side is [BorderSide.none], so an outline is not drawn.
+  /// 定义按钮轮廓外观的`side`的默认值为null。这意味着轮廓由按钮形状的[OutlinedBorder.side]定义。
+  /// 通常，[OutlinedBorder]的side的默认值是[BorderSide.none]，因此不会绘制轮廓。
   ///
-  /// ## Material 3 defaults
+  /// ## Material 3 默认值
   ///
-  /// If [ThemeData.useMaterial3] is set to true the following defaults will
-  /// be used:
+  /// 如果[ThemeData.useMaterial3]设置为true，将使用以下默认值：
   ///
   /// * `textStyle` - Theme.textTheme.labelLarge
   /// * `backgroundColor` - transparent
@@ -382,8 +341,7 @@ class MongolTextButton extends MongolButtonStyleButton {
   /// * `alignment` - Alignment.center
   /// * `splashFactory` - Theme.splashFactory
   ///
-  /// For the [MongolTextButton.icon] factory, the end (generally the bottom) value of
-  /// [padding] is increased from 12 to 16.
+  /// 对于[MongolTextButton.icon]工厂，[padding]的结束（通常是底部）值从12增加到16。
   @override
   ButtonStyle defaultStyleOf(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -416,36 +374,46 @@ class MongolTextButton extends MongolButtonStyleButton {
           );
   }
 
-  /// Returns the [TextButtonThemeData.style] of the closest
-  /// [TextButtonTheme] ancestor.
+  /// 返回最近的[TextButtonTheme]祖先的[TextButtonThemeData.style]。
   @override
   ButtonStyle? themeStyleOf(BuildContext context) {
     return TextButtonTheme.of(context).style;
   }
 }
 
+/// 计算按钮的缩放内边距
+///
+/// 根据主题和文本缩放因子计算按钮的内边距。
 EdgeInsetsGeometry _scaledPadding(BuildContext context) {
   final ThemeData theme = Theme.of(context);
-  final double defaultFontSize = theme.textTheme.labelLarge?.fontSize ?? 14.0;
+  final double defaultFontSize = theme.textTheme.labelLarge?.fontSize ?? 14.0; // 默认字体大小
   final double effectiveTextScale =
-      MediaQuery.textScalerOf(context).scale(defaultFontSize) / 14.0;
+      MediaQuery.textScalerOf(context).scale(defaultFontSize) / 14.0; // 有效的文本缩放因子
   return ButtonStyleButton.scaledPadding(
     theme.useMaterial3
-        ? const EdgeInsets.symmetric(vertical: 12, horizontal: 8)
-        : const EdgeInsets.all(8),
-    const EdgeInsets.symmetric(vertical: 8),
-    const EdgeInsets.symmetric(vertical: 4),
-    effectiveTextScale,
+        ? const EdgeInsets.symmetric(vertical: 12, horizontal: 8) // Material 3的内边距
+        : const EdgeInsets.all(8), // Material 2的内边距
+    const EdgeInsets.symmetric(vertical: 8), // 中等内边距
+    const EdgeInsets.symmetric(vertical: 4), // 小内边距
+    effectiveTextScale, // 文本缩放因子
   );
 }
 
+/// 文本按钮的默认颜色属性
+///
+/// 根据按钮状态返回不同的颜色。
 @immutable
 class _TextButtonDefaultColor extends WidgetStateProperty<Color?> {
+  /// 创建一个文本按钮默认颜色属性
+  ///
+  /// [color]：正常状态下的颜色
+  /// [disabled]：禁用状态下的颜色
   _TextButtonDefaultColor(this.color, this.disabled);
 
-  final Color? color;
-  final Color? disabled;
+  final Color? color; // 正常状态下的颜色
+  final Color? disabled; // 禁用状态下的颜色
 
+  /// 根据状态解析颜色
   @override
   Color? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) {
@@ -454,18 +422,26 @@ class _TextButtonDefaultColor extends WidgetStateProperty<Color?> {
     return color;
   }
 
+  /// 转换为字符串表示
   @override
   String toString() {
     return '{disabled: $disabled, otherwise: $color}';
   }
 }
 
+/// 文本按钮的默认覆盖颜色属性
+///
+/// 根据按钮状态返回不同的覆盖颜色，用于悬停、焦点和按下状态。
 @immutable
 class _TextButtonDefaultOverlay extends WidgetStateProperty<Color?> {
+  /// 创建一个文本按钮默认覆盖颜色属性
+  ///
+  /// [primary]：主要颜色
   _TextButtonDefaultOverlay(this.primary);
 
-  final Color primary;
+  final Color primary; // 主要颜色
 
+  /// 根据状态解析颜色
   @override
   Color? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.pressed)) {
@@ -480,19 +456,28 @@ class _TextButtonDefaultOverlay extends WidgetStateProperty<Color?> {
     return null;
   }
 
+  /// 转换为字符串表示
   @override
   String toString() {
     return '{hovered: ${primary.withValues(alpha: 0.04)}, focused,pressed: ${primary.withValues(alpha: 0.12)}, otherwise: null}';
   }
 }
 
+/// 文本按钮的默认图标颜色属性
+///
+/// 根据按钮状态返回不同的图标颜色。
 @immutable
 class _TextButtonDefaultIconColor extends WidgetStateProperty<Color?> {
+  /// 创建一个文本按钮默认图标颜色属性
+  ///
+  /// [iconColor]：正常状态下的图标颜色
+  /// [disabledIconColor]：禁用状态下的图标颜色
   _TextButtonDefaultIconColor(this.iconColor, this.disabledIconColor);
 
-  final Color? iconColor;
-  final Color? disabledIconColor;
+  final Color? iconColor; // 正常状态下的图标颜色
+  final Color? disabledIconColor; // 禁用状态下的图标颜色
 
+  /// 根据状态解析颜色
   @override
   Color? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) {
@@ -501,20 +486,29 @@ class _TextButtonDefaultIconColor extends WidgetStateProperty<Color?> {
     return iconColor;
   }
 
+  /// 转换为字符串表示
   @override
   String toString() {
     return '{disabled: $disabledIconColor, color: $iconColor}';
   }
 }
 
+/// 文本按钮的默认鼠标光标属性
+///
+/// 根据按钮状态返回不同的鼠标光标。
 @immutable
 class _TextButtonDefaultMouseCursor extends WidgetStateProperty<MouseCursor?>
     with Diagnosticable {
+  /// 创建一个文本按钮默认鼠标光标属性
+  ///
+  /// [enabledCursor]：启用状态下的鼠标光标
+  /// [disabledCursor]：禁用状态下的鼠标光标
   _TextButtonDefaultMouseCursor(this.enabledCursor, this.disabledCursor);
 
-  final MouseCursor? enabledCursor;
-  final MouseCursor? disabledCursor;
+  final MouseCursor? enabledCursor; // 启用状态下的鼠标光标
+  final MouseCursor? disabledCursor; // 禁用状态下的鼠标光标
 
+  /// 根据状态解析鼠标光标
   @override
   MouseCursor? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) {
@@ -524,7 +518,12 @@ class _TextButtonDefaultMouseCursor extends WidgetStateProperty<MouseCursor?>
   }
 }
 
+/// 带有图标的Mongol文本按钮
 class _MongolTextButtonWithIcon extends MongolTextButton {
+  /// 创建一个带有图标的Mongol文本按钮
+  ///
+  /// [icon]：按钮的图标
+  /// [label]：按钮的标签
   _MongolTextButtonWithIcon({
     super.key,
     required super.onPressed,
@@ -544,6 +543,7 @@ class _MongolTextButtonWithIcon extends MongolTextButton {
           child: _MongolTextButtonWithIconChild(icon: icon, label: label),
         );
 
+  /// 定义带图标的文本按钮的默认样式
   @override
   ButtonStyle defaultStyleOf(BuildContext context) {
     final bool useMaterial3 = Theme.of(context).useMaterial3;
@@ -566,20 +566,27 @@ class _MongolTextButtonWithIcon extends MongolTextButton {
   }
 }
 
+/// 带有图标的Mongol文本按钮的子部件
 class _MongolTextButtonWithIconChild extends StatelessWidget {
+  /// 创建一个带有图标的Mongol文本按钮的子部件
+  ///
+  /// [label]：按钮的标签
+  /// [icon]：按钮的图标
   const _MongolTextButtonWithIconChild({
     required this.label,
     required this.icon,
   });
 
-  final Widget label;
-  final Widget icon;
+  final Widget label; // 按钮的标签
+  final Widget icon; // 按钮的图标
 
+  /// 构建UI
   @override
   Widget build(BuildContext context) {
-    final double scale = MediaQuery.textScalerOf(context).textScaleFactor;
-    final double gap =
-        scale <= 1 ? 8 : lerpDouble(8, 4, math.min(scale - 1, 1))!;
+    final TextScaler textScaler = MediaQuery.textScalerOf(context);
+    final double scale = textScaler.scale(1.0); // 文本缩放因子
+    final double gap = 
+        scale <= 1 ? 8 : lerpDouble(8, 4, math.min(scale - 1, 1))!; // 图标和标签之间的间隙
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[icon, SizedBox(height: gap), Flexible(child: label)],
@@ -589,12 +596,15 @@ class _MongolTextButtonWithIconChild extends StatelessWidget {
 
 // BEGIN GENERATED TOKEN PROPERTIES - TextButton
 
-// Do not edit by hand. The code between the "BEGIN GENERATED" and
-// "END GENERATED" comments are generated from data in the Material
-// Design token database by the script:
-//   dev/tools/gen_defaults/bin/gen_defaults.dart.
+// 请勿手动编辑。"BEGIN GENERATED"和"END GENERATED"注释之间的代码是从Material
+// Design token数据库通过脚本生成的：
+//   dev/tools/gen_defaults/bin/gen_defaults.dart。
 
+/// 文本按钮的Material 3默认样式
 class _MongolTextButtonDefaultsM3 extends ButtonStyle {
+  /// 创建文本按钮的Material 3默认样式
+  ///
+  /// [context]：构建上下文
   _MongolTextButtonDefaultsM3(this.context)
       : super(
           animationDuration: kThemeChangeDuration,
@@ -602,17 +612,17 @@ class _MongolTextButtonDefaultsM3 extends ButtonStyle {
           alignment: Alignment.center,
         );
 
-  final BuildContext context;
-  late final ColorScheme _colors = Theme.of(context).colorScheme;
+  final BuildContext context; // 构建上下文
+  late final ColorScheme _colors = Theme.of(context).colorScheme; // 颜色方案
 
   @override
   WidgetStateProperty<TextStyle?> get textStyle =>
       WidgetStatePropertyAll<TextStyle?>(
-          Theme.of(context).textTheme.labelLarge);
+          Theme.of(context).textTheme.labelLarge); // 文本样式
 
   @override
   WidgetStateProperty<Color?>? get backgroundColor =>
-      const WidgetStatePropertyAll<Color>(Colors.transparent);
+      const WidgetStatePropertyAll<Color>(Colors.transparent); // 背景颜色
 
   @override
   WidgetStateProperty<Color?>? get foregroundColor =>
@@ -621,7 +631,7 @@ class _MongolTextButtonDefaultsM3 extends ButtonStyle {
           return _colors.onSurface.withValues(alpha: 0.38);
         }
         return _colors.primary;
-      });
+      }); // 前景颜色
 
   @override
   WidgetStateProperty<Color?>? get overlayColor =>
@@ -636,39 +646,39 @@ class _MongolTextButtonDefaultsM3 extends ButtonStyle {
           return _colors.primary.withValues(alpha: 0.12);
         }
         return null;
-      });
+      }); // 覆盖颜色
 
   @override
   WidgetStateProperty<Color>? get shadowColor =>
-      const WidgetStatePropertyAll<Color>(Colors.transparent);
+      const WidgetStatePropertyAll<Color>(Colors.transparent); // 阴影颜色
 
   @override
   WidgetStateProperty<Color>? get surfaceTintColor =>
-      const WidgetStatePropertyAll<Color>(Colors.transparent);
+      const WidgetStatePropertyAll<Color>(Colors.transparent); // 表面色调
 
   @override
   WidgetStateProperty<double>? get elevation =>
-      const WidgetStatePropertyAll<double>(0.0);
+      const WidgetStatePropertyAll<double>(0.0); // 海拔高度
 
   @override
   WidgetStateProperty<EdgeInsetsGeometry>? get padding =>
-      WidgetStatePropertyAll<EdgeInsetsGeometry>(_scaledPadding(context));
+      WidgetStatePropertyAll<EdgeInsetsGeometry>(_scaledPadding(context)); // 内边距
 
   @override
   WidgetStateProperty<Size>? get minimumSize =>
-      const WidgetStatePropertyAll<Size>(Size(40.0, 64.0));
+      const WidgetStatePropertyAll<Size>(Size(40.0, 64.0)); // 最小大小
 
-  // No default fixedSize
+  // 无默认固定大小
 
   @override
   WidgetStateProperty<Size>? get maximumSize =>
-      const WidgetStatePropertyAll<Size>(Size.infinite);
+      const WidgetStatePropertyAll<Size>(Size.infinite); // 最大大小
 
-  // No default side
+  // 无默认边框
 
   @override
   WidgetStateProperty<OutlinedBorder>? get shape =>
-      const WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder());
+      const WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder()); // 形状
 
   @override
   WidgetStateProperty<MouseCursor?>? get mouseCursor =>
@@ -677,18 +687,18 @@ class _MongolTextButtonDefaultsM3 extends ButtonStyle {
           return SystemMouseCursors.basic;
         }
         return SystemMouseCursors.click;
-      });
+      }); // 鼠标光标
 
   @override
-  VisualDensity? get visualDensity => Theme.of(context).visualDensity;
+  VisualDensity? get visualDensity => Theme.of(context).visualDensity; // 视觉密度
 
   @override
   MaterialTapTargetSize? get tapTargetSize =>
-      Theme.of(context).materialTapTargetSize;
+      Theme.of(context).materialTapTargetSize; // 点击目标大小
 
   @override
   InteractiveInkFeatureFactory? get splashFactory =>
-      Theme.of(context).splashFactory;
+      Theme.of(context).splashFactory; // 水波纹效果工厂
 }
 
 // END GENERATED TOKEN PROPERTIES - TextButton

@@ -19,40 +19,36 @@ import '../text/mongol_text.dart';
 import '../text/mongol_rich_text.dart';
 
 
+/// 单选按钮类型枚举
+///
+/// material：使用 Material 风格的单选按钮
+/// adaptive：使用平台自适应的单选按钮（iOS 上使用 CupertinoRadio）
 enum _RadioType { material, adaptive }
 
-/// A [MongolListTile] with a [Radio]. In other words, a radio button with a label.
+/// 带有 [Radio] 的 [MongolListTile]。换句话说，就是带有标签的单选按钮。
 ///
-/// The entire list tile is interactive: tapping anywhere in the tile selects
-/// the radio button.
+/// 整个列表 tile 是可交互的：点击 tile 中的任何位置都会选择单选按钮。
 ///
-/// The [value], [groupValue], [onChanged], and [activeColor] properties of this
-/// widget are identical to the similarly-named properties on the [Radio]
-/// widget. The type parameter `T` serves the same purpose as that of the
-/// [Radio] class' type parameter.
+/// 此小部件的 [value]、[groupValue]、[onChanged] 和 [activeColor] 属性与
+/// [Radio] 小部件上的同名属性相同。类型参数 `T` 的作用与 [Radio] 类的类型参数相同。
 ///
-/// The [title], [subtitle], [isThreeLine], and [dense] properties are like
-/// those of the same name on [MongolListTile].
+/// [title]、[subtitle]、[isThreeLine] 和 [dense] 属性与
+/// [MongolListTile] 上的同名属性类似。
 ///
-/// The [selected] property on this widget is similar to the [MongolListTile.selected]
-/// property. This tile's [activeColor] is used for the selected item's text color, or
-/// the theme's [ThemeData.toggleableActiveColor] if [activeColor] is null.
+/// 此小部件上的 [selected] 属性与 [MongolListTile.selected] 属性类似。
+/// 此 tile 的 [activeColor] 用于选中项的文本颜色，或者如果 [activeColor] 为 null，
+/// 则使用主题的 [ThemeData.toggleableActiveColor]。
 ///
-/// This widget does not coordinate the [selected] state and the
-/// [checked] state; to have the list tile appear selected when the
-/// radio button is the selected radio button, set [selected] to true
-/// when [value] matches [groupValue].
+/// 此小部件不协调 [selected] 状态和 [checked] 状态；要使列表 tile 在单选按钮
+/// 是选中的单选按钮时显示为选中状态，请在 [value] 与 [groupValue] 匹配时将 [selected] 设置为 true。
 ///
-/// The radio button is shown on the left by default in left-to-right languages
-/// (i.e. the leading edge). This can be changed using [controlAffinity]. The
-/// [secondary] widget is placed on the opposite side. This maps to the
-/// [MongolListTile.leading] and [MongolListTile.trailing] properties of [MongolListTile].
+/// 在从左到右的语言中，单选按钮默认显示在左侧（即前导边缘）。
+/// 这可以通过 [controlAffinity] 更改。[secondary] 小部件放置在相反的一侧。
+/// 这映射到 [MongolListTile] 的 [MongolListTile.leading] 和 [MongolListTile.trailing] 属性。
 ///
-/// This widget requires a [Material] widget ancestor in the tree to paint
-/// itself on, which is typically provided by the app's [Scaffold].
-/// The [tileColor], and [selectedTileColor] are not painted by the
-/// [MongolRadioListTile] itself but by the [Material] widget ancestor. In this
-/// case, one can wrap a [Material] widget around the [MongolRadioListTile], e.g.:
+/// 此小部件需要树中的 [Material] 小部件祖先来绘制自身，这通常由应用的 [Scaffold] 提供。
+/// [tileColor] 和 [selectedTileColor] 不是由 [MongolRadioListTile] 本身绘制的，
+/// 而是由 [Material] 小部件祖先绘制的。在这种情况下，可以在 [MongolRadioListTile] 周围包装一个 [Material] 小部件，例如：
 ///
 /// {@tool snippet}
 /// ```dart
@@ -507,19 +503,16 @@ enum _RadioType { material, adaptive }
 ///  * [MongolSwitchListTile], a similar widget for switches.
 ///  * [MongolListTile] and [Radio], the widgets from which this widget is made.
 class MongolRadioListTile<T> extends StatelessWidget {
-  /// Creates a combination of a list tile and a radio button.
+  /// 创建一个列表 tile 和单选按钮的组合。
   ///
-  /// The radio tile itself does not maintain any state. Instead, when the radio
-  /// button is selected, the widget calls the [onChanged] callback. Most
-  /// widgets that use a radio button will listen for the [onChanged] callback
-  /// and rebuild the radio tile with a new [groupValue] to update the visual
-  /// appearance of the radio button.
+  /// 单选按钮 tile 本身不维护任何状态。相反，当单选按钮被选中时，
+  /// 小部件会调用 [onChanged] 回调。大多数使用单选按钮的小部件会监听 [onChanged] 回调，
+  /// 并使用新的 [groupValue] 重建单选按钮 tile 以更新单选按钮的视觉外观。
   ///
-  /// The following arguments are required:
+  /// 以下参数是必需的：
   ///
-  /// * [value] and [groupValue] together determine whether the radio button is
-  ///   selected.
-  /// * [onChanged] is called when the user selects this radio button.
+  /// * [value] 和 [groupValue] 一起确定单选按钮是否被选中。
+  /// * [onChanged] 在用户选择此单选按钮时调用。
   const MongolRadioListTile({
     super.key,
     required this.value,
@@ -553,12 +546,12 @@ class MongolRadioListTile<T> extends StatelessWidget {
        useCupertinoCheckmarkStyle = false,
        assert(!isThreeLine || subtitle != null);
 
-  /// Creates a combination of a list tile and a platform adaptive radio.
+  /// 创建一个列表 tile 和平台自适应单选按钮的组合。
   ///
-  /// The checkbox uses [Radio.adaptive] to show a [CupertinoRadio] for
-  /// iOS platforms, or [Radio] for all others.
+  /// 单选按钮使用 [Radio.adaptive] 为 iOS 平台显示 [CupertinoRadio]，
+  /// 或为所有其他平台显示 [Radio]。
   ///
-  /// All other properties are the same as [RadioListTile].
+  /// 所有其他属性与 [RadioListTile] 相同。
   const MongolRadioListTile.adaptive({
     super.key,
     required this.value,
@@ -808,6 +801,9 @@ class MongolRadioListTile<T> extends StatelessWidget {
   /// Defaults to false.
   final bool useCupertinoCheckmarkStyle;
 
+  /// 构建小部件
+  ///
+  /// 根据 radioType 创建相应的单选按钮控件，并将其与 MongolListTile 组合
   @override
   Widget build(BuildContext context) {
     final Widget control;
@@ -815,7 +811,9 @@ class MongolRadioListTile<T> extends StatelessWidget {
       case _RadioType.material:
         control = Radio<T>(
           value: value,
+          // ignore: deprecated_member_use
           groupValue: groupValue,
+          // ignore: deprecated_member_use
           onChanged: onChanged,
           toggleable: toggleable,
           activeColor: activeColor,
@@ -830,7 +828,9 @@ class MongolRadioListTile<T> extends StatelessWidget {
       case _RadioType.adaptive:
         control = Radio<T>.adaptive(
           value: value,
+          // ignore: deprecated_member_use
           groupValue: groupValue,
+          // ignore: deprecated_member_use
           onChanged: onChanged,
           toggleable: toggleable,
           activeColor: activeColor,

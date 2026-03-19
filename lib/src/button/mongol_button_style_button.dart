@@ -38,22 +38,19 @@ import 'package:flutter/material.dart'
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// The base [StatefulWidget] class for buttons whose style is defined by a [ButtonStyle] object.
+/// 按钮的基础类，样式由 [ButtonStyle] 对象定义
 ///
-/// Concrete subclasses must override [defaultStyleOf] and [themeStyleOf].
+/// 具体子类必须重写 [defaultStyleOf] 和 [themeStyleOf] 方法
 ///
-/// See also:
-///
-///  * [MongolTextButton], a simple MongolButtonStyleButton without no outline or fill color.
-///  * [MongolFilledButton], a filled MongolButtonStyleButton button that doesn't elevate when pressed.
-///  * [MongolFilledButton.tonal], a filled MongolButtonStyleButton button variant that uses a secondary fill color.
-///  * [MongolElevatedButton], a filled MongolButtonStyleButton whose material elevates when pressed.
-///  * [MongolOutlinedButton], similar to [MongolTextButton], but with an outline and no fill color.
+/// 另请参阅：
+///  * [MongolTextButton] - 无轮廓和填充色的简单按钮
+///  * [MongolFilledButton] - 填充色按钮，按下时不提升
+///  * [MongolElevatedButton] - 填充色按钮，按下时材质会提升
+///  * [MongolOutlinedButton] - 带轮廓的按钮，无填充色
 abstract class MongolButtonStyleButton extends StatefulWidget {
-  /// Abstract const constructor. This constructor enables subclasses to provide
-  /// const constructors so that they can be used in const expressions.
+  /// 创建按钮样式按钮
   const MongolButtonStyleButton({
-    Key? key,
+    super.key,
     required this.onPressed,
     required this.onLongPress,
     required this.onHover,
@@ -65,52 +62,49 @@ abstract class MongolButtonStyleButton extends StatefulWidget {
     this.statesController,
     this.isSemanticButton = true,
     required this.child,
-  }) : super(key: key);
+  });
 
-  /// Called when the button is tapped or otherwise activated.
+  /// 当按钮被点击或以其他方式激活时调用。
   ///
-  /// If this callback and [onLongPress] are null, then the button will be disabled.
+  /// 如果此回调和 [onLongPress] 都为 null，则按钮将被禁用。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [enabled], which is true if the button is enabled.
+  ///  * [enabled]，如果按钮已启用，则为 true。
   final VoidCallback? onPressed;
 
-  /// Called when the button is long-pressed.
+  /// 当按钮被长按时调用。
   ///
-  /// If this callback and [onPressed] are null, then the button will be disabled.
+  /// 如果此回调和 [onPressed] 都为 null，则按钮将被禁用。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [enabled], which is true if the button is enabled.
+  ///  * [enabled]，如果按钮已启用，则为 true。
   final VoidCallback? onLongPress;
 
-  /// Called when a pointer enters or exits the button response area.
+  /// 当指针进入或退出按钮响应区域时调用。
   ///
-  /// The value passed to the callback is true if a pointer has entered this
-  /// part of the material and false if a pointer has exited this part of the
-  /// material.
+  /// 传递给回调的值为 true，如果指针已进入此
+  /// 材质部分，为 false 如果指针已退出此材质部分。
   final ValueChanged<bool>? onHover;
 
-  /// Handler called when the focus changes.
+  /// 当焦点变化时调用的处理程序。
   ///
-  /// Called with true if this widget's node gains focus, and false if it loses
-  /// focus.
+  /// 如果此小部件的节点获得焦点，则调用 true，如果失去焦点，则调用 false。
   final ValueChanged<bool>? onFocusChange;
 
-  /// Customizes this button's appearance.
+  /// 自定义此按钮的外观。
   ///
-  /// Non-null properties of this style override the corresponding
-  /// properties in [themeStyleOf] and [defaultStyleOf]. [WidgetStateProperty]s
-  /// that resolve to non-null values will similarly override the corresponding
-  /// [WidgetStateProperty]s in [themeStyleOf] and [defaultStyleOf].
+  /// 此样式的非空属性会覆盖 [themeStyleOf] 和 [defaultStyleOf] 中的相应
+  /// 属性。解析为非空值的 [WidgetStateProperty] 也会类似地覆盖 [themeStyleOf] 和 [defaultStyleOf] 中的相应
+  /// [WidgetStateProperty]。
   ///
-  /// Null by default.
+  /// 默认值为 null。
   final ButtonStyle? style;
 
   /// {@macro flutter.material.Material.clipBehavior}
   ///
-  /// Defaults to [Clip.none], and must not be null.
+  /// 默认值为 [Clip.none]，且不能为空。
   final Clip clipBehavior;
 
   /// {@macro flutter.widgets.Focus.focusNode}
@@ -122,55 +116,53 @@ abstract class MongolButtonStyleButton extends StatefulWidget {
   /// {@macro flutter.material.inkwell.statesController}
   final WidgetStatesController? statesController;
 
-  /// Determine whether this subtree represents a button.
+  /// 确定此子树是否表示按钮。
   ///
-  /// If this is null, the screen reader will not announce "button" when this
-  /// is focused. This is useful for [MenuItemButton] and [SubmenuButton] when we
-  /// traverse the menu system.
+  /// 如果为 null，则屏幕阅读器在此
+  /// 获得焦点时不会宣布 "button"。这对于 [MenuItemButton] 和 [SubmenuButton] 在我们
+  /// 遍历菜单系统时很有用。
   ///
-  /// Defaults to true.
+  /// 默认值为 true。
   final bool? isSemanticButton;
 
-  /// Typically the button's label.
+  /// 通常是按钮的标签。
   final Widget? child;
 
-  /// Returns a non-null [ButtonStyle] that's based primarily on the [Theme]'s
-  /// [ThemeData.textTheme] and [ThemeData.colorScheme].
+  /// 返回一个非空的 [ButtonStyle]，主要基于 [Theme] 的
+  /// [ThemeData.textTheme] 和 [ThemeData.colorScheme]。
   ///
-  /// The returned style can be overridden by the [style] parameter and
-  /// by the style returned by [themeStyleOf]. For example the default
-  /// style of the [TextButton] subclass can be overridden with its
-  /// [TextButton.style] constructor parameter, or with a
-  /// [TextButtonTheme].
+  /// 返回的样式可以被 [style] 参数和
+  /// [themeStyleOf] 返回的样式覆盖。例如，[TextButton] 子类的默认
+  /// 样式可以通过其 [TextButton.style] 构造函数参数或使用
+  /// [TextButtonTheme] 来覆盖。
   ///
-  /// Concrete button subclasses should return a ButtonStyle that
-  /// has no null properties, and where all of the [WidgetStateProperty]
-  /// properties resolve to non-null values.
+  /// 具体的按钮子类应该返回一个 ButtonStyle，
+  /// 该样式没有 null 属性，并且所有 [WidgetStateProperty]
+  /// 属性都解析为非空值。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [themeStyleOf], Returns the ButtonStyle of this button's component theme.
+  ///  * [themeStyleOf]，返回此按钮的组件主题的 ButtonStyle。
   @protected
   ButtonStyle defaultStyleOf(BuildContext context);
 
-  /// Returns the ButtonStyle that belongs to the button's component theme.
+  /// 返回属于按钮组件主题的 ButtonStyle。
   ///
-  /// The returned style can be overridden by the [style] parameter.
+  /// 返回的样式可以被 [style] 参数覆盖。
   ///
-  /// Concrete button subclasses should return the ButtonStyle for the
-  /// nearest subclass-specific inherited theme, and if no such theme
-  /// exists, then the same value from the overall [Theme].
+  /// 具体的按钮子类应该返回最近的子类特定继承主题的 ButtonStyle，
+  /// 如果不存在这样的主题，则返回整体 [Theme] 中的相同值。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [defaultStyleOf], Returns the default [ButtonStyle] for this button.
+  ///  * [defaultStyleOf]，返回此按钮的默认 [ButtonStyle]。
   @protected
   ButtonStyle? themeStyleOf(BuildContext context);
 
-  /// Whether the button is enabled or disabled.
+  /// 按钮是否启用或禁用。
   ///
-  /// Buttons are disabled by default. To enable a button, set its [onPressed]
-  /// or [onLongPress] properties to a non-null value.
+  /// 按钮默认是禁用的。要启用按钮，请将其 [onPressed]
+  /// 或 [onLongPress] 属性设置为非 null 值。
   bool get enabled => onPressed != null || onLongPress != null;
 
   @override
@@ -188,30 +180,33 @@ abstract class MongolButtonStyleButton extends StatefulWidget {
   }
 }
 
-/// The base [State] class for buttons whose style is defined by a [ButtonStyle] object.
+/// 按钮的基础 [State] 类，其样式由 [ButtonStyle] 对象定义。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolButtonStyleButton], the [StatefulWidget] subclass for which this class is the [State].
-///  * [MongolTextButton], a simple button without a shadow.
-///  * [MongolElevatedButton], a filled button whose material elevates when pressed.
-///  * [MongolFilledButton], a filled ButtonStyleButton that doesn't elevate when pressed.
-///  * [MongolOutlinedButton], similar to [MongolTextButton], but with an outline.
+///  * [MongolButtonStyleButton]，此类是其 [State] 的 [StatefulWidget] 子类。
+///  * [MongolTextButton]，一个没有阴影的简单按钮。
+///  * [MongolElevatedButton]，一个填充的按钮，按下时其材质会提升。
+///  * [MongolFilledButton]，一个填充的 ButtonStyleButton，按下时不会提升。
+///  * [MongolOutlinedButton]，类似于 [MongolTextButton]，但带有轮廓。
 class _MongolButtonStyleState extends State<MongolButtonStyleButton>
     with TickerProviderStateMixin {
-  AnimationController? _controller;
-  double? _elevation;
-  Color? _backgroundColor;
-  WidgetStatesController? internalStatesController;
+  AnimationController? _controller; // 动画控制器
+  double? _elevation; // 按钮的海拔高度
+  Color? _backgroundColor; // 按钮的背景颜色
+  WidgetStatesController? internalStatesController; // 内部状态控制器
 
+  /// 处理状态控制器变化
   void handleStatesControllerChange() {
-    // Force a rebuild to resolve MaterialStateProperty properties
+    // 强制重建以解析 MaterialStateProperty 属性
     setState(() {});
   }
 
+  /// 获取状态控制器
   WidgetStatesController get statesController =>
       widget.statesController ?? internalStatesController!;
 
+  /// 初始化状态控制器
   void initStatesController() {
     if (widget.statesController == null) {
       internalStatesController = WidgetStatesController();
@@ -260,6 +255,7 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
     final ButtonStyle? themeStyle = widget.themeStyleOf(context);
     final ButtonStyle defaultStyle = widget.defaultStyleOf(context);
 
+    /// 获取有效值，优先级为：widget.style > themeStyle > defaultStyle
     T? effectiveValue<T>(T? Function(ButtonStyle? style) getProperty) {
       final T? widgetValue = getProperty(widgetStyle);
       final T? themeValue = getProperty(themeStyle);
@@ -267,6 +263,7 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
       return widgetValue ?? themeValue ?? defaultValue;
     }
 
+    /// 解析 WidgetStateProperty 值
     T? resolve<T>(
         WidgetStateProperty<T>? Function(ButtonStyle? style) getProperty) {
       return effectiveValue(
@@ -473,6 +470,7 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
   }
 }
 
+/// 自定义鼠标光标类
 class _MouseCursor extends WidgetStateMouseCursor {
   const _MouseCursor(this.resolveCallback);
 
@@ -485,11 +483,11 @@ class _MouseCursor extends WidgetStateMouseCursor {
   String get debugDescription => 'ButtonStyleButton_MouseCursor';
 }
 
-/// A widget to pad the area around a [MaterialButton]'s inner [Material].
+/// 一个小部件，用于在 [MaterialButton] 的内部 [Material] 周围填充区域。
 ///
-/// Redirect taps that occur in the padded area around the child to the center
-/// of the child. This increases the size of the button and the button's
-/// "tap target", but not its material or its ink splashes.
+/// 将发生在子项周围填充区域中的点击重定向到子项的中心。
+/// 这增加了按钮的大小和按钮的
+/// "点击目标"，但不增加其材质或墨水飞溅。
 class _InputPadding extends SingleChildRenderObjectWidget {
   const _InputPadding({
     super.child,
@@ -510,6 +508,7 @@ class _InputPadding extends SingleChildRenderObjectWidget {
   }
 }
 
+/// _InputPadding 的渲染对象
 class _RenderInputPadding extends RenderShiftedBox {
   _RenderInputPadding(this._minSize, [RenderBox? child]) : super(child);
 
@@ -553,6 +552,7 @@ class _RenderInputPadding extends RenderShiftedBox {
     return 0.0;
   }
 
+  /// 计算大小
   Size _computeSize(
       {required BoxConstraints constraints,
       required ChildLayouter layoutChild}) {

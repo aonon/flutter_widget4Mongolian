@@ -13,17 +13,11 @@ import 'package:flutter/painting.dart';
 
 import 'mongol_text_align.dart';
 
-/// [MongolLineMetrics] stores the measurements and statistics of a single line in the
-/// paragraph.
+/// 段落单行测量和统计信息
 ///
-/// The measurements here are for the line as a whole, and represent the maximum
-/// extent of the line instead of per-run or per-glyph metrics. For more detailed
-/// metrics, [MongolParagraph.getBoxesForRange].
-///
-/// [MongolLineMetrics] should be obtained directly from the [MongolParagraph.computeLineMetrics]
-/// method.
+/// 存储整行文本的度量信息，通过 [MongolParagraph.computeLineMetrics] 获取
 class MongolLineMetrics {
-  /// Creates a [MongolLineMetrics] object with only the specified values.
+  /// 创建段落行度量信息
   MongolLineMetrics({
     required this.hardBreak,
     required this.ascent,
@@ -36,69 +30,31 @@ class MongolLineMetrics {
     required this.lineNumber,
   });
 
-  /// True if this line ends with an explicit line break (e.g. '\n') or is the end
-  /// of the paragraph. False otherwise.
+  /// 行是否以显式换行符结束
   final bool hardBreak;
 
-  /// The rise from the [baseline] as calculated from the font and style for this line.
-  ///
-  /// This is the final computed ascent and can be impacted by the strut, width(horizontal layout height),
-  /// scaling, as well as outlying runs that are very tall.
-  ///
-  /// The [ascent] is provided as a positive value, even though it is typically defined
-  /// in fonts as negative. This is to ensure the signage of operations with these
-  /// metrics directly reflects the intended signage of the value. For example,
-  /// the x coordinate of the right edge of the line is `baseline + ascent`.
+  /// 从基线开始的上升高度
   final double ascent;
 
-  /// The drop from the [baseline] as calculated from the font and style for this line.
-  ///
-  /// This is the final computed ascent and can be impacted by the strut, width(horizontal layout height),
-  /// scaling, as well as outlying runs that are very tall.
-  ///
-  /// The x coordinate of the left edge of the line is `baseline - descent`.
+  /// 从基线开始的下降高度
   final double descent;
 
-  /// The rise from the [baseline] as calculated from the font and style for this line
-  /// ignoring the [TextStyle.height].
-  ///
-  /// The [unscaledAscent] is provided as a positive value, even though it is typically
-  /// defined in fonts as negative. This is to ensure the signage of operations with
-  /// these metrics directly reflects the intended signage of the value.
+  /// 忽略行高的上升高度
   final double unscaledAscent;
 
-  /// Height of the line from the top edge of the topmost glyph to the bottom
-  /// edge of the bottommost glyph.
-  ///
-  /// This is not the same as the height of the paragraph.
-  ///
-  /// See also:
-  ///
-  ///  * [MongolParagraph.height], the max height passed in during layout.
+  /// 行的总高度
   final double height;
 
-  /// Total width of the line from the left edge to the right edge.
-  ///
-  /// This is equivalent to `round(ascent + descent)`. This value is provided
-  /// separately due to rounding causing sub-pixel differences from the unrounded
-  /// values.
+  /// 行的总宽度
   final double width;
 
-  /// The y coordinate of top edge of the line.
-  ///
-  /// The bottom edge can be obtained with `top + height`.
+  /// 行的顶部 y 坐标
   final double top;
 
-  /// The x coordinate of the baseline for this line from the left of the paragraph.
-  ///
-  /// The right edge of the paragraph up to and including this line may be obtained
-  /// through `baseline + ascent`.
+  /// 行的基线 x 坐标
   final double baseline;
 
-  /// The number of this line in the overall paragraph, with the first line being
-  /// index zero.
-  ///
-  /// For example, the first line is line 0, second line is line 1.
+  /// 行号，从 0 开始
   final int lineNumber;
 
   @override
@@ -136,23 +92,20 @@ class MongolLineMetrics {
   }
 }
 
-/// A paragraph of vertical Mongolian layout text.
+/// 蒙古文垂直排版段落类
 ///
-/// This class is a replacement for the Paragraph class. Since Paragraph hands
-/// all it's work down to the Flutter engine, this class also does the work
-/// of line-wrapping and laying out the text.
+/// 蒙古文具有独特的书写特点：
+/// 1. 文字书写方向：从上到下
+/// 2. 行移动方向：从左到右
+/// 3. 字体朝向：蒙古文字体头朝左，因此在垂直排版时需要将文字旋转90度
 ///
-/// The text is divided into a list of [_runs] where each run is a short
-/// substring (usually a word or CJK/emoji character). Sometimes a run includes
-/// multiple styles in which case [_rawStyledTextRuns] are used temporarily
-/// before they can be combined into single [_runs] just based on words. The
-/// [_runs] are then measured and layed out in [_lines] based on the given
-/// constraints.
+/// 本类负责实现蒙古文的垂直排版、换行和布局，核心实现包括：
+/// - 将整个画布旋转90度，实现垂直排版基础
+/// - 按从上到下方向排列文字，从左到右换行
+/// - 对蒙古文字符进行90度旋转，确保正确的显示朝向
+/// - 处理行内对齐、间距和溢出等布局问题
 class MongolParagraph {
-  /// This class is created by the library, and should not be instantiated
-  /// or extended directly.
-  ///
-  /// To create a [MongolParagraph] object, use a [MongolParagraphBuilder].
+  /// 由 [MongolParagraphBuilder] 创建，不应直接实例化
   MongolParagraph._(
     this._runs,
     this._text,
@@ -173,35 +126,27 @@ class MongolParagraph {
   double? _minIntrinsicHeight;
   double? _maxIntrinsicHeight;
 
-  /// The amount of horizontal space this paragraph occupies.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落占用的水平空间
+  /// 仅在调用 [layout] 后有效
   double get width => _width ?? 0;
 
-  /// The amount of vertical space this paragraph occupies.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落占用的垂直空间
+  /// 仅在调用 [layout] 后有效
   double get height => _height ?? 0;
 
-  /// The distance from the top edge of the topmost glyph to the bottom edge of
-  /// the bottommost glyph in the paragraph.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落中最长行的高度
+  /// 仅在调用 [layout] 后有效
   double get longestLine => _longestLine ?? 0;
 
-  /// The minimum height that this paragraph could be without failing to paint
-  /// its contents within itself.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落的最小固有高度
+  /// 仅在调用 [layout] 后有效
   double get minIntrinsicHeight => _minIntrinsicHeight ?? 0;
 
-  /// Returns the smallest height beyond which increasing the height never
-  /// decreases the width.
-  ///
-  /// Valid only after [layout] has been called.
+  /// 段落的最大固有高度
+  /// 仅在调用 [layout] 后有效
   double get maxIntrinsicHeight => _maxIntrinsicHeight ?? double.infinity;
 
-  /// The distance to the alphabetic baseline the same as for horizontal text.
+  /// 字母基线距离
   double get alphabeticBaseline {
     if (_runs.isEmpty) {
       return 0.0;
@@ -209,7 +154,7 @@ class MongolParagraph {
     return _runs.first.paragraph.alphabeticBaseline;
   }
 
-  /// The distance to the ideographic baseline the same as for horizontal text.
+  /// 表意基线距离
   double get ideographicBaseline {
     if (_runs.isEmpty) {
       return 0.0;
@@ -217,24 +162,21 @@ class MongolParagraph {
     return _runs.first.paragraph.ideographicBaseline;
   }
 
-  /// True if there is more horizontal content, but the text was truncated, either
-  /// because we reached `maxLines` lines of text or because the `maxLines` was
-  /// null, `ellipsis` was not null, and one of the lines exceeded the height
-  /// constraint.
-  ///
-  /// See the discussion of the `maxLines` and `ellipsis` arguments at
-  /// [ParagraphStyle].
+  /// 文本是否超过最大行数
   bool get didExceedMaxLines {
     return _didExceedMaxLines;
   }
 
   bool _didExceedMaxLines = false;
 
-  /// Computes the size and position of each glyph in the paragraph.
-  ///
-  /// The [MongolParagraphConstraints] control how tall the text is allowed
-  /// to be.
-  void layout(MongolParagraphConstraints constraints) =>
+    /// 计算段落中每个字形的大小和位置。
+    ///
+    /// 说明（面向 Flutter 初学者）:
+    /// - 这个库实现的是垂直排版（蒙古文从上到下）, 但内部使用的是水平文本测量。
+    /// - `MongolParagraphConstraints.height` 表示在竖直方向上可用的行长，
+    ///   在内部被当作水平的 "max line length" 来计算换行（随后在绘制时旋转画布）。
+    /// - 在调用这个方法后，需要调用 `draw` 才能把文本绘制到画布上。
+    void layout(MongolParagraphConstraints constraints) =>
       _layout(constraints.height);
 
   void _layout(double height) {
@@ -246,15 +188,25 @@ class MongolParagraph {
   }
 
   final List<_LineInfo> _lines = [];
+  // Cumulative horizontal offsets (in vertical layout terms) for each line.
+  // _lineOffsets[i] is the sum of heights of lines 0..i inclusive and
+  // is used to quickly map a vertical coordinate to a line index.
+  final List<double> _lineOffsets = [];
 
   // Internally this method uses "width" and "height" naming with regard
   // to a horizontal line of text. Rotation doesn't happen until drawing.
   void _calculateLineBreaks(double maxLineLength) {
+    // 解释：
+    // - `maxLineLength` 在外部看起来是段落的高度（因为我们最终是竖直排版），
+    //   但在内部我们把一行当作水平的一段文字来计算，所以这里称为 "maxLineLength"。
+    // - `_runs` 是已经按样式拆分并测量好的段落片段，一个 run 通常是一个可绘制的最小单位（字、词或 emoji）。
+    // - 本函数把这些 run 累加到一行（horizontal）中，超过 `maxLineLength` 时换到下一行。
     if (_runs.isEmpty) {
       return;
     }
     if (_lines.isNotEmpty) {
       _lines.clear();
+      _lineOffsets.clear();
       _didExceedMaxLines = false;
     }
 
@@ -318,9 +270,22 @@ class MongolParagraph {
     }
     _didExceedMaxLines = false;
     final bounds = Rect.fromLTRB(0, 0, width, height);
-    final lineInfo = _LineInfo(start, end, bounds);
+    // precompute cumulative run widths for faster hit testing later
+    final runCumWidths = <double>[];
+    if (start >= 0 && end > start) {
+      var acc = 0.0;
+      for (var i = start; i < end; i++) {
+        acc += _runs[i].width;
+        runCumWidths.add(acc);
+      }
+    }
+    final lineInfo = _LineInfo(start, end, bounds, runCumWidths);
     _lines.add(lineInfo);
     _longestLine = math.max(longestLine, lineInfo.bounds.width);
+
+    // update line offsets
+    final lastOffset = _lineOffsets.isEmpty ? 0.0 : _lineOffsets.last;
+    _lineOffsets.add(lastOffset + bounds.height);
   }
 
   void _calculateWidth() {
@@ -371,7 +336,7 @@ class MongolParagraph {
         math.max(minLineEndsWithoutNewLine, maxLineEndsWithNewLine);
   }
 
-  /// Returns the text position closest to the given offset.
+  /// 获取最接近给定偏移量的文本位置
   TextPosition getPositionForOffset(Offset offset) {
     final encoded = _getPositionForOffset(offset.dx, offset.dy);
     return TextPosition(
@@ -384,51 +349,67 @@ class MongolParagraph {
     const upstream = 0;
     const downstream = 1;
 
+    // 说明：外部的 `dx`/`dy` 是在竖直布局坐标系中的坐标（段落的左上原点）。
+    // 我们内部把行和 run 都当作水平（未旋转）来存储，所以这里需要把竖直坐标
+    // 映射回内部的行/run 索引。
     if (_lines.isEmpty) {
       return [0, downstream];
     }
 
-    // find the line
-    _LineInfo? matchedLine;
-    var rightEdgeAfterRotation = 0.0;
-    var rotatedRunDx = 0.0;
-    var rotatedRunDy = 0.0;
-    for (var line in _lines) {
-      rightEdgeAfterRotation += line.bounds.bottom;
-      // todo rotatedRunDx always = 0 ?
-      // maybe rotatedRunDx = rightEdgeAfterRotation; before the previous line code?
-      rotatedRunDx = line.bounds.top;
-      if (dx <= rightEdgeAfterRotation) {
-        matchedLine = line;
-        break;
+    // find the line using binary search on _lineOffsets
+    _LineInfo matchedLine;
+    if (_lineOffsets.isEmpty) {
+      matchedLine = _lines.last;
+    } else {
+      var low = 0;
+      var high = _lineOffsets.length - 1;
+      while (low <= high) {
+        final mid = (low + high) >> 1;
+        if (dx <= _lineOffsets[mid]) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
       }
+      final lineIndex = math.min(low, _lines.length - 1);
+      matchedLine = _lines[lineIndex];
     }
-    matchedLine ??= _lines.last;
 
-    // find the run in the line
+    // find the run in the line using cumulative run widths (binary search)
     _TextRun? matchedRun;
-    var bottomEdgeAfterRotating = 0.0;
-    for (var i = matchedLine.textRunStart; i < matchedLine.textRunEnd; i++) {
-      final run = _runs[i];
-      rotatedRunDy = bottomEdgeAfterRotating;
-      bottomEdgeAfterRotating += run.width;
-      if (dy <= bottomEdgeAfterRotating) {
-        matchedRun = run;
-        break;
-      }
-    }
-    if (matchedRun == null) {
+    double rotatedRunDy = 0.0;
+    final rotatedRunDx = matchedLine.bounds.top;
+    if (matchedLine.runCumWidths.isEmpty) {
+      // fallback: select last run
       final matchedRunIndex = matchedLine.textRunEnd - 1;
       if (matchedRunIndex.isNegative) {
         matchedRun = _runs.last;
       } else {
         matchedRun = _runs[matchedRunIndex];
       }
+    } else {
+      var low = 0;
+      var high = matchedLine.runCumWidths.length - 1;
+      while (low <= high) {
+        final mid = (low + high) >> 1;
+        if (dy <= matchedLine.runCumWidths[mid]) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      final runIndexInLine = math.min(low, matchedLine.runCumWidths.length - 1);
+      final matchedRunIndex = matchedLine.textRunStart + runIndexInLine;
+      matchedRun = _runs[math.min(matchedRunIndex, _runs.length - 1)];
+      rotatedRunDy = runIndexInLine == 0 ? 0.0 : matchedLine.runCumWidths[runIndexInLine - 1];
     }
+    // matchedRun is guaranteed to be non-null here because both branches
+    // above assign a value.
 
     // find the offset
     final paragraphDx = dy - rotatedRunDy;
     final paragraphDy = dx - rotatedRunDx;
+    // `offset` 是将外部的 (dx,dy) 转换为内部 paragraph 使用的坐标
     final offset = Offset(paragraphDx, paragraphDy);
     final runPosition = matchedRun.paragraph.getPositionForOffset(offset);
     final textOffset = matchedRun.start + runPosition.offset;
@@ -440,16 +421,26 @@ class MongolParagraph {
     return [textOffset, textAffinity];
   }
 
-  /// Draws the precomputed text on a [canvas] one line at a time in vertical
-  /// lines that wrap from left to right.
+  /// 在画布上绘制垂直蒙古文
+  ///
+  /// 蒙古文绘制流程：
+  /// 1. 保存画布状态
+  /// 2. 应用偏移量
+  /// 3. 将整个画布旋转90度，建立垂直排版基础坐标系
+  /// 4. 按从上到下的顺序绘制每一行
+  /// 5. 对需要旋转的字符（如蒙古文）进行额外的90度旋转处理
+  /// 6. 恢复画布状态
   void draw(Canvas canvas, Offset offset) {
     final shouldDrawEllipsis = _didExceedMaxLines && _ellipsis != null;
 
     // translate for the offset
+    // 保存并移动画布到段落的左上角 (外部坐标系)
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
 
-    // rotate the canvas 90 degrees
+    // rotate the canvas 90 degrees clockwise so that horizontal text
+    // (how we measured it) appears vertical on the screen.
+    // 简单理解：我们把内部的 "水平行" 顺时针旋转 90°，变成垂直的视觉效果。
     canvas.rotate(math.pi / 2);
 
     // loop through every line
@@ -470,8 +461,10 @@ class MongolParagraph {
 
   void _drawEachRunInCurrentLine(
       Canvas canvas, _LineInfo line, bool shouldDrawEllipsis, bool isLastLine) {
+    // 每行绘制前保存画布状态，便于恢复
     canvas.save();
 
+    // runSpacing 是行内额外的间距（用于两端对齐时分配空白）
     var runSpacing = 0.0;
     switch (_textAlign) {
       case MongolTextAlign.top:
@@ -498,10 +491,12 @@ class MongolParagraph {
     for (var j = startIndex; j <= endIndex; j++) {
       final run = _runs[j];
 
+      // alignmentOffset: 在 run 宽度小于行高度时，垂直居中该 run
       var alignmentOffset = 0.0;
       if (run.isRotated) {
         alignmentOffset = (line.bounds.height - run.width) / 2;
       }
+      // verticalShift: 根据字体基线做细微的垂直偏移，以便视觉上更居中
       var verticalShift = 0.0;
       if (run.isRotated) {
         final descent = run.paragraph.height - run.paragraph.alphabeticBaseline;
@@ -509,6 +504,7 @@ class MongolParagraph {
       }
       final offset = Offset(verticalShift, alignmentOffset);
 
+      // 如果需要绘制省略号且当前是最后一行的最后一个 run，则处理省略号逻辑
       if (shouldDrawEllipsis && isLastLine && j == endIndex) {
         if (maxIntrinsicHeight + _ellipsis!.height < height) {
           run.draw(canvas, offset);
@@ -525,15 +521,10 @@ class MongolParagraph {
     canvas.restore();
   }
 
-  /// Returns a list of rects that enclose the given text range.
+  /// 获取给定文本范围的包围矩形列表
   ///
-  /// Coordinates of the Rect are relative to the upper-left corner of the
-  /// paragraph, where positive y values indicate down. Orientation is as
-  /// vertical Mongolian text with left to right line wrapping.
-  ///
-  /// Note that this method behaves slightly differently than
-  /// Paragraph.getBoxesForRange. The Paragraph version returns List<TextBox>,
-  /// but TextBox doesn't accurately describe vertical text so Rect is used.
+  /// 矩形坐标相对于段落左上角，正y值向下。
+  /// 方向为垂直蒙古文，从左到右换行。
   List<Rect> getBoxesForRange(int start, int end) {
     final boxes = <Rect>[];
 
@@ -546,7 +537,8 @@ class MongolParagraph {
     // Allow the [end] index to be larger than the text length but don't use it
     final effectiveEnd = math.min(textLength, end);
 
-    // Horizontal offset for the left side of the vertical rect
+    // Horizontal offset (`dx`) 表示在竖直排版下，当前列（line）在水平方向上的起点。
+    // 因为我们把每一行的高度作为列宽来累加，所以这里使用 line.bounds.height。
     var dx = 0.0;
 
     // loop through each line
@@ -608,11 +600,12 @@ class MongolParagraph {
     var boxWidth = 0.0;
     var boxHeight = 0.0;
 
-    // This is the vertical offset for the box in vertical line orientation
-    // It will only be non-zero if this is the first box.
+    // `dy` 是在当前竖直行中（即内部水平行的方向）沿着文字增长方向的偏移量。
+    // 对于第一段选择，它通常是 0，但如果选择从行中间开始，`dy` 会记录偏移。
     var dy = 0.0;
 
     // loop though every run in the line
+    // If the line has cumulative run widths we can use them to skip runs quickly.
     for (var j = line.textRunStart; j < line.textRunEnd; j++) {
       final run = _runs[j];
 
@@ -672,15 +665,15 @@ class MongolParagraph {
     return Rect.fromLTWH(dx, dy, boxWidth, boxHeight);
   }
 
-  /// Returns the [TextRange] of the word at the given [TextPosition].
+  /// 获取给定文本位置处的单词边界
   ///
-  /// The current implementation just returns the correct text run, which is
-  /// generally a word.
+  /// 当前实现返回正确的文本片段，通常是一个单词
   TextRange getWordBoundary(TextPosition position) {
     final offset = position.offset;
     if (offset >= _text.length) {
       return TextRange(start: _text.length, end: offset);
     }
+    // 先找到包含该偏移的 run，然后在 run 内使用分词/换行规则找到单词边界。
     final run = _getRunFromOffset(offset);
     if (run == null) {
       return TextRange.empty;
@@ -710,7 +703,8 @@ class MongolParagraph {
     }
     var min = 0;
     var max = _runs.length - 1;
-    // do a binary search
+    // 使用二分查找在已测量的 runs 中定位包含 `offset` 的 run，
+    // 这样比线性查找要快，尤其是在长文本时。
     while (min <= max) {
       final guess = (max + min) ~/ 2;
       if (offset >= _runs[guess].end) {
@@ -726,15 +720,11 @@ class MongolParagraph {
     return null;
   }
 
-  /// Returns the [TextRange] of the line at the given [TextPosition].
+  /// 获取给定文本位置处的行边界
   ///
-  /// The newline (if any) is NOT returned as part of the range.
-  /// https://github.com/flutter/flutter/issues/83392
-  ///
-  /// Not valid until after layout.
-  ///
-  /// This can potentially be expensive, since it needs to compute the line
-  /// metrics, so use it sparingly.
+  /// 换行符不包含在返回的范围内
+  /// 仅在调用 layout 后有效
+  /// 此方法可能较昂贵，建议谨慎使用
   TextRange getLineBoundary(TextPosition position) {
     final offset = position.offset;
     if (offset > _text.length) {
@@ -767,13 +757,10 @@ class MongolParagraph {
     return TextRange(start: start, end: end);
   }
 
-  /// Returns the full list of [MongolLineMetrics] that describe in detail the various
-  /// metrics of each laid out line.
+  /// 获取每一行的详细度量信息列表
   ///
-  /// Not valid until after layout.
-  ///
-  /// This can potentially return a large amount of data, so it is not recommended
-  /// to repeatedly call this. Instead, cache the results.
+  /// 仅在调用 layout 后有效
+  /// 可能返回大量数据，建议缓存结果而非重复调用
   List<MongolLineMetrics> computeLineMetrics() {
     final List<MongolLineMetrics> metrics = <MongolLineMetrics>[];
     for (int index = 0; index < _lines.length; index += 1) {
@@ -841,8 +828,8 @@ class MongolParagraph {
     return metrics;
   }
 
-  /// Release the resources used by this object. The object is no longer usable
-  /// after this method is called.
+  /// 释放对象使用的资源
+  /// 调用后对象不再可用
   void dispose() {
     assert(!_disposed);
     assert(() {
@@ -876,11 +863,11 @@ class MongolParagraph {
   }
 }
 
-/// Layout constraints for [MongolParagraph] objects.
+/// [MongolParagraph] 的布局约束
 ///
-/// Instances of this class are typically used with [MongolParagraph.layout].
+/// 通常与 [MongolParagraph.layout] 一起使用
 ///
-/// The only constraint that can be specified is the [height].
+/// 唯一可指定的约束是 [height]
 class MongolParagraphConstraints {
   const MongolParagraphConstraints({
     required this.height,
@@ -902,20 +889,11 @@ class MongolParagraphConstraints {
   String toString() => '$runtimeType(height: $height)';
 }
 
-/// Builds a [MongolParagraph] containing text with the given styling
-/// information.
+/// 构建带有样式信息的 [MongolParagraph]
 ///
-/// To set the paragraph's style, pass an appropriately-configured
-/// [ParagraphStyle] object to the [MongolParagraphBuilder] constructor.
-///
-/// Then, call combinations of [pushStyle], [addText], and [pop] to add styled
-/// text to the object.
-///
-/// Finally, call [build] to obtain the constructed [MongolParagraph] object.
-/// After this point, the builder is no longer usable.
-///
-/// After constructing a [MongolParagraph], call [MongolParagraph.layout] on
-/// it and then paint it with [MongolParagraph.draw].
+/// 通过 [pushStyle]、[addText] 和 [pop] 方法添加样式化文本，
+/// 最后调用 [build] 获取构建好的 [MongolParagraph] 对象。
+/// 调用 [build] 后，构建器不再可用。
 class MongolParagraphBuilder {
   MongolParagraphBuilder(
     ui.ParagraphStyle style, {
@@ -1285,11 +1263,10 @@ class _TextRun {
   /// unit).
   final int end;
 
-  /// Whether this text run should be rotated 90 degrees counterclockwise in
-  /// relation to the rest of the text.
+  /// 文本片段是否需要逆时针旋转90度
   ///
-  /// This would normally be for emoji and  CJK characters so that they will
-  /// appear in the correct orientation in a vertical line of text.
+  /// 蒙古文、日文、中文等字符在垂直排版时需要旋转，以保证正确的显示朝向
+  /// 蒙古文字体头朝左，因此在垂直排版时必须旋转90度才能正确显示
   final bool isRotated;
 
   /// The pre-computed text layout for this run.
@@ -1307,11 +1284,24 @@ class _TextRun {
     return paragraph.height;
   }
 
+  /// 绘制文本片段
+  ///
+  /// 蒙古文绘制处理：
+  /// 1. 对于需要旋转的文本（如蒙古文）：
+  ///    - 保存画布状态
+  ///    - 应用偏移量
+  ///    - 逆时针旋转90度，使蒙古文字体朝向正确
+  ///    - 平移调整位置，确保文字居中对齐
+  ///    - 绘制段落
+  ///    - 恢复画布状态
+  /// 2. 对于不需要旋转的文本，直接绘制
   void draw(ui.Canvas canvas, ui.Offset offset) {
     if (isRotated) {
       canvas.save();
       canvas.translate(offset.dx, offset.dy);
+      // 逆时针旋转90度，使蒙古文字体朝向正确
       canvas.rotate(-math.pi / 2);
+      // 平移调整位置
       canvas.translate(-paragraph.maxIntrinsicWidth, 0);
       canvas.drawParagraph(paragraph, const ui.Offset(0, 0));
       canvas.restore();
@@ -1328,7 +1318,7 @@ class _TextRun {
 ///
 /// The [bounds] is the size of the unrotated text line.
 class _LineInfo {
-  _LineInfo(this.textRunStart, this.textRunEnd, this.bounds);
+  _LineInfo(this.textRunStart, this.textRunEnd, this.bounds, this.runCumWidths);
 
   /// The index of the run in [_runs] where this line starts
   final int textRunStart;
@@ -1341,6 +1331,10 @@ class _LineInfo {
   /// There is no offset so [left] and [top] are `0`. Just use [width] and
   /// [height].
   final Rect bounds;
+
+  /// Cumulative run widths for runs in this line.
+  /// Example: [w1, w1+w2, w1+w2+w3]
+  final List<double> runCumWidths;
 }
 
 // This is for keeping track of the text style stack.

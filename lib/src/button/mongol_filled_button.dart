@@ -17,32 +17,31 @@ import 'mongol_elevated_button.dart';
 
 enum _MongolFilledButtonVariant { filled, tonal }
 
-/// A Material Design Mongol filled button.
+/// Material Design 蒙古文填充按钮。
 ///
-/// Filled buttons have the most visual impact after the [FloatingActionButton],
-/// and should be used for important, final actions that complete a flow,
-/// like **Save**, **Join now**, or **Confirm**.
+/// 填充按钮在 [FloatingActionButton] 之后具有最强的视觉冲击力，
+/// 应该用于完成流程的重要最终操作，
+/// 例如 **保存**、**立即加入** 或 **确认**。
 ///
-/// A filled button is a label [child] displayed on a [Material]
-/// widget. The label's [MongolText] and [Icon] widgets are displayed in
-/// [style]'s [ButtonStyle.foregroundColor] and the button's filled
-/// background is the [ButtonStyle.backgroundColor].
+/// 填充按钮是一个显示在 [Material]
+/// 小部件上的标签 [child]。标签的 [MongolText] 和 [Icon] 小部件以
+/// [style] 的 [ButtonStyle.foregroundColor] 显示，按钮的填充
+/// 背景是 [ButtonStyle.backgroundColor]。
 ///
-/// The filled button's default style is defined by
-/// [defaultStyleOf]. The style of this filled button can be
-/// overridden with its [style] parameter. The style of all filled
-/// buttons in a subtree can be overridden with the
-/// [FilledButtonTheme], and the style of all of the filled
-/// buttons in an app can be overridden with the [Theme]'s
-/// [ThemeData.filledButtonTheme] property.
+/// 填充按钮的默认样式由
+/// [defaultStyleOf] 定义。此填充按钮的样式可以
+/// 通过其 [style] 参数覆盖。子树中所有填充
+/// 按钮的样式可以通过
+/// [FilledButtonTheme] 覆盖，应用中所有填充
+/// 按钮的样式可以通过 [Theme] 的
+/// [ThemeData.filledButtonTheme] 属性覆盖。
 ///
-/// The static [styleFrom] method is a convenient way to create a
-/// filled button [ButtonStyle] from simple values.
+/// 静态 [styleFrom] 方法是创建填充按钮
+/// [ButtonStyle] 的便捷方法，可从简单值创建。
 ///
-/// If [onPressed] and [onLongPress] callbacks are null, then the
-/// button will be disabled.
+/// 如果 [onPressed] 和 [onLongPress] 回调为 null，则按钮将被禁用。
 ///
-/// To create a 'filled tonal' button, use [MongolFilledButton.tonal].
+/// 要创建 "填充色调" 按钮，请使用 [MongolFilledButton.tonal]。
 ///
 /// {@tool dartpad}
 /// This sample produces enabled and disabled filled and filled tonal
@@ -59,7 +58,7 @@ enum _MongolFilledButtonVariant { filled, tonal }
 ///  * <https://material.io/design/components/buttons.html>
 ///  * <https://m3.material.io/components/buttons>
 class MongolFilledButton extends MongolButtonStyleButton {
-  /// Create a MongolFilledButton.
+  /// 创建一个 MongolFilledButton。
   const MongolFilledButton({
     super.key,
     required super.onPressed,
@@ -74,10 +73,10 @@ class MongolFilledButton extends MongolButtonStyleButton {
     required super.child,
   }) : _variant = _MongolFilledButtonVariant.filled;
 
-  /// Create a mongol filled button from [icon] and [label].
+  /// 从 [icon] 和 [label] 创建一个蒙古文填充按钮。
   ///
-  /// The icon and label are arranged in a row with padding at the start and end
-  /// and a gap between them.
+  /// 图标和标签排列成一列，开头和结尾有填充，
+  /// 中间有一个间隙。
   factory MongolFilledButton.icon({
     Key? key,
     required VoidCallback? onPressed,
@@ -93,12 +92,11 @@ class MongolFilledButton extends MongolButtonStyleButton {
     required Widget label,
   }) = _MongolFilledButtonWithIcon;
 
-  /// Create a tonal variant of MongolFilledButton.
+  /// 创建 MongolFilledButton 的色调变体。
   ///
-  /// A filled tonal button is an alternative middle ground between
-  /// [MongolFilledButton] and [MongolOutlinedButton]. They’re useful in contexts where
-  /// a lower-priority button requires slightly more emphasis than an
-  /// outline would give, such as "Next" in an onboarding flow.
+  /// 填充色调按钮是 [MongolFilledButton] 和 [MongolOutlinedButton] 之间的中间选择。
+  /// 它们在低优先级按钮需要比轮廓更多强调的上下文中很有用，
+  /// 例如入门流程中的 "下一步"。
   const MongolFilledButton.tonal({
     super.key,
     required super.onPressed,
@@ -113,10 +111,10 @@ class MongolFilledButton extends MongolButtonStyleButton {
     required super.child,
   }) : _variant = _MongolFilledButtonVariant.tonal;
 
-  /// Create a mongol filled tonal button from [icon] and [label].
+  /// 从 [icon] 和 [label] 创建一个蒙古文填充色调按钮。
   ///
-  /// The icon and label are arranged in a row with padding at the start and end
-  /// and a gap between them.
+  /// 图标和标签排列成一列，开头和结尾有填充，
+  /// 中间有一个间隙。
   factory MongolFilledButton.tonalIcon({
     Key? key,
     required VoidCallback? onPressed,
@@ -147,33 +145,29 @@ class MongolFilledButton extends MongolButtonStyleButton {
     );
   }
 
-  /// A static convenience method that constructs a filled button
-  /// [ButtonStyle] given simple values.
+  /// 一个静态便捷方法，根据简单值构造填充按钮的 [ButtonStyle]。
   ///
-  /// The [foregroundColor], and [disabledForegroundColor] colors are used to create a
-  /// [MaterialStateProperty] [ButtonStyle.foregroundColor] value. The
-  /// [backgroundColor] and [disabledBackgroundColor] are used to create a
-  /// [MaterialStateProperty] [ButtonStyle.backgroundColor] value.
+  /// [foregroundColor] 和 [disabledForegroundColor] 颜色用于创建
+  /// [MaterialStateProperty] [ButtonStyle.foregroundColor] 值。
+  /// [backgroundColor] 和 [disabledBackgroundColor] 用于创建
+  /// [MaterialStateProperty] [ButtonStyle.backgroundColor] 值。
   ///
-  /// The button's elevations are defined relative to the [elevation]
-  /// parameter. The disabled elevation is the same as the parameter
-  /// value, [elevation] + 2 is used when the button is hovered
-  /// or focused, and elevation + 6 is used when the button is pressed.
+  /// 按钮的海拔高度是相对于 [elevation]
+  /// 参数定义的。禁用的海拔高度与参数值相同，
+  /// 当按钮被悬停或聚焦时使用 [elevation] + 2，当按钮被按下时使用 elevation + 6。
   ///
-  /// Similarly, the [enabledMouseCursor] and [disabledMouseCursor]
-  /// parameters are used to construct [ButtonStyle.mouseCursor].
+  /// 同样，[enabledMouseCursor] 和 [disabledMouseCursor]
+  /// 参数用于构造 [ButtonStyle.mouseCursor]。
   ///
-  /// All of the other parameters are either used directly or used to
-  /// create a [WidgetStateProperty] with a single value for all
-  /// states.
+  /// 所有其他参数要么直接使用，要么用于
+  /// 为所有状态创建具有单一值的 [WidgetStateProperty]。
   ///
-  /// All parameters default to null, by default this method returns
-  /// a [ButtonStyle] that doesn't override anything.
+  /// 所有参数默认为 null，默认情况下此方法返回
+  /// 一个不覆盖任何内容的 [ButtonStyle]。
   ///
-  /// For example, to override the default text and icon colors for a
-  /// [MongolFilledButton], as well as its overlay color, with all of the
-  /// standard opacity adjustments for the pressed, focused, and
-  /// hovered states, one could write:
+  /// 例如，要覆盖 [MongolFilledButton] 的默认文本和图标颜色，
+  /// 以及其覆盖颜色，并为按下、聚焦和
+  /// 悬停状态提供所有标准不透明度调整，可以这样写：
   ///
   /// ```dart
   /// MongolFilledButton(
@@ -183,7 +177,7 @@ class MongolFilledButton extends MongolButtonStyleButton {
   /// );
   /// ```
   ///
-  /// or for a Filled tonal variant:
+  /// 或者对于填充色调变体：
   /// ```dart
   /// MongolFilledButton.tonal(
   ///   style: MongolFilledButton.styleFrom(foregroundColor: Colors.green),
@@ -259,26 +253,23 @@ class MongolFilledButton extends MongolButtonStyleButton {
 
   final _MongolFilledButtonVariant _variant;
 
-  /// Defines the button's default appearance.
+  /// 定义按钮的默认外观。
   ///
-  /// The button [child]'s [MongolText] and [Icon] widgets are rendered with
-  /// the [ButtonStyle]'s foreground color. The button's [InkWell] adds
-  /// the style's overlay color when the button is focused, hovered
-  /// or pressed. The button's background color becomes its [Material]
-  /// color.
+  /// 按钮 [child] 的 [MongolText] 和 [Icon] 小部件以
+  /// [ButtonStyle] 的前景色渲染。按钮的 [InkWell] 在按钮被聚焦、悬停
+  /// 或按下时添加样式的覆盖颜色。按钮的背景颜色成为其 [Material]
+  /// 颜色。
   ///
-  /// All of the ButtonStyle's defaults appear below. In this list
-  /// "Theme.foo" is shorthand for `Theme.of(context).foo`. Color
-  /// scheme values like "onSurface(0.38)" are shorthand for
-  /// `onSurface.withValues(alpha: 0.38)`. [WidgetStateProperty] valued
-  /// properties that are not followed by a sublist have the same
-  /// value for all states, otherwise the values are as specified for
-  /// each state, and "others" means all other states.
+  /// 以下是 ButtonStyle 的所有默认值。在此列表中
+  /// "Theme.foo" 是 `Theme.of(context).foo` 的简写。颜色
+  /// 方案值如 "onSurface(0.38)" 是 `onSurface.withValues(alpha: 0.38)` 的简写。
+  /// [WidgetStateProperty] 类型的属性如果后面没有子列表，则所有状态都具有相同
+  /// 的值，否则值按每个状态指定，"others" 表示所有其他状态。
   ///
   /// {@macro flutter.material.elevated_button.default_font_size}
   ///
-  /// The color of the [ButtonStyle.textStyle] is not used, the
-  /// [ButtonStyle.foregroundColor] color is used instead.
+  /// [ButtonStyle.textStyle] 的颜色不使用，而是使用
+  /// [ButtonStyle.foregroundColor] 颜色。
   ///
   /// * `textStyle` - Theme.textTheme.labelLarge
   /// * `backgroundColor`
@@ -317,7 +308,7 @@ class MongolFilledButton extends MongolButtonStyleButton {
   /// * `alignment` - Alignment.center
   /// * `splashFactory` - Theme.splashFactory
   ///
-  /// The default padding values for the [MongolFilledButton.icon] factory are slightly different:
+  /// [MongolFilledButton.icon] 工厂的默认填充值略有不同：
   ///
   /// * `padding`
   ///   * `default font size <= 14` - start(12) end(16)
@@ -325,15 +316,13 @@ class MongolFilledButton extends MongolButtonStyleButton {
   ///   * `28 < default font size <= 36` - lerp(vertical(8), vertical(4))
   ///   * `36 < default font size` - vertical(4)
   ///
-  /// The default value for `side`, which defines the appearance of the button's
-  /// outline, is null. That means that the outline is defined by the button
-  /// shape's [OutlinedBorder.side]. Typically the default value of an
-  /// [OutlinedBorder]'s side is [BorderSide.none], so an outline is not drawn.
+  /// `side` 的默认值（定义按钮轮廓的外观）为 null。这意味着轮廓由按钮
+  /// 形状的 [OutlinedBorder.side] 定义。通常，[OutlinedBorder]
+  /// 的 side 的默认值是 [BorderSide.none]，因此不绘制轮廓。
   ///
-  /// ## Material 3 defaults
+  /// ## Material 3 默认值
   ///
-  /// If [ThemeData.useMaterial3] is set to true the following defaults will
-  /// be used:
+  /// 如果 [ThemeData.useMaterial3] 设置为 true，则将使用以下默认值：
   ///
   /// * `textStyle` - Theme.textTheme.labelLarge
   /// * `backgroundColor`
@@ -372,8 +361,8 @@ class MongolFilledButton extends MongolButtonStyleButton {
   /// * `alignment` - Alignment.center
   /// * `splashFactory` - Theme.splashFactory
   ///
-  /// For the [MongolFilledButton.icon] factory, the start (generally the top) value of
-  /// [padding] is reduced from 24 to 16.
+  /// 对于 [MongolFilledButton.icon] 工厂，[padding] 的开始（通常是顶部）值
+  /// 从 24 减少到 16。
   @override
   ButtonStyle defaultStyleOf(BuildContext context) {
     switch (_variant) {
@@ -537,7 +526,9 @@ class _MongolFilledButtonWithIconChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double scale = MediaQuery.textScalerOf(context).textScaleFactor;
+    final TextScaler textScaler = MediaQuery.textScalerOf(context);
+    // 使用 TextScaler.scale() 替代已弃用的 textScaleFactor
+    final double scale = textScaler.scale(1.0);
     // Adjust the gap based on the text scale factor. Start at 8, and lerp
     // to 4 based on how large the text is.
     final double gap =

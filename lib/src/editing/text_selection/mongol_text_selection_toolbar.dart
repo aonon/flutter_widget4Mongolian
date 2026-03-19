@@ -14,63 +14,57 @@ import 'package:flutter/widgets.dart';
 
 import 'mongol_text_selection_toolbar_layout_delegate.dart';
 
-// Minimal padding from all edges of the selection toolbar to all edges of the
-// viewport.
+// 选择工具栏与视口所有边缘的最小填充。
 const double _kToolbarScreenPadding = 8.0;
 const double _kToolbarWidth = 44.0;
 
-/// A fully-functional Material-style text selection toolbar.
+/// 功能齐全的 Material 风格文本选择工具栏。
 ///
-/// Tries to position itself to the left of [anchorLeft], but if it doesn't fit,
-/// then it positions itself to the right of [anchorRight].
+/// 尝试将自己定位到 [anchorLeft] 的左侧，但如果不合适，
+/// 则将自己定位到 [anchorRight] 的右侧。
 ///
-/// If any children don't fit in the menu, an overflow menu will automatically
-/// be created.
+/// 如果任何子项不适合菜单，将自动创建一个溢出菜单。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolTextSelectionControls.buildToolbar], where this is used by default to
-///    build an Android-style toolbar.
+///  * [MongolTextSelectionControls.buildToolbar]，默认使用它来
+///    构建 Android 风格的工具栏。
 class MongolTextSelectionToolbar extends StatelessWidget {
-  /// Creates an instance of MongolTextSelectionToolbar.
+  /// 创建 MongolTextSelectionToolbar 的实例。
   const MongolTextSelectionToolbar({
-    Key? key,
+    super.key,
     required this.anchorLeft,
     required this.anchorRight,
     this.toolbarBuilder = _defaultToolbarBuilder,
     required this.children,
-  })  : assert(children.length > 0),
-        super(key: key);
+  })  : assert(children.length > 0);
 
-  /// The focal point to the left of which the toolbar attempts to position
-  /// itself.
+  /// 工具栏尝试定位到其左侧的焦点。
   ///
-  /// If there is not enough room to the left before reaching the left of the
-  /// screen, then the toolbar will position itself to the right of
-  /// [anchorRight].
+  /// 如果在到达屏幕左侧之前左侧没有足够的空间，
+  /// 则工具栏将定位到 [anchorRight] 的右侧。
   final Offset anchorLeft;
 
-  /// The focal point to the right of which the toolbar attempts to position
-  /// itself, if it doesn't fit to the left of [anchorLeft].
+  /// 如果工具栏不适合 [anchorLeft] 的左侧，则它尝试定位到其右侧的焦点。
   final Offset anchorRight;
 
-  /// The children that will be displayed in the text selection toolbar.
+  /// 将在文本选择工具栏中显示的子项。
   ///
-  /// Typically these are buttons.
+  /// 通常这些是按钮。
   ///
-  /// Must not be empty.
+  /// 不能为空。
   ///
-  /// See also:
-  ///   * [MongolTextSelectionToolbarButton], which builds a toolbar button.
+  /// 另请参阅：
+  ///   * [MongolTextSelectionToolbarButton]，它构建工具栏按钮。
   final List<Widget> children;
 
-  /// Builds the toolbar container.
+  /// 构建工具栏容器。
   ///
-  /// Useful for customizing the high-level background of the toolbar. The given
-  /// child Widget will contain all of the [children].
+  /// 对于自定义工具栏的高级背景很有用。给定的
+  /// 子 Widget 将包含所有 [children]。
   final ToolbarBuilder toolbarBuilder;
 
-  // Build the default text selection menu toolbar.
+  // 构建默认的文本选择菜单工具栏。
   static Widget _defaultToolbarBuilder(BuildContext context, Widget child) {
     return _TextSelectionToolbarContainer(
       child: child,
@@ -112,26 +106,21 @@ class MongolTextSelectionToolbar extends StatelessWidget {
   }
 }
 
-// A toolbar containing the given children. If they overflow the height
-// available, then the overflowing children will be displayed in an overflow
-// menu.
+// 包含给定子项的工具栏。如果它们超出可用高度，
+// 则溢出的子项将显示在溢出菜单中。
 class _TextSelectionToolbarOverflowable extends StatefulWidget {
   const _TextSelectionToolbarOverflowable({
-    Key? key,
     required this.isLeft,
     required this.toolbarBuilder,
     required this.children,
-  })  : assert(children.length > 0),
-        super(key: key);
+  })  : assert(children.length > 0);
 
   final List<Widget> children;
 
-  // When true, the toolbar fits to the left of its anchor and will be
-  // positioned there.
+  // 当为 true 时，工具栏适合其锚点的左侧，并将定位在那里。
   final bool isLeft;
 
-  // Builds the toolbar that will be populated with the children and fit inside
-  // of the layout that adjusts to overflow.
+  // 构建将填充子项并适合调整溢出的布局内的工具栏。
   final ToolbarBuilder toolbarBuilder;
 
   @override
@@ -142,33 +131,29 @@ class _TextSelectionToolbarOverflowable extends StatefulWidget {
 class _TextSelectionToolbarOverflowableState
     extends State<_TextSelectionToolbarOverflowable>
     with TickerProviderStateMixin {
-  // Whether or not the overflow menu is open. When it is closed, the menu
-  // items that don't overflow are shown. When it is open, only the overflowing
-  // menu items are shown.
+  // 溢出菜单是否打开。当它关闭时，显示不溢出的菜单项。
+  // 当它打开时，只显示溢出的菜单项。
   bool _overflowOpen = false;
 
-  // The key for _TextSelectionToolbarTrailingEdgeAlign.
+  // _TextSelectionToolbarTrailingEdgeAlign 的键。
   UniqueKey _containerKey = UniqueKey();
 
-  // Close the menu and reset layout calculations, as in when the menu has
-  // changed and saved values are no longer relevant. This should be called in
-  // setState or another context where a rebuild is happening.
+  // 关闭菜单并重置布局计算，例如当菜单已更改且保存的值不再相关时。
+  // 这应该在 setState 或发生重建的其他上下文中调用。
   void _reset() {
-    // Change _TextSelectionToolbarTrailingEdgeAlign's key when the menu changes in
-    // order to cause it to rebuild. This lets it recalculate its
-    // saved height for the new set of children, and it prevents AnimatedSize
-    // from animating the size change.
+    // 当菜单更改时更改 _TextSelectionToolbarTrailingEdgeAlign 的键，
+    // 以使其重建。这使其能够为新的子项集重新计算其保存的高度，
+    // 并防止 AnimatedSize 对大小变化进行动画处理。
     _containerKey = UniqueKey();
-    // If the menu items change, make sure the overflow menu is closed. This
-    // prevents getting into a broken state where _overflowOpen is true when
-    // there are not enough children to cause overflow.
+    // 如果菜单项更改，确保溢出菜单已关闭。
+    // 这可以防止进入 _overflowOpen 为 true 但没有足够子项导致溢出的损坏状态。
     _overflowOpen = false;
   }
 
   @override
   void didUpdateWidget(_TextSelectionToolbarOverflowable oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If the children are changing at all, the current page should be reset.
+    // 如果子项有任何变化，当前页面应重置。
     if (!listEquals(widget.children, oldWidget.children)) {
       _reset();
     }
@@ -180,8 +165,7 @@ class _TextSelectionToolbarOverflowableState
       key: _containerKey,
       overflowOpen: _overflowOpen,
       child: AnimatedSize(
-        // This duration was eyeballed on a Pixel 2 emulator running Android
-        // API 28.
+        // 此持续时间是在运行 Android API 28 的 Pixel 2 模拟器上目测的。
         duration: const Duration(milliseconds: 140),
         child: widget.toolbarBuilder(
             context,
@@ -206,17 +190,15 @@ class _TextSelectionToolbarOverflowableState
   }
 }
 
-// When the overflow menu is open, it tries to align its trailing edge to the
-// trailing edge of the closed menu. This widget handles this effect by
-// measuring and maintaining the height of the closed menu and aligning the child
-// to that side.
+// 当溢出菜单打开时，它尝试将其 trailing edge 与关闭菜单的 trailing edge 对齐。
+// 此小部件通过测量和维护关闭菜单的高度并将子项对齐到该侧来处理此效果。
 class _TextSelectionToolbarTrailingEdgeAlign
     extends SingleChildRenderObjectWidget {
   const _TextSelectionToolbarTrailingEdgeAlign({
-    Key? key,
-    required Widget child,
+    super.key,
+    required Widget super.child,
     required this.overflowOpen,
-  }) : super(key: key, child: child);
+  });
 
   final bool overflowOpen;
 
@@ -241,9 +223,8 @@ class _TextSelectionToolbarTrailingEdgeAlignRenderBox extends RenderProxyBox {
   })  : _overflowOpen = overflowOpen,
         super();
 
-  // The height of the menu when it was closed. This is used to achieve the
-  // behavior where the open menu aligns its trailing edge to the closed menu's
-  // trailing edge.
+  // 菜单关闭时的高度。这用于实现打开菜单将其 trailing edge 与关闭菜单的
+  // trailing edge 对齐的行为。
   double? _closedHeight;
 
   bool _overflowOpen;
@@ -260,27 +241,24 @@ class _TextSelectionToolbarTrailingEdgeAlignRenderBox extends RenderProxyBox {
   void performLayout() {
     child!.layout(constraints.loosen(), parentUsesSize: true);
 
-    // Save the height when the menu is closed. If the menu changes, this height
-    // is invalid, so it's important that this RenderBox be recreated in that
-    // case. Currently, this is achieved by providing a new key to
-    // _TextSelectionToolbarTrailingEdgeAlign.
+    // 保存菜单关闭时的高度。如果菜单更改，此高度无效，
+    // 因此重要的是在此情况下重新创建此 RenderBox。
+    // 目前，这是通过向 _TextSelectionToolbarTrailingEdgeAlign 提供新键来实现的。
     if (!overflowOpen && _closedHeight == null) {
       _closedHeight = child!.size.height;
     }
 
     size = constraints.constrain(Size(
       child!.size.width,
-      // If the open menu is higher than the closed menu, just use its own height
-      // and don't worry about aligning the trailing edges.
-      // _closedHeight is used even when the menu is closed to allow it to
-      // animate its size while keeping the same edge alignment.
+      // 如果打开的菜单比关闭的菜单高，只需使用其自身的高度
+      // 而不担心对齐 trailing edge。
+      // 即使菜单关闭时也使用 _closedHeight，以允许它在保持相同边缘对齐的同时为其大小设置动画。
       _closedHeight == null || child!.size.height > _closedHeight!
           ? child!.size.height
           : _closedHeight!,
     ));
 
-    // Set the offset in the parent data such that the child will be aligned to
-    // the trailing edge.
+    // 在父数据中设置偏移，使子项将对齐到 trailing edge。
     final childParentData = child!.parentData! as ToolbarItemsParentData;
     childParentData.offset = Offset(
       0.0,
@@ -288,17 +266,17 @@ class _TextSelectionToolbarTrailingEdgeAlignRenderBox extends RenderProxyBox {
     );
   }
 
-  // Paint at the offset set in the parent data.
+  // 在父数据中设置的偏移处绘制。
   @override
   void paint(PaintingContext context, Offset offset) {
     final childParentData = child!.parentData! as ToolbarItemsParentData;
     context.paintChild(child!, childParentData.offset + offset);
   }
 
-  // Include the parent data offset in the hit test.
+  // 在命中测试中包含父数据偏移。
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    // The x, y parameters have the top left of the node's box as the origin.
+    // x, y 参数以节点框的左上角为原点。
     final childParentData = child!.parentData! as ToolbarItemsParentData;
     return result.addWithPaintOffset(
       offset: childParentData.offset,
@@ -320,20 +298,18 @@ class _TextSelectionToolbarTrailingEdgeAlignRenderBox extends RenderProxyBox {
   @override
   void applyPaintTransform(RenderObject child, Matrix4 transform) {
     final childParentData = child.parentData! as ToolbarItemsParentData;
-    transform.translate(childParentData.offset.dx, childParentData.offset.dy);
+    transform.translateByDouble(childParentData.offset.dx, childParentData.offset.dy, 0.0, 0.0);
     super.applyPaintTransform(child, transform);
   }
 }
 
-// Renders the menu items in the correct positions in the menu and its overflow
-// submenu based on calculating which item would first overflow.
+// 根据计算哪个项目首先溢出，在菜单及其溢出子菜单中的正确位置渲染菜单项。
 class _TextSelectionToolbarItemsLayout extends MultiChildRenderObjectWidget {
   const _TextSelectionToolbarItemsLayout({
-    Key? key,
     required this.isLeft,
     required this.overflowOpen,
-    required List<Widget> children,
-  }) : super(key: key, children: children);
+    required super.children,
+  });
 
   final bool isLeft;
   final bool overflowOpen;
@@ -363,8 +339,8 @@ class _TextSelectionToolbarItemsLayout extends MultiChildRenderObjectWidget {
 class _TextSelectionToolbarItemsLayoutElement
     extends MultiChildRenderObjectElement {
   _TextSelectionToolbarItemsLayoutElement(
-    MultiChildRenderObjectWidget widget,
-  ) : super(widget);
+    super.widget,
+  );
 
   static bool _shouldPaint(Element child) {
     return (child.renderObject!.parentData! as ToolbarItemsParentData)
@@ -386,7 +362,7 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
         _overflowOpen = overflowOpen,
         super();
 
-  // The index of the last item that doesn't overflow.
+  // 不溢出的最后一个项目的索引。
   int _lastIndexThatFits = -1;
 
   bool _isLeft;
@@ -409,10 +385,9 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
     markNeedsLayout();
   }
 
-  // Layout the necessary children, and figure out where the children first
-  // overflow, if at all.
+  // 布局必要的子项，并找出子项首先溢出的位置（如果有的话）。
   void _layoutChildren() {
-    // When overflow is not open, the toolbar is always a specific width.
+    // 当溢出未打开时，工具栏始终具有特定宽度。
     final sizedConstraints = _overflowOpen
         ? constraints
         : BoxConstraints.loose(Size(
@@ -425,10 +400,9 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
     visitChildren((RenderObject renderObjectChild) {
       i++;
 
-      // No need to layout children inside the overflow menu when it's closed.
-      // The opposite is not true. It is necessary to layout the children that
-      // don't overflow when the overflow menu is open in order to calculate
-      // _lastIndexThatFits.
+      // 当溢出菜单关闭时，无需布局其内部的子项。
+      // 相反的情况并非如此。当溢出菜单打开时，需要布局不溢出的子项，
+      // 以便计算 _lastIndexThatFits。
       if (_lastIndexThatFits != -1 && !overflowOpen) {
         return;
       }
@@ -442,8 +416,8 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
       }
     });
 
-    // If the last child overflows, but only because of the height of the
-    // overflow button, then just show it and hide the overflow button.
+    // 如果最后一个子项溢出，但只是因为溢出按钮的高度，
+    // 则只显示它并隐藏溢出按钮。
     final navButton = firstChild!;
     if (_lastIndexThatFits != -1 &&
         _lastIndexThatFits == childCount - 2 &&
@@ -452,27 +426,24 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
     }
   }
 
-  // Returns true when the child should be painted, false otherwise.
+  // 当子项应该被绘制时返回 true，否则返回 false。
   bool _shouldPaintChild(RenderObject renderObjectChild, int index) {
-    // Paint the navButton when there is overflow.
+    // 当有溢出时绘制导航按钮。
     if (renderObjectChild == firstChild) {
       return _lastIndexThatFits != -1;
     }
 
-    // If there is no overflow, all children besides the navButton are painted.
+    // 如果没有溢出，除导航按钮外的所有子项都被绘制。
     if (_lastIndexThatFits == -1) {
       return true;
     }
 
-    // When there is overflow, paint if the child is in the part of the menu
-    // that is currently open. Overflowing children are painted when the
-    // overflow menu is open, and the children that fit are painted when the
-    // overflow menu is closed.
+    // 当有溢出时，如果子项在当前打开的菜单部分中，则绘制。
+    // 当溢出菜单打开时绘制溢出的子项，当溢出菜单关闭时绘制适合的子项。
     return (index > _lastIndexThatFits) == overflowOpen;
   }
 
-  // Decide which children will be painted, set their shouldPaint, and set the
-  // offset that painted children will be placed at.
+  // 决定哪些子项将被绘制，设置它们的 shouldPaint，并设置绘制子项将被放置的偏移。
   void _placeChildren() {
     var i = -1;
     var nextSize = const Size(0.0, 0.0);
@@ -485,12 +456,12 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
       final child = renderObjectChild as RenderBox;
       final childParentData = child.parentData! as ToolbarItemsParentData;
 
-      // Handle placing the navigation button after iterating all children.
+      // 在迭代所有子项后处理放置导航按钮。
       if (renderObjectChild == navButton) {
         return;
       }
 
-      // There is no need to place children that won't be painted.
+      // 无需放置不会被绘制的子项。
       if (!_shouldPaintChild(renderObjectChild, i)) {
         childParentData.shouldPaint = false;
         return;
@@ -514,7 +485,7 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
       }
     });
 
-    // Place the navigation button if needed.
+    // 如果需要，放置导航按钮。
     final navButtonParentData = navButton.parentData! as ToolbarItemsParentData;
     if (_shouldPaintChild(firstChild!, 0)) {
       navButtonParentData.shouldPaint = true;
@@ -571,12 +542,12 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    // The x, y parameters have the top left of the node's box as the origin.
+    // x, y 参数以节点框的左上角为原点。
     var child = lastChild;
     while (child != null) {
       final childParentData = child.parentData! as ToolbarItemsParentData;
 
-      // Don't hit test children aren't shown.
+      // 不要对未显示的子项进行命中测试。
       if (!childParentData.shouldPaint) {
         child = childParentData.previousSibling;
         continue;
@@ -598,7 +569,7 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
     return false;
   }
 
-  // Visit only the children that should be painted.
+  // 仅访问应该被绘制的子项。
   @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     visitChildren((RenderObject renderObjectChild) {
@@ -611,21 +582,18 @@ class _RenderTextSelectionToolbarItemsLayout extends RenderBox
   }
 }
 
-// The Material-styled toolbar outline. Fill it with any widgets you want. No
-// overflow ability.
+// Material 风格的工具栏轮廓。用任何你想要的小部件填充它。没有溢出能力。
 class _TextSelectionToolbarContainer extends StatelessWidget {
   const _TextSelectionToolbarContainer({
-    Key? key,
     required this.child,
-  }) : super(key: key);
+  });
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      // This value was eyeballed to match the native text selection menu on
-      // a Pixel 2 running Android 10.
+      // 此值是在运行 Android 10 的 Pixel 2 上目测以匹配原生文本选择菜单。
       borderRadius: const BorderRadius.all(Radius.circular(7.0)),
       clipBehavior: Clip.antiAlias,
       elevation: 1.0,
@@ -635,16 +603,14 @@ class _TextSelectionToolbarContainer extends StatelessWidget {
   }
 }
 
-// A button styled like a Material native Android text selection overflow menu
-// forward and back controls.
+// 样式类似于 Material 原生 Android 文本选择溢出菜单前进和后退控件的按钮。
 class _TextSelectionToolbarOverflowButton extends StatelessWidget {
   const _TextSelectionToolbarOverflowButton({
-    Key? key,
     required this.icon,
     this.onPressed,
     // ignore: unused_element_parameter
     this.tooltip,
-  }) : super(key: key);
+  });
 
   final Icon icon;
   final VoidCallback? onPressed;

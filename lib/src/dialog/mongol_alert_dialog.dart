@@ -8,30 +8,41 @@ import 'package:flutter/material.dart';
 
 import 'mongol_button_bar.dart';
 
-/// This class was adapted from Flutter [Dialog]
+/// 此类改编自Flutter的[Dialog]类
+///
+/// 用于显示垂直方向的对话框，支持蒙古文垂直文本布局。
 class MongolDialog extends StatelessWidget {
+  /// 创建一个MongolDialog
+  ///
+  /// [backgroundColor]：对话框的背景颜色
+  /// [elevation]：对话框的海拔高度
+  /// [insetAnimationDuration]：插入动画的持续时间
+  /// [insetAnimationCurve]：插入动画的曲线
+  /// [shape]：对话框的形状
+  /// [child]：对话框的子部件
   const MongolDialog({
-    Key? key,
+    super.key,
     this.backgroundColor,
     this.elevation,
     this.insetAnimationDuration = const Duration(milliseconds: 100),
     this.insetAnimationCurve = Curves.decelerate,
     this.shape,
     this.child,
-  }) : super(key: key);
+  });
 
-  final Color? backgroundColor;
-  final double? elevation;
-  final Duration insetAnimationDuration;
-  final Curve insetAnimationCurve;
-  final ShapeBorder? shape;
-  final Widget? child;
+  final Color? backgroundColor; // 对话框的背景颜色
+  final double? elevation; // 对话框的海拔高度
+  final Duration insetAnimationDuration; // 插入动画的持续时间
+  final Curve insetAnimationCurve; // 插入动画的曲线
+  final ShapeBorder? shape; // 对话框的形状
+  final Widget? child; // 对话框的子部件
 
   static const RoundedRectangleBorder _defaultDialogShape =
       RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(2.0)));
-  static const double _defaultElevation = 24.0;
+          borderRadius: BorderRadius.all(Radius.circular(2.0))); // 默认对话框形状
+  static const double _defaultElevation = 24.0; // 默认海拔高度
 
+  /// 构建对话框UI
   @override
   Widget build(BuildContext context) {
     final dialogTheme = DialogTheme.of(context);
@@ -66,10 +77,27 @@ class MongolDialog extends StatelessWidget {
   }
 }
 
-/// This class was adapted from the Flutter [AlertDialog] class
+/// 此类改编自Flutter的[AlertDialog]类
+///
+/// 用于显示垂直方向的警告对话框，支持蒙古文垂直文本布局。
 class MongolAlertDialog extends StatelessWidget {
+  /// 创建一个MongolAlertDialog
+  ///
+  /// [title]：对话框的标题
+  /// [titlePadding]：标题的内边距
+  /// [titleTextStyle]：标题的文本样式
+  /// [content]：对话框的内容
+  /// [contentPadding]：内容的内边距
+  /// [contentTextStyle]：内容的文本样式
+  /// [actions]：对话框的操作按钮
+  /// [actionsPadding]：操作按钮的内边距
+  /// [actionsOverflowDirection]：操作按钮溢出方向
+  /// [buttonPadding]：按钮的内边距
+  /// [backgroundColor]：对话框的背景颜色
+  /// [elevation]：对话框的海拔高度
+  /// [shape]：对话框的形状
   const MongolAlertDialog({
-    Key? key,
+    super.key,
     this.title,
     this.titlePadding,
     this.titleTextStyle,
@@ -83,22 +111,23 @@ class MongolAlertDialog extends StatelessWidget {
     this.backgroundColor,
     this.elevation,
     this.shape,
-  }) : super(key: key);
+  });
 
-  final Widget? title;
-  final EdgeInsetsGeometry? titlePadding;
-  final TextStyle? titleTextStyle;
-  final Widget? content;
-  final EdgeInsetsGeometry contentPadding;
-  final TextStyle? contentTextStyle;
-  final List<Widget>? actions;
-  final EdgeInsetsGeometry actionsPadding;
-  final VerticalDirection? actionsOverflowDirection;
-  final EdgeInsetsGeometry? buttonPadding;
-  final Color? backgroundColor;
-  final double? elevation;
-  final ShapeBorder? shape;
+  final Widget? title; // 对话框的标题
+  final EdgeInsetsGeometry? titlePadding; // 标题的内边距
+  final TextStyle? titleTextStyle; // 标题的文本样式
+  final Widget? content; // 对话框的内容
+  final EdgeInsetsGeometry contentPadding; // 内容的内边距
+  final TextStyle? contentTextStyle; // 内容的文本样式
+  final List<Widget>? actions; // 对话框的操作按钮
+  final EdgeInsetsGeometry actionsPadding; // 操作按钮的内边距
+  final VerticalDirection? actionsOverflowDirection; // 操作按钮溢出方向
+  final EdgeInsetsGeometry? buttonPadding; // 按钮的内边距
+  final Color? backgroundColor; // 对话框的背景颜色
+  final double? elevation; // 对话框的海拔高度
+  final ShapeBorder? shape; // 对话框的形状
 
+  /// 构建警告对话框UI
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

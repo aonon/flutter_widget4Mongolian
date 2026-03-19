@@ -1,36 +1,100 @@
 # mongol
 
-This library is a collection of Flutter widgets for displaying traditional Mongolian vertical text.
+这个库是一个 Flutter 小部件集合，用于显示传统蒙古文垂直文本。它提供了一系列专门为蒙古文垂直排版设计的小部件，使开发者能够轻松地在 Flutter 应用中实现蒙古文的正确显示和交互。
 
-The primary widgets include:
+## 功能特点
 
-- `MongolText`: vertical version of `Text`
-- `MongolTextField`: vertical version of `TextField`
-- `MongolListTile`: vertical version of `ListTile`, for use in horizontal list views and menus
-- `MongolPopupMenuButton`: vertical version of `PopupMenuButton`, for displaying menus
-- `MongolAlertDialog`: vertical version of `AlertDialog`
+- 支持传统蒙古文的垂直排版
+- 提供与 Flutter 原生小部件对应的蒙古文版本
+- 支持表情符号和 CJK 字符的正确旋转
+- 跨平台兼容（移动、Web、桌面）
+- 富文本样式和编辑功能
+- 支持水平列表和菜单
 
-## Displaying vertical text
+## 主要小部件
 
-`MongolText` is a vertical text version of Flutter's `Text` widget. Left-to-right line wrapping is supported. 
+- `MongolText`：`Text` 的垂直版本
+- `MongolTextField`：`TextField` 的垂直版本
+- `MongolListTile`：`ListTile` 的垂直版本，用于水平列表视图和菜单
+- `MongolPopupMenuButton`：`PopupMenuButton` 的垂直版本，用于显示菜单
+- `MongolAlertDialog`：`AlertDialog` 的垂直版本
+- `MongolTextButton`、`MongolOutlinedButton`、`MongolElevatedButton` 等按钮组件
+- `MongolCheckboxListTile`、`MongolRadioListTile`、`MongolSwitchListTile` 等列表组件
 
-```dart
-MongolText('ᠨᠢᠭᠡ ᠬᠣᠶᠠᠷ ᠭᠤᠷᠪᠠ ᠳᠦᠷᠪᠡ ᠲᠠᠪᠤ ᠵᠢᠷᠭᠤᠭ᠎ᠠ ᠳᠣᠯᠣᠭ᠎ᠠ ᠨᠠᠢᠮᠠ ᠶᠢᠰᠦ ᠠᠷᠪᠠ'),
+## 安装指南
+
+### 从 Pub.dev 安装
+
+要在您的 Flutter 项目中使用 mongol 库，请在 `pubspec.yaml` 文件中添加以下依赖：
+
+```yaml
+dependencies:
+  mongol: ^9.2.1
 ```
 
-The library supports mobile, web, and desktop.
+然后运行 `flutter pub get` 来安装依赖。
+
+### 作为本地库使用
+
+如果您想将 mongol 库作为本地库使用，以便进行修改或调试，可以按照以下步骤操作：
+
+1. **克隆仓库**：将 mongol 库克隆到您的本地机器上
+   ```bash
+   git clone https://github.com/suragch/mongol.git
+   ```
+
+2. **在您的项目中添加本地依赖**：在您的 Flutter 项目的 `pubspec.yaml` 文件中，使用 `path` 依赖指向本地克隆的 mongol 库
+   ```yaml
+   dependencies:
+     mongol:
+       path: /path/to/mongol
+   ```
+   请将 `/path/to/mongol` 替换为您本地 mongol 库的实际路径。
+
+3. **运行 flutter pub get**：在您的项目目录中运行
+   ```bash
+   flutter pub get
+   ```
+
+4. **开始使用**：现在您可以像使用普通依赖一样使用 mongol 库，并且可以直接修改本地克隆的代码进行调试和开发。
+
+这种方法特别适合需要对库进行自定义修改或贡献代码的情况。
+
+### 本地库文件说明
+
+#### 必要文件
+
+当将 mongol 库作为本地库使用时，以下文件是必要的：
+
+- **lib/ 目录**：包含库的所有源代码，特别是：
+  - `mongol.dart`：库的主入口文件
+  - `src/` 目录：包含所有具体实现的源代码
+- **pubspec.yaml**：依赖配置文件，定义了库的名称、版本和依赖关系
+- **LICENSE**：许可证文件，确保您合法使用库
+
+## 快速开始
+
+### 显示垂直文本
+
+`MongolText` 是 Flutter `Text` 小部件的垂直文本版本。支持从左到右的换行。
+
+```dart
+MongolText("ᠨᠢᠭᠡ ᠬᠣᠶᠠᠷ ᠭᠤᠷᠪᠠ ᠳᠦᠷᠪᠡ ᠲᠠᠪᠤ ᠵᠢᠷᠭᠤᠭ᠎ᠠ ᠳᠣᠯᠣᠭ᠎ᠠ ᠨᠠᠢᠮᠠ ᠶᠢᠰᠦ ᠠᠷᠪᠠ"),
+```
+
+该库支持移动、Web 和桌面平台。
 
 ![](./example/supplemental/mongol_text.gif)
 
-### Emoji and CJK characters
+### 表情符号和 CJK 字符
 
-The library rotates emoji and CJK (Chinese, Japanese, and Korean) characters for proper orientation.
+该库会旋转表情符号和 CJK（中文、日文和韩文）字符以获得正确的方向。
 
 ![](./example/supplemental/emoji_cjk.png)
 
-### Text styling
+### 富文本
 
-You add styling using `TextSpan` and/or `TextStyle`, just as you would for a `Text` widget.
+您可以使用 `TextSpan` 和/或 `TextStyle` 添加样式，就像使用 `Text` 小部件一样。
 
 ```dart
 MongolText.rich(
@@ -39,7 +103,7 @@ MongolText.rich(
 ),
 ```
 
-where `textSpan` is defined like so:
+其中 `textSpan` 定义如下：
 
 ```dart
 const textSpan = TextSpan(
@@ -71,17 +135,17 @@ const textSpan = TextSpan(
 
 ![](./example/supplemental/mongol_rich_text.png)
 
-This all assumes you've added one or more Mongolian fonts to your app assets.
+这一切都假设您已经向应用程序资产添加了一种或多种蒙古文字体。
 
-## Adding a Mongolian font
+## 添加蒙古文字体
 
-The library does not include a Mongolian font. This allows the library to be smaller and also gives developers the freedom to choose any Mongolian font they like.
+该库不包含蒙古文字体。这使得库更小，也让开发者可以自由选择他们喜欢的任何蒙古文字体。
 
-Since it's likely that some of your users' devices won't have a Mongolian font installed, you should include at least one Mongolian font with your project. Here is what you need to do:
+由于您的一些用户的设备可能没有安装蒙古文字体，您应该在项目中至少包含一种蒙古文字体。您需要做以下操作：
 
-### 1. Get a font
+### 1. 获取字体
 
-You can find a font from the following sources:
+您可以从以下来源找到字体：
 
 - [Menksoft](https://www.mklai.cn/download-font?productId=a0ec7735b5714334934ff3c094ca0a5e)
 - [MongolFont](http://www.mongolfont.com/en/font/index.html)
@@ -89,11 +153,11 @@ You can find a font from the following sources:
 - [Z Mongol Code](https://install.zcodetech.com/)
 - [CMs font](https://phabricator.wikimedia.org/T130502)
 
-### 2. Add the font to your project
+### 2. 将字体添加到您的项目
 
-You can get directions to do that [here](https://medium.com/@suragch/how-to-use-a-custom-font-in-a-flutter-app-911763c162f5) and [here](https://flutter.dev/docs/cookbook/design/fonts). 
+您可以在[这里](https://medium.com/@suragch/how-to-use-a-custom-font-in-a-flutter-app-911763c162f5)和[这里](https://flutter.dev/docs/cookbook/design/fonts)获取有关如何执行此操作的说明。
 
-Basically you just need to create an **assets/fonts** folder for it and then declare the font in **pubspec.yaml** like this:
+基本上，您只需要为它创建一个 **assets/fonts** 文件夹，然后在 **pubspec.yaml** 中声明字体，如下所示：
 
 ```yaml
 flutter:
@@ -103,11 +167,11 @@ flutter:
         - asset: assets/fonts/MQG8F02.ttf
 ```
 
-You can call the family name whatever you want, but this string is what you will use in the next step.
+您可以将族名称称为任何您想要的名称，但这个字符串是您将在下一步中使用的。
 
-### 3. Set the default Mongolian font for your app
+### 3. 为您的应用设置默认蒙古文字体
 
-In your `main.dart` file, set the `fontFamily` for the app theme.
+在您的 `main.dart` 文件中，为应用主题设置 `fontFamily`。
 
 ```dart
 MaterialApp(
@@ -116,36 +180,36 @@ MaterialApp(
 );
 ```
 
-Now you won't have to manually set the font for every Mongolian text widget. If you want to use a different font for some widgets, though, you can still set the `fontFamily` as you normally would inside `TextStyle`.
+现在您不必为每个蒙古文文本小部件手动设置字体。不过，如果您想为某些小部件使用不同的字体，您仍然可以像通常在 `TextStyle` 中那样设置 `fontFamily`。
 
-You may also consider using [mongol_code](https://pub.dev/packages/mongol_code) with a Menksoft font if your users have devices that don't support OpenType Unicode font rendering. `mongol_code` converts Unicode to Menksoft code, which a Menksoft font can display without any special rendering requirements.
+您还可以考虑将 [mongol_code](https://pub.dev/packages/mongol_code) 与 Menksoft 字体一起使用，如果您的用户的设备不支持 OpenType Unicode 字体渲染。`mongol_code` 将 Unicode 转换为 Menksoft 代码，Menksoft 字体可以显示而不需要任何特殊的渲染要求。
 
-## Editing vertical text
+## 编辑垂直文本
 
-You can use `MongolTextField` to receive and edit text from the system keyboard. This widget includes most of the functionality of the standard Flutter `TextField` widget.
+您可以使用 `MongolTextField` 从系统键盘接收和编辑文本。这个小部件包含标准 Flutter `TextField` 小部件的大部分功能。
 
 ![](./example/supplemental/mongol_text_field.gif)
 
-Here is it on iOS and Android interacting with a system keyboard:
+这是它在 iOS 和 Android 上与系统键盘交互的样子：
 
 ![](./example/supplemental/mongol_text_field_large.gif)
 
-If you want to use an outlined text field with a label, use `MongolOutlineInputBorder`:
+如果您想使用带有标签的轮廓文本字段，请使用 `MongolOutlineInputBorder`：
 
 ![](./example/supplemental/mongol_outline_input_border.png)
 
-> **Note**: There is currently a [bug](https://github.com/suragch/mongol/issues/39) in the `MongolTextField` for `maxLines: null`. PRs are welcome!
+> **注意**：`MongolTextField` 目前在 `maxLines: null` 方面存在 [bug](https://github.com/suragch/mongol/issues/39)。欢迎提交 PR！
 
 ```dart
 MongolTextField(
   decoration: InputDecoration(
     border: MongolOutlineInputBorder(),
-    labelText: 'ᠨᠢᠭᠡ ᠬᠤᠶᠠᠷ ᠭᠤᠷᠪᠠ',
+    labelText: 'ᠨᠢᠭᠡ ᠬᠣᠶᠠᠷ ᠭᠤᠷᠪᠠ',
   ),
 ),
 ```
 
-In order to correctly handle right/left and up/down keys on the web and desktop (or for physical keyboards connected to a mobile app), you need to return the `MongolTextEditingShortcuts` widget from the `builder` method of your `MaterialApp` (or `CupertinoApp` or `WidgetsApp`) at the top of your widget tree:
+为了在 Web 和桌面（或连接到移动应用的物理键盘）上正确处理右/左和上/下键，您需要从小部件树顶部的 `MaterialApp`（或 `CupertinoApp` 或 `WidgetsApp`）的 `builder` 方法返回 `MongolTextEditingShortcuts` 小部件：
 
 ```dart
 MaterialApp(
@@ -154,9 +218,9 @@ MaterialApp(
 )
 ```
 
-## Horizontal lists
+## 水平列表
 
-You can display horizontally scrolling lists with the standard `ListView` widget. All you need to do is set the scroll direction to horizontal.
+您可以使用标准的 `ListView` 小部件显示水平滚动列表。您只需要将滚动方向设置为水平。
 
 ```dart
 ListView(
@@ -169,7 +233,7 @@ ListView(
 ),
 ```
 
-For something a little fancier, you can also use the `MongolListTile` widget just like you would use `ListTile`. Here is an example from the example project:
+对于更高级的内容，您也可以像使用 `ListTile` 一样使用 `MongolListTile` 小部件。以下是示例项目中的一个示例：
 
 ```dart
 Card(
@@ -184,15 +248,15 @@ Card(
 
 ![](./example/supplemental/mongol_list_tile.gif)
 
-As visible in the image above, in addition to `MongolListTile`, there is also:
+如上图所示，除了 `MongolListTile` 之外，还有：
 
 - `MongolCheckboxListTile`
 - `MongolRadioListTile`
 - `MongolSwitchListTile`
 
-## Menus
+## 菜单
 
-To add a popup menu with horizontal items, you can use `MongolPopupMenuButton`. It is customizable in all the ways that the standard `PopupMenuButton` is.
+要添加带有水平项目的弹出菜单，您可以使用 `MongolPopupMenuButton`。它在所有标准 `PopupMenuButton` 的可自定义方式上都是可自定义的。
 
 ```dart
 Scaffold(
@@ -216,9 +280,9 @@ Scaffold(
 
 ![](./example/supplemental/mongol_popup_menu_button.gif)
 
-## Buttons
+## 按钮
 
-There are Mongol equivalents to all of the Flutter buttons:
+所有 Flutter 按钮都有蒙古文等效项：
 
 - `MongolTextButton`
 - `MongolOutlinedButton`
@@ -237,21 +301,45 @@ There are Mongol equivalents to all of the Flutter buttons:
 
 ![](./example/supplemental/buttons.png)
 
-The reason for the Mongol icon button is to provide a vertical tooltip that will appear for a longpress on mobile and for a mouse hover on desktop and web.
+蒙古文图标按钮的原因是提供一个垂直工具提示，该提示会在移动设备上长按和在桌面和 Web 上鼠标悬停时出现。
 
-## Other widgets
+## 其他小部件
 
 ### MongolAlertDialog
 
-This alert dialog works mostly the same as the Flutter `AlertDialog`.
+这个警报对话框的工作原理与 Flutter `AlertDialog` 大致相同。
 
 ![](./example/supplemental/mongol_alert_dialog.png)
 
-### TODO
+## 运行示例应用
 
-- Improve keyboard (this may be better as a separate package)
-- Various other text based widgets
-- Support `WidgetSpan`.
-- Add more tests
-- For `MongolTextAlign.bottom` don't count final space in line height
-- Add `MongolSelectableText` widget
+要运行示例应用，请克隆仓库并执行以下命令：
+
+```bash
+cd example
+flutter run
+```
+
+示例应用展示了库中所有小部件的使用方法和效果。
+
+
+## 问题和反馈
+
+如果您遇到任何问题或有任何反馈，请在 [GitHub Issues](https://github.com/suragch/mongol/issues) 中提出。
+
+## 许可证
+
+本项目采用 MIT 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件。
+
+## 版本历史
+
+有关版本更新的详细信息，请参阅 [CHANGELOG.md](CHANGELOG.md) 文件。
+
+## 待办事项
+
+- 改进键盘（这可能作为一个单独的包更好）
+- 各种其他基于文本的小部件
+- 支持 `WidgetSpan`
+- 添加更多测试
+- 对于 `MongolTextAlign.bottom`，不要计算行高的最终空间
+- 添加 `MongolSelectableText` 小部件

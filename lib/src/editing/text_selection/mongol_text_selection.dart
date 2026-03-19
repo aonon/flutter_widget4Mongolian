@@ -27,14 +27,30 @@ import 'package:flutter/widgets.dart';
 import '../mongol_editable_text.dart';
 import '../mongol_render_editable.dart';
 
-/// An object that manages a pair of text selection handles.
+/// 管理一对文本选择手柄的对象。
 ///
-/// The selection handles are displayed in the [Overlay] that most closely
-/// encloses the given [BuildContext].
+/// 选择手柄显示在最接近给定 [BuildContext] 的 [Overlay] 中。
 class MongolTextSelectionOverlay {
-  /// Creates an object that manages overlay entries for selection handles.
+  /// 创建一个管理选择手柄覆盖项的对象。
   ///
-  /// The [context] must not be null and must have an [Overlay] as an ancestor.
+  /// [context] 不能为空，并且必须有一个 [Overlay] 作为祖先。
+  /// 
+  /// 参数：
+  /// - value: 文本编辑值
+  /// - context: 构建上下文
+  /// - debugRequiredFor: 调试所需的小部件
+  /// - toolbarLayerLink: 工具栏层链接
+  /// - startHandleLayerLink: 开始手柄层链接
+  /// - endHandleLayerLink: 结束手柄层链接
+  /// - renderObject: 渲染对象
+  /// - selectionControls: 选择控件
+  /// - handlesVisible: 手柄是否可见，默认为 false
+  /// - selectionDelegate: 选择委托
+  /// - dragStartBehavior: 拖动开始行为，默认为 DragStartBehavior.start
+  /// - onSelectionHandleTapped: 选择手柄点击回调
+  /// - clipboardStatus: 剪贴板状态通知器
+  /// - contextMenuBuilder: 上下文菜单构建器
+  /// - magnifierConfiguration: 放大镜配置
   MongolTextSelectionOverlay({
     required TextEditingValue value,
     required this.context,
@@ -62,7 +78,7 @@ class MongolTextSelectionOverlay {
       magnifierConfiguration: magnifierConfiguration,
       context: context,
       debugRequiredFor: debugRequiredFor,
-      // The metrics will be set when show handles.
+      // 指标将在显示手柄时设置
       startHandleType: TextSelectionHandleType.collapsed,
       startHandlesVisible: _effectiveStartHandleVisibility,
       lineWidthAtStart: 0.0,
@@ -89,41 +105,39 @@ class MongolTextSelectionOverlay {
     );
   }
 
-  /// The context in which the selection handles should appear.
+  /// 选择手柄应该出现的上下文。
   ///
-  /// This context must have an [Overlay] as an ancestor because this object
-  /// will display the text selection handles in that [Overlay].
+  /// 此上下文必须有一个 [Overlay] 作为祖先，因为此对象
+  /// 将在该 [Overlay] 中显示文本选择手柄。
   final BuildContext context;
 
-  /// Controls the fade-in and fade-out animations for the toolbar and handles.
+  /// 控制工具栏和手柄的淡入淡出动画。
   @Deprecated('Use `SelectionOverlay.fadeDuration` instead. '
       'This feature was deprecated after v2.12.0-4.1.pre.')
   static const Duration fadeDuration = SelectionOverlay.fadeDuration;
 
-  /// The editable line in which the selected text is being displayed.
+  /// 显示所选文本的可编辑行。
   final MongolRenderEditable renderObject;
 
-  /// Builds text selection handles and toolbar.
+  /// 构建文本选择手柄和工具栏。
   final TextSelectionControls? selectionControls;
 
-  /// The delegate for manipulating the current selection in the owning
-  /// text field.
+  /// 用于操作所属文本字段中当前选择的委托。
   final TextSelectionDelegate selectionDelegate;
 
   late final MongolSelectionOverlay _selectionOverlay;
 
-  /// Builds the text selection toolbar when requested by the user.
+  /// 在用户请求时构建文本选择工具栏。
   ///
-  /// `primaryAnchor` is the desired anchor position for the context menu, while
-  /// `secondaryAnchor` is the fallback location if the menu doesn't fit.
+  /// `primaryAnchor` 是上下文菜单的期望锚点位置，而
+  /// `secondaryAnchor` 是如果菜单不适合时的回退位置。
   ///
-  /// `buttonItems` represents the buttons that would be built by default for
-  /// this widget.
+  /// `buttonItems` 表示默认为此小部件构建的按钮。
   ///
-  /// If not provided, no context menu will be built.
+  /// 如果未提供，则不会构建上下文菜单。
   final WidgetBuilder? contextMenuBuilder;
 
-  /// Retrieve current value.
+  /// 获取当前值。
   @visibleForTesting
   TextEditingValue get value => _value;
 
@@ -148,12 +162,12 @@ class MongolTextSelectionOverlay {
             renderObject.selectionEndInViewport.value;
   }
 
-  /// Whether selection handles are visible.
+  /// 选择手柄是否可见。
   ///
-  /// Set to false if you want to hide the handles. Use this property to show or
-  /// hide the handle without rebuilding them.
+  /// 如果要隐藏手柄，设置为 false。使用此属性显示或
+  /// 隐藏手柄而无需重建它们。
   ///
-  /// Defaults to false.
+  /// 默认为 false。
   bool get handlesVisible => _handlesVisible;
   bool _handlesVisible = false;
   set handlesVisible(bool visible) {
@@ -164,16 +178,16 @@ class MongolTextSelectionOverlay {
     _updateTextSelectionOverlayVisibilities();
   }
 
-  /// Builds the handles by inserting them into the [context]'s overlay.
+  /// 通过将手柄插入到 [context] 的覆盖层中来构建手柄。
   void showHandles() {
     _updateSelectionOverlay();
     _selectionOverlay.showHandles();
   }
 
-  /// Destroys the handles by removing them from overlay.
+  /// 通过从覆盖层中删除手柄来销毁手柄。
   void hideHandles() => _selectionOverlay.hideHandles();
 
-  /// Shows the toolbar by inserting it into the [context]'s overlay.
+  /// 通过将工具栏插入到 [context] 的覆盖层中来显示工具栏。
   void showToolbar() {
     _updateSelectionOverlay();
 
@@ -194,14 +208,14 @@ class MongolTextSelectionOverlay {
     return;
   }
 
-  /// Shows the magnifier, and hides the toolbar if it was showing when
-  /// [showMagnifier] was called. This is safe to call on platforms not mobile,
-  /// since a magnifierBuilder will not be provided, or the magnifierBuilder
-  /// will return null on platforms not mobile.
+  /// 显示放大镜，如果调用 [showMagnifier] 时工具栏正在显示，则隐藏工具栏。
+  /// 这在非移动平台上调用是安全的，
+  /// 因为不会提供 magnifierBuilder，或者 magnifierBuilder
+  /// 在非移动平台上会返回 null。
   ///
-  /// This is NOT the source of truth for if the magnifier is up or not,
-  /// since magnifiers may hide themselves. If this info is needed, check
-  /// [MagnifierController.shown].
+  /// 这不是放大镜是否打开的真实来源，
+  /// 因为放大镜可能会自行隐藏。如果需要此信息，请检查
+  /// [MagnifierController.shown]。
   void showMagnifier(Offset positionToShow) {
     final TextPosition position =
         renderObject.getPositionForPoint(positionToShow);
@@ -215,14 +229,14 @@ class MongolTextSelectionOverlay {
     );
   }
 
-  /// Update the current magnifier with new selection data, so the magnifier
-  /// can respond accordingly.
+  /// 用新的选择数据更新当前放大镜，以便放大镜
+  /// 可以相应地响应。
   ///
-  /// If the magnifier is not shown, this still updates the magnifier position
-  /// because the magnifier may have hidden itself and is looking for a cue to
-  /// reshow itself.
+  /// 如果放大镜未显示，这仍会更新放大镜位置
+  /// 因为放大镜可能已自行隐藏并正在寻找提示以
+  /// 重新显示自己。
   ///
-  /// If there is no magnifier in the overlay, this does nothing.
+  /// 如果覆盖层中没有放大镜，这将不执行任何操作。
   void updateMagnifier(Offset positionToShow) {
     final TextPosition position =
         renderObject.getPositionForPoint(positionToShow);
@@ -236,42 +250,39 @@ class MongolTextSelectionOverlay {
     );
   }
 
-  /// Hide the current magnifier.
+  /// 隐藏当前放大镜。
   ///
-  /// This does nothing if there is no magnifier.
+  /// 如果没有放大镜，这将不执行任何操作。
   void hideMagnifier() {
     _selectionOverlay.hideMagnifier();
   }
 
-  /// Updates the overlay after the selection has changed.
+  /// 在选择更改后更新覆盖层。
   ///
-  /// If this method is called while the [SchedulerBinding.schedulerPhase] is
-  /// [SchedulerPhase.persistentCallbacks], i.e. during the build, layout, or
-  /// paint phases (see [WidgetsBinding.drawFrame]), then the update is delayed
-  /// until the post-frame callbacks phase. Otherwise the update is done
-  /// synchronously. This means that it is safe to call during builds, but also
-  /// that if you do call this during a build, the UI will not update until the
-  /// next frame (i.e. many milliseconds later).
+  /// 如果在 [SchedulerBinding.schedulerPhase] 为
+  /// [SchedulerPhase.persistentCallbacks] 时调用此方法，即
+  /// 在构建、布局或绘制阶段（请参阅 [WidgetsBinding.drawFrame]），
+  /// 则更新会延迟到帧后回调阶段。否则，更新会同步完成。
+  /// 这意味着在构建期间调用是安全的，但也
+  /// 意味着如果您在构建期间调用此方法，UI 将不会更新，直到下
+  /// 一帧（即几毫秒后）。
   void update(TextEditingValue newValue) {
     if (_value == newValue) {
       return;
     }
     _value = newValue;
     _updateSelectionOverlay();
-    // _updateSelectionOverlay may not rebuild the selection overlay if the
-    // text metrics and selection doesn't change even if the text has changed.
-    // This rebuild is needed for the toolbar to update based on the latest text
-    // value.
+    // 即使文本已更改，如果文本指标和选择没有更改，_updateSelectionOverlay 可能不会重建选择覆盖层。
+    // 此重建是工具栏基于最新文本值更新所必需的。
     _selectionOverlay.markNeedsBuild();
   }
 
   void _updateSelectionOverlay() {
-    // Use selection delegate's current value so we have the correct selection
-    // even when overlay was just created (update() not called yet).
+    // 使用选择委托的当前值，以便即使覆盖层刚创建（update() 尚未调用），我们也有正确的选择。
     final bool selectionCollapsed =
         selectionDelegate.textEditingValue.selection.isCollapsed;
     _selectionOverlay
-      // Update selection handle metrics.
+      // 更新选择手柄指标。
       ..startHandleType = selectionCollapsed
           ? TextSelectionHandleType.collapsed
           : TextSelectionHandleType.left
@@ -280,46 +291,45 @@ class MongolTextSelectionOverlay {
           ? TextSelectionHandleType.collapsed
           : TextSelectionHandleType.right
       ..lineWidthAtEnd = _getEndGlyphWidth()
-      // Update selection toolbar metrics.
+      // 更新选择工具栏指标。
       ..selectionEndpoints = renderObject.getEndpointsForSelection(_selection)
       ..toolbarLocation = renderObject.lastSecondaryTapDownPosition;
   }
 
-  /// Causes the overlay to update its rendering.
+  /// 使覆盖层更新其渲染。
   ///
-  /// This is intended to be called when the [renderObject] may have changed its
-  /// text metrics (e.g. because the text was scrolled).
+  /// 这旨在在 [renderObject] 可能已更改其
+  /// 文本指标时调用（例如，因为文本已滚动）。
   void updateForScroll() {
     _updateSelectionOverlay();
-    // This method may be called due to windows metrics changes. In that case,
-    // non of the properties in _selectionOverlay will change, but a rebuild is
-    // still needed.
+    // 此方法可能由于窗口指标更改而调用。在这种情况下，
+    // _selectionOverlay 中的任何属性都不会更改，但仍需要重建。
     _selectionOverlay.markNeedsBuild();
   }
 
-  /// Whether the handles are currently visible.
+  /// 手柄当前是否可见。
   bool get handlesAreVisible =>
       _selectionOverlay._handles != null && handlesVisible;
 
-  /// Whether the toolbar is currently visible.
+  /// 工具栏当前是否可见。
   bool get toolbarIsVisible {
     return selectionControls is TextSelectionHandleControls
         ? _selectionOverlay._contextMenuControllerIsShown
         : _selectionOverlay._toolbar != null;
   }
 
-  /// Whether the magnifier is currently visible.
+  /// 放大镜当前是否可见。
   bool get magnifierIsVisible => _selectionOverlay._magnifierController.shown;
 
-  /// Hides the entire overlay including the toolbar and the handles.
+  /// 隐藏整个覆盖层，包括工具栏和手柄。
   void hide() => _selectionOverlay.hide();
 
-  /// Hides the toolbar part of the overlay.
+  /// 隐藏覆盖层的工具栏部分。
   ///
-  /// To hide the whole overlay, see [hide].
+  /// 要隐藏整个覆盖层，请参阅 [hide]。
   void hideToolbar() => _selectionOverlay.hideToolbar();
 
-  /// Final cleanup.
+  /// 最终清理。
   void dispose() {
     _selectionOverlay.dispose();
     renderObject.selectionStartInViewport
@@ -332,19 +342,17 @@ class MongolTextSelectionOverlay {
     hideToolbar();
   }
 
-  // "Width" here refers to the glyph width in a vertical line.
-  // It would be the height of the glyph in a non-rotated orientation.
+  // 这里的"宽度"指的是垂直线中的字形宽度。
+  // 在非旋转方向上，它将是字形的高度。
   double _getStartGlyphWidth() {
     final String currText = selectionDelegate.textEditingValue.text;
     final int firstSelectedGraphemeExtent;
     Rect? startHandleRect;
-    // Only calculate handle rects if the text in the previous frame
-    // is the same as the text in the current frame. This is done because
-    // widget.renderObject contains the renderEditable from the previous frame.
-    // If the text changed between the current and previous frames then
-    // widget.renderObject.getRectForComposingRange might fail. In cases where
-    // the current frame is different from the previous we fall back to
-    // renderObject.preferredLineWidth.
+    // 仅当先前帧中的文本与当前帧中的文本相同时才计算手柄矩形。
+    // 这样做是因为 widget.renderObject 包含来自先前帧的 renderEditable。
+    // 如果当前帧和先前帧之间的文本发生变化，则
+    // widget.renderObject.getRectForComposingRange 可能会失败。
+    // 在当前帧与先前帧不同的情况下，我们回退到 renderObject.preferredLineWidth。
     if (renderObject.plainText == currText &&
         _selection.isValid &&
         !_selection.isCollapsed) {
@@ -357,13 +365,13 @@ class MongolTextSelectionOverlay {
     return startHandleRect?.width ?? renderObject.preferredLineWidth;
   }
 
-  // "Width" here refers to the glyph width in a vertical line.
-  // It would be the height of the glyph in a non-rotated orientation.
+  // 这里的"宽度"指的是垂直线中的字形宽度。
+  // 在非旋转方向上，它将是字形的高度。
   double _getEndGlyphWidth() {
     final String currText = selectionDelegate.textEditingValue.text;
     final int lastSelectedGraphemeExtent;
     Rect? endHandleRect;
-    // See the explanation in _getStartGlyphWidth.
+    // 请参阅 _getStartGlyphWidth 中的解释。
     if (renderObject.plainText == currText &&
         _selection.isValid &&
         !_selection.isCollapsed) {
@@ -393,7 +401,7 @@ class MongolTextSelectionOverlay {
       affinity: TextAffinity.upstream,
     );
 
-    // Default affinity is downstream.
+    // 默认亲和力是下游。
     final TextPosition positionAtBeginningOfLine = TextPosition(
       offset: lineAtOffset.baseOffset,
     );
@@ -411,12 +419,11 @@ class MongolTextSelectionOverlay {
     );
   }
 
-  // The contact position of the gesture at the current end handle location.
-  // Updated when the handle moves.
+  // 手势在当前结束手柄位置的接触位置。
+  // 当手柄移动时更新。
   late double _endHandleDragPosition;
 
-  // The distance from _endHandleDragPosition to the center of the line that it
-  // corresponds to.
+  // 从 _endHandleDragPosition 到它对应的线的中心的距离。
   late double _endHandleDragPositionToCenterOfLine;
 
   void _handleSelectionEndHandleDragStart(DragStartDetails details) {
@@ -424,8 +431,7 @@ class MongolTextSelectionOverlay {
       return;
     }
 
-    // This adjusts for the fact that the selection handles may not
-    // perfectly cover the TextPosition that they correspond to.
+    // 这是为了调整选择手柄可能不完全覆盖它们对应的 TextPosition 的事实。
     _endHandleDragPosition = details.globalPosition.dx;
     final Offset endPoint = renderObject
         .localToGlobal(_selectionOverlay.selectionEndpoints.last.point);
@@ -449,13 +455,10 @@ class MongolTextSelectionOverlay {
     );
   }
 
-  /// Given a handle position and drag position, returns the position of handle
-  /// after the drag.
+  /// 给定手柄位置和拖动位置，返回拖动后手柄的位置。
   ///
-  /// The handle jumps instantly between lines when the drag reaches a full
-  /// line's width away from the original handle position. In other words, the
-  /// line jump happens when the contact point would be located at the same
-  /// place on the handle at the new line as when the gesture started.
+  /// 当拖动到达离原始手柄位置一整行宽度的距离时，手柄会在行间立即跳转。
+  /// 换句话说，当接触点位于新行上的手柄上与手势开始时相同的位置时，就会发生行跳转。
   double _getHandleDx(double dragDx, double handleDx) {
     final double distanceDragged = dragDx - handleDx;
     final int dragDirection = distanceDragged < 0.0 ? -1 : 1;
@@ -494,7 +497,7 @@ class MongolTextSelectionOverlay {
 
     final TextSelection newSelection;
     switch (defaultTargetPlatform) {
-      // On Apple platforms, dragging the base handle makes it the extent.
+      // 在 Apple 平台上，拖动基础手柄使其成为范围。
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         newSelection = TextSelection(
@@ -502,7 +505,7 @@ class MongolTextSelectionOverlay {
           baseOffset: _selection.start,
         );
         if (position.offset <= _selection.start) {
-          return; // Don't allow order swapping.
+          return; // 不允许顺序交换。
         }
         break;
       case TargetPlatform.android:
@@ -514,7 +517,7 @@ class MongolTextSelectionOverlay {
           extentOffset: position.offset,
         );
         if (newSelection.baseOffset >= newSelection.extentOffset) {
-          return; // Don't allow order swapping.
+          return; // 不允许顺序交换。
         }
         break;
     }
@@ -528,12 +531,11 @@ class MongolTextSelectionOverlay {
     ));
   }
 
-  // The contact position of the gesture at the current start handle location.
-  // Updated when the handle moves.
+  // 手势在当前开始手柄位置的接触位置。
+  // 当手柄移动时更新。
   late double _startHandleDragPosition;
 
-  // The distance from _startHandleDragPosition to the center of the line that
-  // it corresponds to.
+  // 从 _startHandleDragPosition 到它对应的线的中心的距离。
   late double _startHandleDragPositionToCenterOfLine;
 
   void _handleSelectionStartHandleDragStart(DragStartDetails details) {
@@ -541,8 +543,7 @@ class MongolTextSelectionOverlay {
       return;
     }
 
-    // This adjusts for the fact that the selection handles may not
-    // perfectly cover the TextPosition that they correspond to.
+    // 这是为了调整选择手柄可能不完全覆盖它们对应的 TextPosition 的事实。
     _startHandleDragPosition = details.globalPosition.dx;
     final Offset startPoint = renderObject
         .localToGlobal(_selectionOverlay.selectionEndpoints.first.point);
@@ -595,7 +596,7 @@ class MongolTextSelectionOverlay {
 
     final TextSelection newSelection;
     switch (defaultTargetPlatform) {
-      // On Apple platforms, dragging the base handle makes it the extent.
+      // 在 Apple 平台上，拖动基础手柄使其成为范围。
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         newSelection = TextSelection(
@@ -603,7 +604,7 @@ class MongolTextSelectionOverlay {
           baseOffset: _selection.end,
         );
         if (newSelection.extentOffset >= _selection.end) {
-          return; // Don't allow order swapping.
+          return; // 不允许顺序交换。
         }
         break;
       case TargetPlatform.android:
@@ -615,7 +616,7 @@ class MongolTextSelectionOverlay {
           extentOffset: _selection.extentOffset,
         );
         if (newSelection.baseOffset >= newSelection.extentOffset) {
-          return; // Don't allow order swapping.
+          return; // 不允许顺序交换。
         }
         break;
     }
@@ -663,62 +664,56 @@ class MongolTextSelectionOverlay {
   }
 }
 
-/// Delegate interface for the [MongolTextSelectionGestureDetectorBuilder].
+/// [MongolTextSelectionGestureDetectorBuilder] 的委托接口。
 ///
-/// The interface is usually implemented by textfield implementations wrapping
-/// [MongolEditableText], that use a [MongolTextSelectionGestureDetectorBuilder] to build a
-/// [TextSelectionGestureDetector] for their [MongolEditableText]. The delegate provides
-/// the builder with information about the current state of the textfield.
-/// Based on this information, the builder adds the correct gesture handlers
-/// to the gesture detector.
+/// 该接口通常由包装 [MongolEditableText] 的文本字段实现实现，
+/// 这些实现使用 [MongolTextSelectionGestureDetectorBuilder] 为其 [MongolEditableText] 构建 [TextSelectionGestureDetector]。
+/// 委托向构建器提供有关文本字段当前状态的信息。
+/// 基于此信息，构建器向手势检测器添加正确的手势处理程序。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolTextField], which implements this delegate for the Material textfield.
+///  * [MongolTextField]，它为 Material 文本字段实现此委托。
 abstract class MongolTextSelectionGestureDetectorBuilderDelegate {
-  /// [GlobalKey] to the [MongolEditableText] for which the
-  /// [MongolTextSelectionGestureDetectorBuilder] will build a [TextSelectionGestureDetector].
+  /// 指向 [MongolEditableText] 的 [GlobalKey]，
+  /// [MongolTextSelectionGestureDetectorBuilder] 将为其构建 [TextSelectionGestureDetector]。
   GlobalKey<MongolEditableTextState> get editableTextKey;
 
-  /// Whether the text field should respond to force presses.
+  /// 文本字段是否应该响应强制按压。
   bool get forcePressEnabled;
 
-  /// Whether the user may select text in the text field.
+  /// 用户是否可以在文本字段中选择文本。
   bool get selectionEnabled;
 }
 
-/// Builds a [TextSelectionGestureDetector] to wrap an [MongolEditableText].
+/// 构建一个 [TextSelectionGestureDetector] 来包装 [MongolEditableText]。
 ///
-/// The class implements sensible defaults for many user interactions
-/// with an [MongolEditableText] (see the documentation of the various gesture handler
-/// methods, e.g. [onTapDown], [onForcePressStart], etc.). Subclasses of
-/// [MongolTextSelectionGestureDetectorBuilder] can change the behavior performed in
-/// responds to these gesture events by overriding the corresponding handler
-/// methods of this class.
+/// 该类为许多与 [MongolEditableText] 的用户交互实现了合理的默认值
+/// （请参阅各种手势处理程序方法的文档，例如 [onTapDown]、[onForcePressStart] 等）。
+/// [MongolTextSelectionGestureDetectorBuilder] 的子类可以通过覆盖此类的相应处理程序方法来更改响应这些手势事件时执行的行为。
 ///
-/// The resulting [TextSelectionGestureDetector] to wrap an [MongolEditableText] is
-/// obtained by calling [buildGestureDetector].
+/// 通过调用 [buildGestureDetector] 获得包装 [MongolEditableText] 的最终 [TextSelectionGestureDetector]。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///  * [MongolTextField], which uses a subclass to implement the Material-specific
-///    gesture logic of an [MongolEditableText].
+///  * [MongolTextField]，它使用子类实现 [MongolEditableText] 的 Material 特定手势逻辑。
 class MongolTextSelectionGestureDetectorBuilder {
-  /// Creates a [MongolTextSelectionGestureDetectorBuilder].
+  /// 创建一个 [MongolTextSelectionGestureDetectorBuilder]。
+  /// 
+  /// 参数：
+  /// - delegate: 此构建器的委托
   MongolTextSelectionGestureDetectorBuilder({
     required this.delegate,
   });
 
-  /// The delegate for this [MongolTextSelectionGestureDetectorBuilder].
+  /// 此 [MongolTextSelectionGestureDetectorBuilder] 的委托。
   ///
-  /// The delegate provides the builder with information about what actions can
-  /// currently be performed on the text field. Based on this, the builder adds
-  /// the correct gesture handlers to the gesture detector.
+  /// 委托向构建器提供有关当前可以在文本字段上执行哪些操作的信息。
+  /// 基于此，构建器向手势检测器添加正确的手势处理程序。
   @protected
   final MongolTextSelectionGestureDetectorBuilderDelegate delegate;
 
-  // Shows the magnifier on supported platforms at the given offset, currently
-  // only Android and iOS.
+  // 在支持的平台上在给定偏移处显示放大镜，目前仅 Android 和 iOS。
   void _showMagnifierIfSupportedByPlatform(Offset positionToShow) {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -731,7 +726,7 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  // Hides the magnifier on supported platforms, currently only Android and iOS.
+  // 在支持的平台上隐藏放大镜，目前仅 Android 和 iOS。
   void _hideMagnifierIfSupportedByPlatform() {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -744,7 +739,7 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Returns true if lastSecondaryTapDownPosition was on selection.
+  /// 如果 lastSecondaryTapDownPosition 在选择上，则返回 true。
   bool get _lastSecondaryTapWasOnSelection {
     assert(renderEditable.lastSecondaryTapDownPosition != null);
     if (renderEditable.selection == null) {
@@ -779,7 +774,7 @@ class MongolTextSelectionGestureDetectorBuilder {
         selection.end >= textPosition.offset;
   }
 
-  /// Returns true if position was on selection.
+  /// 如果位置在选择上，则返回 true。
   bool _positionOnSelection(Offset position, TextSelection? targetSelection) {
     if (targetSelection == null) {
       return false;
@@ -792,18 +787,16 @@ class MongolTextSelectionGestureDetectorBuilder {
         targetSelection.end >= textPosition.offset;
   }
 
-  // Expand the selection to the given global position.
+  // 将选择扩展到给定的全局位置。
   //
-  // Either base or extent will be moved to the last tapped position, whichever
-  // is closest. The selection will never shrink or pivot, only grow.
+  // 基础或范围将移动到最后点击的位置，以较近的为准。
+  // 选择永远不会缩小或旋转，只会增长。
   //
-  // If fromSelection is given, will expand from that selection instead of the
-  // current selection in renderEditable.
+  // 如果给出 fromSelection，则从该选择扩展，而不是从 renderEditable 中的当前选择。
   //
-  // See also:
+  // 另请参阅：
   //
-  //   * [_extendSelection], which is similar but pivots the selection around
-  //     the base.
+  //   * [_extendSelection]，它类似但围绕基础旋转选择。
   void _expandSelection(Offset offset, SelectionChangedCause cause,
       [TextSelection? fromSelection]) {
     assert(renderEditable.selection?.baseOffset != null);
@@ -827,14 +820,13 @@ class MongolTextSelectionGestureDetectorBuilder {
     );
   }
 
-  // Extend the selection to the given global position.
+  // 将选择扩展到给定的全局位置。
   //
-  // Holds the base in place and moves the extent.
+  // 保持基础不变并移动范围。
   //
-  // See also:
+  // 另请参阅：
   //
-  //   * [_expandSelection], which is similar but always increases the size of
-  //     the selection.
+  //   * [_expandSelection]，它类似但总是增加选择的大小。
   void _extendSelection(Offset offset, SelectionChangedCause cause) {
     assert(renderEditable.selection?.baseOffset != null);
 
@@ -853,34 +845,29 @@ class MongolTextSelectionGestureDetectorBuilder {
     );
   }
 
-  /// Whether to show the selection toolbar.
+  /// 是否显示选择工具栏。
   ///
-  /// It is based on the signal source when a [onTapDown] is called. This getter
-  /// will return true if current [onTapDown] event is triggered by a touch or
-  /// a stylus.
+  /// 它基于调用 [onTapDown] 时的信号源。如果当前 [onTapDown] 事件是由触摸或手写笔触发的，
+  /// 此 getter 将返回 true。
   bool get shouldShowSelectionToolbar => _shouldShowSelectionToolbar;
   bool _shouldShowSelectionToolbar = true;
 
-  /// The [State] of the [EditableText] for which the builder will provide a
-  /// [TextSelectionGestureDetector].
+  /// [EditableText] 的 [State]，构建器将为其提供 [TextSelectionGestureDetector]。
   @protected
   MongolEditableTextState get editableText =>
       delegate.editableTextKey.currentState!;
 
-  /// The [RenderObject] of the [MongolEditableText] for which the builder will
-  /// provide a [TextSelectionGestureDetector].
+  /// [MongolEditableText] 的 [RenderObject]，构建器将为其提供 [TextSelectionGestureDetector]。
   @protected
   MongolRenderEditable get renderEditable => editableText.renderEditable;
 
-  /// Whether the Shift key was pressed when the most recent [PointerDownEvent]
-  /// was tracked by the [BaseTapAndDragGestureRecognizer].
+  /// 当最近的 [PointerDownEvent] 被 [BaseTapAndDragGestureRecognizer] 跟踪时，Shift 键是否被按下。
   bool _isShiftPressed = false;
 
-  /// The viewport offset pixels of any [Scrollable] containing the
-  /// [MongolRenderEditable] at the last drag start.
+  /// 上次拖动开始时包含 [MongolRenderEditable] 的任何 [Scrollable] 的视口偏移像素。
   double _dragStartScrollOffset = 0.0;
 
-  /// The viewport offset pixels of the [MongolRenderEditable] at the last drag start.
+  /// 上次拖动开始时 [MongolRenderEditable] 的视口偏移像素。
   double _dragStartViewportOffset = 0.0;
 
   double get _scrollPosition {
@@ -891,34 +878,28 @@ class MongolTextSelectionGestureDetectorBuilder {
     return scrollableState == null ? 0.0 : scrollableState.position.pixels;
   }
 
-  // For a shift + tap + drag gesture, the TextSelection at the point of the
-  // tap. Mac uses this value to reset to the original selection when an
-  // inversion of the base and offset happens.
+  // 对于 shift + tap + drag 手势，是点击点的 TextSelection。
+  // Mac 使用此值在基础和偏移反转时重置为原始选择。
   TextSelection? _dragStartSelection;
 
-  // For tap + drag gesture on iOS, whether the position where the drag started
-  // was on the previous TextSelection. iOS uses this value to determine if
-  // the cursor should move on drag update.
+  // 对于 iOS 上的 tap + drag 手势，拖动开始的位置是否在先前的 TextSelection 上。
+  // iOS 使用此值来确定光标是否应在拖动更新时移动。
   //
-  // If the drag started on the previous selection then the cursor will move on
-  // drag update. If the drag did not start on the previous selection then the
-  // cursor will not move on drag update.
+  // 如果拖动开始于先前的选择，则光标将在拖动更新时移动。
+  // 如果拖动不是开始于先前的选择，则光标不会在拖动更新时移动。
   bool? _dragBeganOnPreviousSelection;
 
-  // For iOS long press behavior when the field is not focused. iOS uses this value
-  // to determine if a long press began on a field that was not focused.
+  // 对于字段未聚焦时的 iOS 长按行为。iOS 使用此值来确定长按是否开始于未聚焦的字段。
   //
-  // If the field was not focused when the long press began, a long press will select
-  // the word and a long press move will select word-by-word. If the field was
-  // focused, the cursor moves to the long press position.
+  // 如果长按开始时字段未聚焦，长按将选择单词，长按移动将逐字选择。
+  // 如果字段已聚焦，光标将移动到长按位置。
   bool _longPressStartedWithoutFocus = false;
 
-  /// Handler for [TextSelectionGestureDetector.onTapTrackStart].
+  /// [TextSelectionGestureDetector.onTapTrackStart] 的处理程序。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onTapTrackStart], which triggers this
-  ///    callback.
+  ///  * [TextSelectionGestureDetector.onTapTrackStart]，它触发此回调。
   @protected
   void onTapTrackStart() {
     _isShiftPressed = HardwareKeyboard.instance.logicalKeysPressed
@@ -928,25 +909,24 @@ class MongolTextSelectionGestureDetectorBuilder {
     }).isNotEmpty;
   }
 
-  /// Handler for [TextSelectionGestureDetector.onTapTrackReset].
+  /// [TextSelectionGestureDetector.onTapTrackReset] 的处理程序。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onTapTrackReset], which triggers this
-  ///    callback.
+  ///  * [TextSelectionGestureDetector.onTapTrackReset]，它触发此回调。
   @protected
   void onTapTrackReset() {
     _isShiftPressed = false;
   }
 
-  /// Handler for [TextSelectionGestureDetector.onTapDown].
+  /// [TextSelectionGestureDetector.onTapDown] 的处理程序。
   ///
-  /// By default, it forwards the tap to [MongolRenderEditable.handleTapDown] and sets
-  /// [shouldShowSelectionToolbar] to true if the tap was initiated by a finger or stylus.
+  /// 默认情况下，它将点击转发给 [MongolRenderEditable.handleTapDown]，
+  /// 并在点击由手指或手写笔启动时将 [shouldShowSelectionToolbar] 设置为 true。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onTapDown], which triggers this callback.
+  ///  * [TextSelectionGestureDetector.onTapDown]，它触发此回调。
   @protected
   void onTapDown(TapDragDownDetails details) {
     if (!delegate.selectionEnabled) {
@@ -954,31 +934,28 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
     renderEditable
         .handleTapDown(TapDownDetails(globalPosition: details.globalPosition));
-    // The selection overlay should only be shown when the user is interacting
-    // through a touch screen (via either a finger or a stylus). A mouse shouldn't
-    // trigger the selection overlay.
-    // For backwards-compatibility, we treat a null kind the same as touch.
+    // 选择覆盖层应仅在用户通过触摸屏（通过手指或手写笔）交互时显示。
+    // 鼠标不应触发选择覆盖层。
+    // 为了向后兼容，我们将 null 类型视为与触摸相同。
     final PointerDeviceKind? kind = details.kind;
     _shouldShowSelectionToolbar = kind == null ||
         kind == PointerDeviceKind.touch ||
         kind == PointerDeviceKind.stylus;
 
-    // It is impossible to extend the selection when the shift key is pressed, if the
-    // renderEditable.selection is invalid.
+    // 如果 renderEditable.selection 无效，则在按下 Shift 键时无法扩展选择。
     final bool isShiftPressedValid =
         _isShiftPressed && renderEditable.selection?.baseOffset != null;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.fuchsia:
-        // On mobile platforms the selection is set on tap up.
+        // 在移动平台上，选择在点击时设置。
         editableText.hideToolbar(false);
       case TargetPlatform.iOS:
-        // On mobile platforms the selection is set on tap up.
+        // 在移动平台上，选择在点击时设置。
         break;
       case TargetPlatform.macOS:
         editableText.hideToolbar();
-        // On macOS, a shift-tapped unfocused field expands from 0, not from the
-        // previous selection.
+        // 在 macOS 上，shift-tapped 未聚焦字段从 0 扩展，而不是从先前的选择。
         if (isShiftPressedValid) {
           final TextSelection? fromSelection = renderEditable.hasFocus
               ? null
@@ -990,10 +967,9 @@ class MongolTextSelectionGestureDetectorBuilder {
           );
           return;
         }
-        // On macOS, a tap/click places the selection in a precise position.
-        // This differs from iOS/iPadOS, where if the gesture is done by a touch
-        // then the selection moves to the closest word edge, instead of a
-        // precise position.
+        // 在 macOS 上，点击/单击将选择放置在精确位置。
+        // 这与 iOS/iPadOS 不同，在 iOS/iPadOS 中，如果手势是通过触摸完成的，
+        // 则选择会移动到最近的单词边缘，而不是精确位置。
         renderEditable.selectPosition(cause: SelectionChangedCause.tap);
       case TargetPlatform.linux:
       case TargetPlatform.windows:
@@ -1006,17 +982,15 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Handler for [TextSelectionGestureDetector.onForcePressStart].
+  /// [TextSelectionGestureDetector.onForcePressStart] 的处理程序。
   ///
-  /// By default, it selects the word at the position of the force press,
-  /// if selection is enabled.
+  /// 默认情况下，如果启用了选择，它会选择强制按压位置的单词。
   ///
-  /// This callback is only applicable when force press is enabled.
+  /// 此回调仅在启用强制按压时适用。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onForcePressStart], which triggers this
-  ///    callback.
+  ///  * [TextSelectionGestureDetector.onForcePressStart]，它触发此回调。
   @protected
   void onForcePressStart(ForcePressDetails details) {
     assert(delegate.forcePressEnabled);
@@ -1029,17 +1003,15 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Handler for [TextSelectionGestureDetector.onForcePressEnd].
+  /// [TextSelectionGestureDetector.onForcePressEnd] 的处理程序。
   ///
-  /// By default, it selects words in the range specified in [details] and shows
-  /// toolbar if it is necessary.
+  /// 默认情况下，它选择 [details] 中指定的范围内的单词，并在必要时显示工具栏。
   ///
-  /// This callback is only applicable when force press is enabled.
+  /// 此回调仅在启用强制按压时适用。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onForcePressEnd], which triggers this
-  ///    callback.
+  ///  * [TextSelectionGestureDetector.onForcePressEnd]，它触发此回调。
   @protected
   void onForcePressEnd(ForcePressDetails details) {
     assert(delegate.forcePressEnabled);
@@ -1050,19 +1022,17 @@ class MongolTextSelectionGestureDetectorBuilder {
     if (shouldShowSelectionToolbar) editableText.showToolbar();
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSingleTapUp].
+  /// [TextSelectionGestureDetector.onSingleTapUp] 的处理程序。
   ///
-  /// By default, it selects word edge if selection is enabled.
+  /// 默认情况下，如果启用了选择，它会选择单词边缘。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onSingleTapUp], which triggers
-  ///    this callback.
+  ///  * [TextSelectionGestureDetector.onSingleTapUp]，它触发此回调。
   @protected
   void onSingleTapUp(TapDragUpDetails details) {
     if (delegate.selectionEnabled) {
-      // It is impossible to extend the selection when the shift key is pressed, if the
-      // renderEditable.selection is invalid.
+      // 如果 renderEditable.selection 无效，则在按下 Shift 键时无法扩展选择。
       final bool isShiftPressedValid =
           _isShiftPressed && renderEditable.selection?.baseOffset != null;
       switch (defaultTargetPlatform) {
@@ -1070,7 +1040,7 @@ class MongolTextSelectionGestureDetectorBuilder {
         case TargetPlatform.macOS:
         case TargetPlatform.windows:
           break;
-        // On desktop platforms the selection is set on tap down.
+        // 在桌面平台上，选择在点击时设置。
         case TargetPlatform.android:
           if (isShiftPressedValid) {
             _extendSelection(details.globalPosition, SelectionChangedCause.tap);
@@ -1086,8 +1056,7 @@ class MongolTextSelectionGestureDetectorBuilder {
           renderEditable.selectPosition(cause: SelectionChangedCause.tap);
         case TargetPlatform.iOS:
           if (isShiftPressedValid) {
-            // On iOS, a shift-tapped unfocused field expands from 0, not from
-            // the previous selection.
+            // 在 iOS 上，shift-tapped 未聚焦字段从 0 扩展，而不是从先前的选择。
             final TextSelection? fromSelection = renderEditable.hasFocus
                 ? null
                 : const TextSelection.collapsed(offset: 0);
@@ -1103,26 +1072,25 @@ class MongolTextSelectionGestureDetectorBuilder {
             case PointerDeviceKind.trackpad:
             case PointerDeviceKind.stylus:
             case PointerDeviceKind.invertedStylus:
-              // Precise devices should place the cursor at a precise position if the
-              // word at the text position is not misspelled.
+              // 精确设备应将光标放在精确位置（如果文本位置的单词没有拼写错误）。
               renderEditable.selectPosition(cause: SelectionChangedCause.tap);
             case PointerDeviceKind.touch:
             case PointerDeviceKind.unknown:
-              // If the word that was tapped is misspelled, select the word and show the spell check suggestions
-              // toolbar once. If additional taps are made on a misspelled word, toggle the toolbar. If the word
-              // is not misspelled, default to the following behavior:
+              // 如果点击的单词拼写错误，选择该单词并显示拼写检查建议工具栏一次。
+              // 如果在拼写错误的单词上进行额外点击，则切换工具栏。
+              // 如果单词没有拼写错误，默认行为如下：
               //
-              // Toggle the toolbar if the `previousSelection` is collapsed, the tap is on the selection, the
-              // TextAffinity remains the same, and the editable is focused. The TextAffinity is important when the
-              // cursor is on the boundary of a line wrap, if the affinity is different (i.e. it is downstream), the
-              // selection should move to the following line and not toggle the toolbar.
+              // 如果 `previousSelection` 已折叠，点击在选择上，TextAffinity 保持不变，
+              // 并且可编辑字段已聚焦，则切换工具栏。
+              // 当光标位于换行边界时，TextAffinity 很重要，如果亲和力不同（即它是下游），
+              // 选择应移动到下一行，而不是切换工具栏。
               //
-              // Toggle the toolbar when the tap is exclusively within the bounds of a non-collapsed `previousSelection`,
-              // and the editable is focused.
+              // 当点击完全在非折叠 `previousSelection` 的边界内，并且可编辑字段已聚焦时，切换工具栏。
               //
-              // Selects the word edge closest to the tap when the editable is not focused, or if the tap was neither exclusively
-              // or inclusively on `previousSelection`. If the selection remains the same after selecting the word edge, then we
-              // toggle the toolbar. If the selection changes then we hide the toolbar.
+              // 当可编辑字段未聚焦时，或者如果点击既不完全也不包含在 `previousSelection` 上时，
+              // 选择最接近点击的单词边缘。
+              // 如果选择在选择单词边缘后保持不变，则我们切换工具栏。
+              // 如果选择发生变化，则我们隐藏工具栏。
               final TextSelection previousSelection =
                   renderEditable.selection ??
                       editableText.textEditingValue.selection;
@@ -1164,28 +1132,25 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSingleTapCancel].
+  /// [TextSelectionGestureDetector.onSingleTapCancel] 的处理程序。
   ///
-  /// By default, it services as place holder to enable subclass override.
+  /// 默认情况下，它作为占位符以启用子类覆盖。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onSingleTapCancel], which triggers
-  ///    this callback.
+  ///  * [TextSelectionGestureDetector.onSingleTapCancel]，它触发此回调。
   @protected
   void onSingleTapCancel() {
     /* Subclass should override this method if needed. */
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSingleLongTapStart].
+  /// [TextSelectionGestureDetector.onSingleLongTapStart] 的处理程序。
   ///
-  /// By default, it selects text position specified in [details] if selection
-  /// is enabled.
+  /// 默认情况下，如果启用了选择，它会选择 [details] 中指定的文本位置。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onSingleLongTapStart], which triggers
-  ///    this callback.
+  ///  * [TextSelectionGestureDetector.onSingleLongTapStart]，它触发此回调。
   @protected
   void onSingleLongTapStart(LongPressStartDetails details) {
     if (delegate.selectionEnabled) {
@@ -1215,19 +1180,17 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSingleLongTapMoveUpdate].
+  /// [TextSelectionGestureDetector.onSingleLongTapMoveUpdate] 的处理程序。
   ///
-  /// By default, it updates the selection location specified in [details] if
-  /// selection is enabled.
+  /// 默认情况下，如果启用了选择，它会更新 [details] 中指定的选择位置。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onSingleLongTapMoveUpdate], which
-  ///    triggers this callback.
+  ///  * [TextSelectionGestureDetector.onSingleLongTapMoveUpdate]，它触发此回调。
   @protected
   void onSingleLongTapMoveUpdate(LongPressMoveUpdateDetails details) {
     if (delegate.selectionEnabled) {
-      // Adjust the drag start offset for possible viewport offset changes.
+      // 调整拖动开始偏移以适应可能的视口偏移变化。
       final Offset editableOffset = renderEditable.maxLines == 1
           ? Offset(renderEditable.offset.pixels - _dragStartViewportOffset, 0.0)
           : Offset(
@@ -1273,14 +1236,13 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSingleLongTapEnd].
+  /// [TextSelectionGestureDetector.onSingleLongTapEnd] 的处理程序。
   ///
-  /// By default, it shows toolbar if necessary.
+  /// 默认情况下，它在必要时显示工具栏。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onSingleLongTapEnd], which triggers this
-  ///    callback.
+  ///  * [TextSelectionGestureDetector.onSingleLongTapEnd]，它触发此回调。
   @protected
   void onSingleLongTapEnd(LongPressEndDetails details) {
     _hideMagnifierIfSupportedByPlatform();
@@ -1292,9 +1254,9 @@ class MongolTextSelectionGestureDetectorBuilder {
     _dragStartScrollOffset = 0.0;
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSecondaryTap].
+  /// [TextSelectionGestureDetector.onSecondaryTap] 的处理程序。
   ///
-  /// By default, selects the word if possible and shows the toolbar.
+  /// 默认情况下，如果可能，选择单词并显示工具栏。
   @protected
   void onSecondaryTap() {
     if (!delegate.selectionEnabled) {
@@ -1321,13 +1283,12 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  /// Handler for [TextSelectionGestureDetector.onSecondaryTapDown].
+  /// [TextSelectionGestureDetector.onSecondaryTapDown] 的处理程序。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onSecondaryTapDown], which triggers this
-  ///    callback.
-  ///  * [onSecondaryTap], which is typically called after this.
+  ///  * [TextSelectionGestureDetector.onSecondaryTapDown]，它触发此回调。
+  ///  * [onSecondaryTap]，通常在此之后调用。
   @protected
   void onSecondaryTapDown(TapDownDetails details) {
     renderEditable.handleSecondaryTapDown(
@@ -1335,15 +1296,13 @@ class MongolTextSelectionGestureDetectorBuilder {
     _shouldShowSelectionToolbar = true;
   }
 
-  /// Handler for [TextSelectionGestureDetector.onDoubleTapDown].
+  /// [TextSelectionGestureDetector.onDoubleTapDown] 的处理程序。
   ///
-  /// By default, it selects a word through [MongolRenderEditable.selectWord] if
-  /// selectionEnabled and shows toolbar if necessary.
+  /// 默认情况下，如果 selectionEnabled，它通过 [MongolRenderEditable.selectWord] 选择一个单词，并在必要时显示工具栏。
   ///
-  /// See also:
+  /// 另请参阅：
   ///
-  ///  * [TextSelectionGestureDetector.onDoubleTapDown], which triggers this
-  ///    callback.
+  ///  * [TextSelectionGestureDetector.onDoubleTapDown]，它触发此回调。
   @protected
   void onDoubleTapDown(TapDragDownDetails details) {
     if (delegate.selectionEnabled) {
@@ -1354,8 +1313,7 @@ class MongolTextSelectionGestureDetectorBuilder {
     }
   }
 
-  // Selects the set of paragraphs in a document that intersect a given range of
-  // global positions.
+  // 选择文档中与给定全局位置范围相交的段落集。
   void _selectParagraphsInRange(
       {required Offset from, Offset? to, SelectionChangedCause? cause}) {
     final TextBoundary paragraphBoundary =

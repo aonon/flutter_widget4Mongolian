@@ -8,60 +8,53 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 
-/// Positions the toolbar to the left of [anchorLeft] if it fits, or otherwise 
-/// to the right of [anchorRight].
+/// 如果适合，将工具栏定位到 [anchorLeft] 的左侧，否则定位到 [anchorRight] 的右侧。
 ///
-/// See also:
+/// 另请参阅：
 ///
-///   * [MongolTextSelectionToolbar], which uses this to position itself.
+///   * [MongolTextSelectionToolbar]，它使用此来定位自己。
 class MongolTextSelectionToolbarLayoutDelegate extends SingleChildLayoutDelegate {
-  /// Creates an instance of MongolTextSelectionToolbarLayoutDelegate.
+  /// 创建 MongolTextSelectionToolbarLayoutDelegate 的实例。
   MongolTextSelectionToolbarLayoutDelegate({
     required this.anchorLeft,
     required this.anchorRight,
     this.fitsLeft,
   });
 
-  /// The focal point to the left of which the toolbar attempts to position 
-  /// itself.
+  /// 工具栏尝试定位到其左侧的焦点。
   ///
-  /// If there is not enough room to the left before reaching the left of the 
-  /// screen, then the toolbar will position itself to the right of 
-  /// [anchorRight].
+  /// 如果在到达屏幕左侧之前左侧没有足够的空间，
+  /// 则工具栏将定位到 [anchorRight] 的右侧。
   ///
-  /// Should be provided in local coordinates.
+  /// 应以局部坐标提供。
   final Offset anchorLeft;
 
-  /// The focal point to the right of which the toolbar attempts to position 
-  /// itself, if it doesn't fit to the left of [anchorLeft].
+  /// 如果工具栏不适合 [anchorLeft] 的左侧，则它尝试定位到其右侧的焦点。
   ///
-  /// Should be provided in local coordinates.
+  /// 应以局部坐标提供。
   final Offset anchorRight;
 
-  /// Whether or not the child should be considered to fit to the left of
-  /// anchorLeft.
+  /// 子项是否应被视为适合 anchorLeft 的左侧。
   ///
-  /// Typically used to force the child to be drawn at anchorLeft even when it
-  /// doesn't fit, such as when the [MongolTextSelectionToolbar] draws an
-  /// open overflow menu.
+  /// 通常用于强制子项即使不适合也绘制在 anchorLeft 处，
+  /// 例如当 [MongolTextSelectionToolbar] 绘制打开的溢出菜单时。
   ///
-  /// If not provided, it will be calculated.
+  /// 如果未提供，将进行计算。
   final bool? fitsLeft;
 
-  // Return the value that centers height as closely as possible to position
-  // while fitting inside of min and max.
+  // 返回尽可能将高度居中到位置的值，同时适应最小和最大值。
   static double _centerOn(double position, double height, double max) {
-    // If it overflows above, put it as far above as possible.
+    // 如果它向上溢出，将其尽可能向上放置。
     if (position - height / 2.0 < 0.0) {
       return 0.0;
     }
 
-    // If it overflows below, put it as far below as possible.
+    // 如果它向下溢出，将其尽可能向下放置。
     if (position + height / 2.0 > max) {
       return max - height;
     }
 
-    // Otherwise it fits while perfectly centered.
+    // 否则它在完全居中的情况下适合。
     return position - height / 2.0;
   }
 
