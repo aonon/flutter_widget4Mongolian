@@ -446,13 +446,34 @@ class MongolTextPainter {
         _textHeightBasis = textHeightBasis,
         _rotateCJK = rotateCJK;
 
-  /// 计算配置的 [MongolTextPainter] 的高度
+  /// 计算指定配置下文本绘制器的实际高度
   ///
-  /// 这是一个便捷方法，使用提供的参数创建一个文本绘制器，
-  /// 使用提供的 [minHeight] 和 [maxHeight] 进行布局，
-  /// 并返回其 [MongolTextPainter.height]，同时确保释放底层资源
-  /// 此操作成本较高，应尽可能避免，
-  /// 只要有可能保留 [MongolTextPainter] 来绘制文本或获取其他信息
+  /// 实际高度是指文本在指定约束条件下布局后的实际占用高度，
+  /// 它会根据 [textHeightBasis] 参数的不同而有所变化：
+  /// - [TextHeightBasis.parent]：多行文本占满父容器高度，单行文本使用最小高度
+  /// - [TextHeightBasis.longestLine]：高度仅足以容纳最长行
+  ///
+  /// 这是一个静态便捷方法，其工作流程：
+  /// 1. 使用提供的参数创建一个临时 [MongolTextPainter] 实例
+  /// 2. 使用指定的 [minHeight] 和 [maxHeight] 调用 [layout] 方法进行布局
+  /// 3. 获取并返回 [height] 属性值
+  /// 4. 无论计算成功与否，都会释放临时绘制器的资源
+  ///
+  /// 性能注意事项：
+  /// - 此操作成本较高，因为它需要创建、布局和销毁一个完整的文本绘制器实例
+  /// - 当需要多次获取文本度量信息时，建议创建并重用一个 [MongolTextPainter] 实例
+  /// - 仅在单次使用场景下或无法重用绘制器时使用此静态方法
+  ///
+  /// 参数说明：
+  /// - [text]：要计算的文本内容，必须提供
+  /// - [textAlign]：文本对齐方式，默认为顶部对齐
+  /// - [textScaleFactor]：已弃用，请使用 [textScaler] 替代
+  /// - [textScaler]：字体缩放策略，用于调整文本大小
+  /// - [maxLines]：最大行数限制，null 表示无限制
+  /// - [ellipsis]：溢出时显示的省略符号
+  /// - [textHeightBasis]：高度计算方式，默认为基于父容器
+  /// - [minHeight]：最小高度约束，默认为 0.0
+  /// - [maxHeight]：最大高度约束，默认为无限大
   static double computeHeight({
     required TextSpan text,
     MongolTextAlign textAlign = MongolTextAlign.top,
@@ -491,13 +512,32 @@ class MongolTextPainter {
     }
   }
 
-  /// 计算配置的 [MongolTextPainter] 的最大内在高度
+  /// 计算指定配置下文本绘制器的最大内在高度
   ///
-  /// 这是一个便捷方法，使用提供的参数创建一个文本绘制器，
-  /// 使用提供的 [minHeight] 和 [maxHeight] 进行布局，
-  /// 并返回其 [MongolTextPainter.maxIntrinsicHeight]，同时确保释放底层资源
-  /// 此操作成本较高，应尽可能避免，
-  /// 只要有可能保留 [MongolTextPainter] 来绘制文本或获取其他信息
+  /// 最大内在高度是指文本在垂直方向上能够达到的最大高度，
+  /// 当文本高度增加到这个值后，继续增加高度不会再减少宽度
+  ///
+  /// 这是一个静态便捷方法，其工作流程：
+  /// 1. 使用提供的参数创建一个临时 [MongolTextPainter] 实例
+  /// 2. 使用指定的 [minHeight] 和 [maxHeight] 调用 [layout] 方法进行布局
+  /// 3. 获取并返回 [maxIntrinsicHeight] 属性值
+  /// 4. 无论计算成功与否，都会释放临时绘制器的资源
+  ///
+  /// 性能注意事项：
+  /// - 此操作成本较高，因为它需要创建、布局和销毁一个完整的文本绘制器实例
+  /// - 当需要多次获取文本度量信息时，建议创建并重用一个 [MongolTextPainter] 实例
+  /// - 仅在单次使用场景下或无法重用绘制器时使用此静态方法
+  ///
+  /// 参数说明：
+  /// - [text]：要计算的文本内容，必须提供
+  /// - [textAlign]：文本对齐方式，默认为顶部对齐
+  /// - [textScaleFactor]：已弃用，请使用 [textScaler] 替代
+  /// - [textScaler]：字体缩放策略，用于调整文本大小
+  /// - [maxLines]：最大行数限制，null 表示无限制
+  /// - [ellipsis]：溢出时显示的省略符号
+  /// - [textHeightBasis]：高度计算方式，默认为基于父容器
+  /// - [minHeight]：最小高度约束，默认为 0.0
+  /// - [maxHeight]：最大高度约束，默认为无限大
   static double computeMaxIntrinsicHeight({
     required TextSpan text,
     MongolTextAlign textAlign = MongolTextAlign.top,
@@ -569,79 +609,123 @@ class MongolTextPainter {
 
   StackTrace? _debugMarkNeedsLayoutCallStack;
 
-  /// 将此文本绘制器的布局信息标记为脏并移除缓存信息
+  /// 标记文本绘制器的布局信息为脏状态并清除布局缓存
   ///
-  /// 使用此方法在引擎中布局更改的情况下通知文本绘制器重布局
-  /// 在大多数情况下，在框架中更新文本绘制器属性会自动调用此方法
+  /// 当文本绘制器的属性（如文本内容、样式、对齐方式等）发生变化时，
+  /// 需要调用此方法通知绘制器在下一次绘制前重新计算布局
+  ///
+  /// 内部实现：
+  /// 1. 如果启用断言，记录导致布局失效的调用栈，便于调试
+  /// 2. 释放当前布局缓存中可能持有的 [MongolParagraph] 资源
+  /// 3. 清除布局缓存引用，触发下一次布局计算
+  ///
+  /// 注意：在大多数情况下，更新绘制器属性后会自动调用此方法，无需手动调用
+  /// 只有在特殊情况下（如引擎层面的布局变化）才需要手动调用
   void markNeedsLayout() {
     assert(() {
       if (_layoutCache != null) {
-        _debugMarkNeedsLayoutCallStack ??= StackTrace.current;
+        _debugMarkNeedsLayoutCallStack ??= StackTrace.current; // 记录调用栈，用于调试布局失效问题
       }
       return true;
     }());
-    _layoutCache?.paragraph.dispose();
-    _layoutCache = null;
+    _layoutCache?.paragraph.dispose(); // 释放当前段落资源
+    _layoutCache = null; // 清除布局缓存，标记为需要重新布局
   }
 
-  /// 要绘制的（可能带样式的）文本
+  /// 要绘制的文本内容，可以是带样式的文本树
   ///
-  /// 设置后，在下次调用 [paint] 之前必须调用 [layout]
-  /// 在调用 [layout] 之前，此属性必须非空
+  /// 此属性接受 [TextSpan] 对象，用于表示复杂的富文本内容
+  /// - 单个 [TextSpan] 可表示简单的带样式文本
+  /// - 嵌套的 [TextSpan] 可表示复杂的富文本树结构
   ///
-  /// 此属性提供的 [TextSpan] 是以树的形式，可能包含多个 [TextSpan] 实例
-  /// 要获取此 [MongolTextPainter] 内容的纯文本表示，请使用 [plainText]
+  /// 关键特性：
+  /// - 设置为 null 时，表示没有文本内容
+  /// - 在调用 [layout] 方法之前，此属性必须非空，否则会抛出异常
+  /// - 更改此属性后，需要根据文本变化的类型决定是否重新布局或仅重新绘制
+  ///
+  /// 文本变化处理逻辑：
+  /// 1. 比较新旧文本的样式，如果样式变化则释放并重置布局模板
+  /// 2. 使用 [RenderComparison] 评估文本变化程度
+  /// 3. 如果是布局级别的变化（如文本内容、字体大小等），标记需要重新布局
+  /// 4. 如果仅是绘制级别的变化（如文本颜色），标记需要重建段落但不需要重新布局
+  /// 5. 清除纯文本缓存，因为文本内容已变化
+  ///
+  /// 获取纯文本内容：使用 [plainText] 属性获取此文本的纯文本表示
   TextSpan? get text => _text;
   TextSpan? _text;
   set text(TextSpan? value) {
-    assert(value == null || value.debugAssertIsValid());
+    assert(value == null || value.debugAssertIsValid()); // 确保文本树结构有效
+    
     if (_text == value) {
-      return;
+      return; // 文本未变化，无需操作
     }
+    
+    // 检查样式是否变化，变化则重置布局模板
     if (_text?.style != value?.style) {
       _layoutTemplate?.dispose();
       _layoutTemplate = null;
     }
 
+    // 评估文本变化程度
     final RenderComparison comparison = value == null
-        ? RenderComparison.layout
-        : _text?.compareTo(value) ?? RenderComparison.layout;
+        ? RenderComparison.layout // 从有文本变为无文本，属于布局变化
+        : _text?.compareTo(value) ?? RenderComparison.layout; // 比较新旧文本
 
     _text = value;
-    _cachedPlainText = null;
+    _cachedPlainText = null; // 清除纯文本缓存
 
     if (comparison.index >= RenderComparison.layout.index) {
-      markNeedsLayout();
+      markNeedsLayout(); // 布局级变化，标记需要重新布局
     } else if (comparison.index >= RenderComparison.paint.index) {
-      // 暂时不要清除 _paragraph 实例变量，它仍然包含有效的布局信息
+      // 仅绘制级变化，无需重新布局，但需要重建段落
       _rebuildParagraphForPaint = true;
     }
-    // 既不需要重布局也不需要重绘
+    // 否则：既不需要重布局也不需要重绘
   }
 
-  /// 返回要绘制的文本的纯文本版本
+  /// 获取文本内容的纯文本表示，忽略所有样式信息
   ///
-  /// 这使用 [TextSpan.toPlainText] 来获取树中所有节点的完整内容
+  /// 此属性提供了一种便捷方式获取 [text] 属性中 [TextSpan] 树的纯文本内容
+  /// 内部实现：
+  /// 1. 使用 [TextSpan.toPlainText] 方法递归遍历文本树，提取所有文本内容
+  /// 2. 缓存结果以提高性能，避免重复计算
+  /// 3. 当 [text] 属性变化时，缓存会自动失效
+  ///
+  /// 重要特性：
+  /// - 忽略所有样式信息（如颜色、字体、大小等），仅返回文本字符
+  /// - 不包含语义标签（includeSemanticsLabels: false）
+  /// - 当 [text] 为 null 时，返回空字符串 ''
+  /// - 当文本树结构复杂时，首次访问可能有轻微性能开销，但后续访问会使用缓存
+  ///
+  /// 使用场景：
+  /// - 需要获取文本长度或进行文本搜索时
+  /// - 需要将富文本转换为纯文本进行处理时
+  /// - 需要在调试时查看实际文本内容时
   String get plainText {
-    _cachedPlainText ??= _text?.toPlainText(includeSemanticsLabels: false);
-    return _cachedPlainText ?? '';
+    _cachedPlainText ??= _text?.toPlainText(includeSemanticsLabels: false); // 懒加载并缓存结果
+    return _cachedPlainText ?? ''; // 确保始终返回非空字符串
   }
 
   String? _cachedPlainText;
 
-  /// 文本应如何垂直对齐
+  /// 文本在垂直方向上的对齐方式
   ///
-  /// 设置后，在下次调用 [paint] 之前必须调用 [layout]
+  /// 由于蒙古文是垂直排版的，此属性控制文本在垂直方向上的对齐
+  /// - [MongolTextAlign.top]：文本顶部对齐（默认值）
+  /// - [MongolTextAlign.center]：文本垂直居中对齐
+  /// - [MongolTextAlign.bottom]：文本底部对齐
+  /// - [MongolTextAlign.justify]：文本两端对齐
   ///
-  /// [textAlign] 属性默认为 [MongolTextAlign.top]
+  /// 更改此属性后，必须调用 [layout] 方法重新布局文本，然后才能调用 [paint] 进行绘制
+  /// 这是因为对齐方式会影响文本的布局计算
   MongolTextAlign get textAlign => _textAlign;
   MongolTextAlign _textAlign;
   set textAlign(MongolTextAlign value) {
     if (_textAlign == value) {
-      return;
+      return; // 对齐方式未改变，无需操作
     }
     _textAlign = value;
-    markNeedsLayout();
+    markNeedsLayout(); // 对齐方式改变，标记需要重新布局
   }
 
   /// 已弃用。将在未来的 Flutter 版本中移除。请使用 [textScaler] 代替
@@ -749,8 +833,8 @@ class MongolTextPainter {
   }
 
   ui.ParagraphStyle _createParagraphStyle() {
-    // textAlign should always be `left` because this is the style for
-    // a single text run. MongolTextAlign is handled elsewhere.
+    // textAlign 应该始终为 `left`，因为这是单个文本 run 的样式。
+    // MongolTextAlign 在其他地方处理。
     return _text!.style?.getParagraphStyle(
           textAlign: TextAlign.left,
           textDirection: TextDirection.ltr,
@@ -763,9 +847,8 @@ class MongolTextPainter {
         ui.ParagraphStyle(
           textAlign: TextAlign.left,
           textDirection: TextDirection.ltr,
-          // Use the default font size to multiply by as MongolRichText does not
-          // perform inheriting [TextStyle]s and would otherwise
-          // fail to apply textScaleFactor.
+          // 使用默认字体大小进行乘法，因为 MongolRichText 不执行
+          // 继承 [TextStyle]，否则将无法应用 textScaleFactor。
           fontSize: textScaler.scale(_kDefaultFontSize),
           maxLines: maxLines,
           ellipsis: ellipsis,
@@ -776,8 +859,8 @@ class MongolTextPainter {
   MongolParagraph? _layoutTemplate;
   MongolParagraph _createLayoutTemplate() {
     final builder = MongolParagraphBuilder(_createParagraphStyle());
-    // MongolParagraphBuilder will handle converting the painter TextStyle to
-    // the ui.TextStyle as well as applying the text scaler.
+    // MongolParagraphBuilder 将处理将绘制器 TextStyle 转换为
+    // ui.TextStyle 以及应用文本缩放器。
     final textStyle = text?.style;
     if (textStyle != null) {
       builder.pushStyle(textStyle);
@@ -787,95 +870,85 @@ class MongolTextPainter {
       ..layout(const MongolParagraphConstraints(height: double.infinity));
   }
 
-  /// The width of a space in [text] in logical pixels.
+  /// [text] 中一个空格的逻辑像素宽度。
   ///
-  /// (This is in vertical orientation. In other words, it is the height
-  /// of a space in horizontal orientation.)
+  /// （这是在垂直方向上。换句话说，它是水平方向上一个空格的高度。）
   ///
-  /// Not every line of text in [text] will have this width, but this width
-  /// is "typical" for text in [text] and useful for sizing other objects
-  /// relative a typical line of text.
+  /// 并非 [text] 中的每一行文本都会有此宽度，但此宽度对于 [text] 中的文本来说是 "典型的"，
+  /// 可用于相对于典型文本行调整其他对象的大小。
   ///
-  /// Obtaining this value does not require calling [layout].
+  /// 获取此值不需要调用 [layout]。
   ///
-  /// The style of the [text] property is used to determine the font settings
-  /// that contribute to the [preferredLineWidth]. If [text] is null or if it
-  /// specifies no styles, the default [TextStyle] values are used (a 10 pixel
-  /// sans-serif font).
+  /// [text] 属性的样式用于确定影响 [preferredLineWidth] 的字体设置。
+  /// 如果 [text] 为 null 或未指定任何样式，则使用默认的 [TextStyle] 值（10 像素的无衬线字体）。
   double get preferredLineWidth =>
       (_layoutTemplate ??= _createLayoutTemplate()).width;
 
-  /// The height at which decreasing the height of the text would prevent it from
-  /// painting itself completely within its bounds.
+  /// 减小文本高度会阻止其完全绘制在其边界内的高度。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   double get minIntrinsicHeight {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.layout.minIntrinsicLineExtent;
   }
 
-  /// The height at which increasing the height of the text no longer decreases
-  /// the width.
+  /// 增加文本高度不再减少宽度的高度。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   double get maxIntrinsicHeight {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.layout.maxIntrinsicLineExtent;
   }
 
-  /// The vertical space required to paint this text.
+  /// 绘制此文本所需的垂直空间。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   double get height {
     assert(_debugAssertTextLayoutIsValid);
     assert(!_debugNeedsRelayout);
     return _layoutCache!.contentHeight;
   }
 
-  /// The horizontal space required to paint this text.
+  /// 绘制此文本所需的水平空间。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   double get width {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.layout.width;
   }
 
-  /// The amount of space required to paint this text.
+  /// 绘制此文本所需的空间大小。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   Size get size {
     assert(_debugAssertTextLayoutIsValid);
     assert(!_debugNeedsRelayout);
     return Size(width, height);
   }
 
-  /// Even though the text is rotated, it is still useful to have a baseline
-  /// along which to layout objects. (For example in the MongolInputDecorator.)
+  /// 尽管文本被旋转，但沿基线布局对象仍然很有用。（例如在 MongolInputDecorator 中。）
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   double computeDistanceToActualBaseline(TextBaseline baseline) {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.layout.getDistanceToBaseline(baseline);
   }
 
-  /// Whether any text was truncated or ellipsized.
+  /// 是否有任何文本被截断或省略。
   ///
-  /// If [maxLines] is not null, this is true if there were more lines to be
-  /// drawn than the given [maxLines], and thus at least one line was omitted in
-  /// the output; otherwise it is false.
+  /// 如果 [maxLines] 不为 null，当要绘制的行数超过给定的 [maxLines]，
+  /// 因此输出中至少省略了一行时，返回 true；否则返回 false。
   ///
-  /// If [maxLines] is null, this is true if [ellipsis] is not the empty string
-  /// and there was a line that overflowed the `maxHeight` argument passed to
-  /// [layout]; otherwise it is false.
+  /// 如果 [maxLines] 为 null，当 [ellipsis] 不是空字符串且有一行溢出了传递给
+  /// [layout] 的 `maxHeight` 参数时，返回 true；否则返回 false。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   bool get didExceedMaxLines {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.paragraph.didExceedMaxLines;
   }
 
-  // Creates a MongolParagraph using the current configurations in this class and
-  // assign it to _paragraph.
+  // 使用此类中的当前配置创建 MongolParagraph 并将其分配给 _paragraph。
   MongolParagraph _createParagraph(InlineSpan text) {
     final builder = MongolParagraphBuilder(
       _createParagraphStyle(),
@@ -917,14 +990,13 @@ class MongolTextPainter {
     if (hasStyle) builder.pop();
   }
 
-  /// Computes the visual position of the glyphs for painting the text.
+  /// 计算用于绘制文本的字形的视觉位置。
   ///
-  /// The text will layout with a height that's as close to its max intrinsic
-  /// height (or its longest line, if [textHeightBasis] is set to
-  /// [TextHeightBasis.parent]) as possible while still being greater than or
-  /// equal to `minHeight` and less than or equal to `maxHeight`.
+  /// 文本将以尽可能接近其最大内在高度（如果 [textHeightBasis] 设置为
+  /// [TextHeightBasis.parent]，则为其最长行）的高度进行布局，
+  /// 同时仍大于或等于 `minHeight` 且小于或等于 `maxHeight`。
   ///
-  /// The [text] property must be non-null before this is called.
+  /// 在调用此方法之前，[text] 属性必须非空。
   void layout({double minHeight = 0.0, double maxHeight = double.infinity}) {
     assert(!maxHeight.isNaN);
     assert(!minHeight.isNaN);
@@ -946,9 +1018,8 @@ class MongolTextPainter {
     }
 
     final double paintOffsetAlignment = _computePaintOffsetFraction(textAlign);
-    // Try to avoid laying out the paragraph with maxHeight=double.infinity
-    // when the text is not top-aligned, so we don't have to deal with an
-    // infinite paint offset.
+    // 尽量避免在文本非顶部对齐时使用 maxHeight=double.infinity 布局段落，
+    // 这样我们就不需要处理无限的绘制偏移量。
     final bool adjustMaxHeight =
         !maxHeight.isFinite && paintOffsetAlignment != 0;
     final double? adjustedMaxHeight = !adjustMaxHeight
@@ -956,13 +1027,10 @@ class MongolTextPainter {
         : cachedLayout?.layout.maxIntrinsicLineExtent;
     _inputHeight = adjustedMaxHeight ?? maxHeight;
 
-    // Only rebuild the paragraph when there're layout changes, even when
-    // `_rebuildParagraphForPaint` is true. It's best to not eagerly rebuild
-    // the paragraph to avoid the extra work, because:
-    // 1. the text color could change again before `paint` is called (so one of
-    //    the paragraph rebuilds is unnecessary)
-    // 2. the user could be measuring the text layout so `paint` will never be
-    //    called.
+    // 只有在布局变化时才重建段落，即使 `_rebuildParagraphForPaint` 为 true。
+    // 最好不要急于重建段落以避免额外工作，因为：
+    // 1. 在调用 `paint` 之前，文本颜色可能会再次更改（因此其中一次段落重建是不必要的）
+    // 2. 用户可能正在测量文本布局，因此永远不会调用 `paint`。
     final paragraph = (cachedLayout?.paragraph ?? _createParagraph(text))
       ..layout(MongolParagraphConstraints(height: _inputHeight));
     final newLayoutCache = _TextPainterLayoutCacheWithOffset(
@@ -972,9 +1040,8 @@ class MongolTextPainter {
       maxHeight,
       textHeightBasis,
     );
-    // Call layout again if newLayoutCache had an infinite paint offset.
-    // This is not as expensive as it seems, line breaking is relatively cheap
-    // as compared to shaping.
+    // 如果 newLayoutCache 有无限的绘制偏移量，则再次调用 layout。
+    // 这并不像看起来那么昂贵，与字形绘制相比，换行相对便宜。
     if (adjustedMaxHeight == null && minHeight.isFinite) {
       assert(maxHeight.isInfinite);
       final double newInputHeight =
@@ -985,19 +1052,16 @@ class MongolTextPainter {
     _layoutCache = newLayoutCache;
   }
 
-  /// Paints the text onto the given canvas at the given offset.
+  /// 将文本绘制到给定偏移量的给定画布上。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   ///
-  /// If you cannot see the text being painted, check that your text color does
-  /// not conflict with the background on which you are drawing. The default
-  /// text color is white (to contrast with the default black background color),
-  /// so if you are writing an application with a white background, the text
-  /// will not be visible by default.
+  /// 如果看不到正在绘制的文本，请检查文本颜色是否与您绘制的背景冲突。
+  /// 默认文本颜色为白色（与默认黑色背景颜色形成对比），
+  /// 因此如果您正在编写具有白色背景的应用程序，文本默认将不可见。
   ///
-  /// To set the text style, specify a [TextStyle] when creating the [TextSpan]
-  /// that you pass to the [MongolTextPainter] constructor or to the [text]
-  /// property.
+  /// 要设置文本样式，请在创建传递给 [MongolTextPainter] 构造函数或 [text]
+  /// 属性的 [TextSpan] 时指定 [TextStyle]。
   void paint(Canvas canvas, Offset offset) {
     final _TextPainterLayoutCacheWithOffset? layoutCache = _layoutCache;
     if (layoutCache == null) {
@@ -1020,9 +1084,8 @@ class MongolTextPainter {
       }());
 
       final paragraph = layoutCache.paragraph;
-      // Unfortunately even if we know that there is only paint changes, there's
-      // no API to only make those updates so the paragraph has to be recreated
-      // and re-laid out.
+      // 不幸的是，即使我们知道只有绘制更改，也没有 API 只更新这些更改，
+      // 因此必须重新创建并重新布局段落。
       assert(!_inputHeight.isNaN);
       layoutCache.layout._paragraph = _createParagraph(text!)
         ..layout(MongolParagraphConstraints(height: _inputHeight));
@@ -1034,47 +1097,41 @@ class MongolTextPainter {
     layoutCache.paragraph.draw(canvas, offset + layoutCache.paintOffset);
   }
 
-  // Returns true if value falls in the valid range of the UTF16 encoding.
+  // 如果值在 UTF16 编码的有效范围内，则返回 true。
   static bool _isUTF16(int value) {
     return value >= 0x0 && value <= 0xFFFFF;
   }
 
-  /// Returns true iff the given value is a valid UTF-16 high (first) surrogate.
-  /// The value must be a UTF-16 code unit, meaning it must be in the range
-  /// 0x0000-0xFFFF.
+  /// 当且仅当给定值是有效的 UTF-16 高（第一个）代理项时返回 true。
+  /// 该值必须是 UTF-16 代码单元，这意味着它必须在 0x0000-0xFFFF 范围内。
   ///
-  /// See also:
+  /// 另请参阅：
   ///   * https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
-  ///   * [isLowSurrogate], which checks the same thing for low (second)
-  /// surrogates.
+  ///   * [isLowSurrogate]，它对低（第二个）代理项执行相同的检查。
   static bool isHighSurrogate(int value) {
     assert(_isUTF16(value));
     return value & 0xFC00 == 0xD800;
   }
 
-  /// Returns true iff the given value is a valid UTF-16 low (second) surrogate.
-  /// The value must be a UTF-16 code unit, meaning it must be in the range
-  /// 0x0000-0xFFFF.
+  /// 当且仅当给定值是有效的 UTF-16 低（第二个）代理项时返回 true。
+  /// 该值必须是 UTF-16 代码单元，这意味着它必须在 0x0000-0xFFFF 范围内。
   ///
-  /// See also:
+  /// 另请参阅：
   ///   * https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
-  ///   * [isHighSurrogate], which checks the same thing for high (first)
-  /// surrogates.
+  ///   * [isHighSurrogate]，它对高（第一个）代理项执行相同的检查。
   static bool isLowSurrogate(int value) {
     assert(_isUTF16(value));
     return value & 0xFC00 == 0xDC00;
   }
 
-  // Checks if the glyph is either [Unicode.RLM] or [Unicode.LRM]. These values take
-  // up zero space and do not have valid bounding boxes around them.
+  // 检查字形是否为 [Unicode.RLM] 或 [Unicode.LRM]。这些值占用零空间且周围没有有效的边界框。
   //
-  // We do not directly use the [Unicode] constants since they are strings.
+  // 我们不直接使用 [Unicode] 常量，因为它们是字符串。
   static bool _isUnicodeDirectionality(int value) {
     return value == 0x200F || value == 0x200E;
   }
 
-  /// Returns the closest offset after `offset` at which the input cursor can be
-  /// positioned.
+  /// 返回输入光标可以定位的 `offset` 之后最近的偏移量。
   int? getOffsetAfter(int offset) {
     final int? nextCodeUnit = _text!.codeUnitAt(offset);
     if (nextCodeUnit == null) {
@@ -1083,8 +1140,7 @@ class MongolTextPainter {
     return isHighSurrogate(nextCodeUnit) ? offset + 2 : offset + 1;
   }
 
-  /// Returns the closest offset before `offset` at which the input cursor can
-  /// be positioned.
+  /// 返回输入光标可以定位的 `offset` 之前最近的偏移量。
   int? getOffsetBefore(int offset) {
     final int? prevCodeUnit = _text!.codeUnitAt(offset - 1);
     if (prevCodeUnit == null) {
@@ -1093,11 +1149,10 @@ class MongolTextPainter {
     return isLowSurrogate(prevCodeUnit) ? offset - 2 : offset - 1;
   }
 
-  // Unicode value for a zero width joiner character.
+  // 零宽度连接符字符的 Unicode 值。
   static const int _zwjUtf16 = 0x200d;
 
-  // Get the caret metrics (in logical pixels) based off the near edge of the
-  // character upstream from the given string offset.
+  // 基于给定字符串偏移量上游字符的近边缘获取插入符度量（以逻辑像素为单位）。
   _CaretMetrics? _getMetricsFromUpstream(int offset) {
     assert(offset >= 0);
     final int plainTextLength = plainText.length;
@@ -1106,10 +1161,10 @@ class MongolTextPainter {
     }
     final int prevCodeUnit = plainText.codeUnitAt(max(0, offset - 1));
 
-    // If the upstream character is a newline, cursor is at start of next line
+    // 如果上游字符是换行符，则光标位于下一行的开始
     const int newlineCodeUnit = 10;
 
-    // Check for multi-code-unit glyphs such as emojis or zero width joiner.
+    // 检查多代码单元字形，如表情符号或零宽度连接符.
     final bool needsSearch = isHighSurrogate(prevCodeUnit) ||
         isLowSurrogate(prevCodeUnit) ||
         _text!.codeUnitAt(offset) == _zwjUtf16 ||
@@ -1120,26 +1175,22 @@ class MongolTextPainter {
       final int prevRuneOffset = offset - graphemeClusterLength;
       boxes = _layoutCache!.paragraph
           .getBoxesForRange(max(0, prevRuneOffset), offset);
-      // When the range does not include a full cluster, no boxes will be returned.
+      // 当范围不包含完整的集群时，不会返回任何框。
       if (boxes.isEmpty) {
-        // When we are at the beginning of the line, a non-surrogate position will
-        // return empty boxes. We break and try from downstream instead.
+        // 当我们在行的开头时，非代理位置将返回空框。我们中断并尝试从下游开始。
         if (!needsSearch && prevCodeUnit == newlineCodeUnit) {
-          break; // Only perform one iteration if no search is required.
+          break; // 如果不需要搜索，只执行一次迭代。
         }
         if (prevRuneOffset < -plainTextLength) {
-          break; // Stop iterating when beyond the max length of the text.
+          break; // 当超出文本的最大长度时停止迭代。
         }
-        // Multiply by two to log(n) time cover the entire text span. This allows
-        // faster discovery of very long clusters and reduces the possibility
-        // of certain large clusters taking much longer than others, which can
-        // cause jank.
+        // 乘以2以 log(n) 时间覆盖整个文本范围。这允许更快地发现非常长的集群，
+        // 并减少某些大型集群比其他集群花费更长时间的可能性，这可能导致卡顿。
         graphemeClusterLength *= 2;
         continue;
       }
 
-      // Try to identify the box nearest the offset.  This logic works when
-      // there's just one box, and when all boxes have the same direction.
+      // 尝试识别最接近偏移量的框。当只有一个框且所有框具有相同方向时，此逻辑有效。
       final box = boxes.last;
       return prevCodeUnit == newlineCodeUnit
           ? _EmptyLineCaretMetrics(lineHorizontalOffset: box.right)
@@ -1151,19 +1202,18 @@ class MongolTextPainter {
     return null;
   }
 
-  // Get the caret metrics (in logical pixels) based off the near edge of the
-  // character downstream from the given string offset.
+  // 基于给定字符串偏移量下游字符的近边缘获取插入符度量（以逻辑像素为单位）。
   _CaretMetrics? _getMetricsFromDownstream(int offset) {
     assert(offset >= 0);
     final int plainTextLength = plainText.length;
     if (plainTextLength == 0) {
       return null;
     }
-    // We cap the offset at the final index of plain text.
+    // 我们将偏移量限制在纯文本的最终索引处。
     final int nextCodeUnit =
         plainText.codeUnitAt(min(offset, plainTextLength - 1));
 
-    // Check for multi-code-unit glyphs such as emojis or zero width joiner
+    // 检查多代码单元字形，如表情符号或零宽度连接符
     final bool needsSearch = isHighSurrogate(nextCodeUnit) ||
         isLowSurrogate(nextCodeUnit) ||
         nextCodeUnit == _zwjUtf16 ||
@@ -1173,26 +1223,22 @@ class MongolTextPainter {
     while (boxes.isEmpty) {
       final int nextRuneOffset = offset + graphemeClusterLength;
       boxes = _layoutCache!.paragraph.getBoxesForRange(offset, nextRuneOffset);
-      // When the range does not include a full cluster, no boxes will be returned.
+      // 当范围不包含完整的集群时，不会返回任何框。
       if (boxes.isEmpty) {
-        // When we are at the end of the line, a non-surrogate position will
-        // return empty boxes. We break and try from upstream instead.
+        // 当我们在行的末尾时，非代理位置将返回空框。我们中断并尝试从上游开始。
         if (!needsSearch) {
-          break; // Only perform one iteration if no search is required.
+          break; // 如果不需要搜索，只执行一次迭代。
         }
         if (nextRuneOffset >= plainTextLength << 1) {
-          break; // Stop iterating when beyond the max length of the text.
+          break; // 当超出文本的最大长度时停止迭代。
         }
-        // Multiply by two to log(n) time cover the entire text span. This allows
-        // faster discovery of very long clusters and reduces the possibility
-        // of certain large clusters taking much longer than others, which can
-        // cause jank.
+        // 乘以2以 log(n) 时间覆盖整个文本范围。这允许更快地发现非常长的集群，
+        // 并减少某些大型集群比其他集群花费更长时间的可能性，这可能导致卡顿。
         graphemeClusterLength *= 2;
         continue;
       }
 
-      // Try to identify the box nearest the offset.  This logic works when
-      // there's just one box, and when all boxes have the same direction.
+      // 尝试识别最接近偏移量的框。当只有一个框且所有框具有相同方向时，此逻辑有效。
       final box = boxes.first;
       return _LineCaretMetrics(
         offset: Offset(box.left, box.top),
@@ -1211,9 +1257,9 @@ class MongolTextPainter {
     };
   }
 
-  /// Returns the offset at which to paint the caret.
+  /// 返回绘制插入符的偏移量。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   Offset getOffsetForCaret(TextPosition position, Rect caretPrototype) {
     final _CaretMetrics caretMetrics;
     final _TextPainterLayoutCacheWithOffset layoutCache = _layoutCache!;
@@ -1228,9 +1274,9 @@ class MongolTextPainter {
       case _EmptyLineCaretMetrics(:final double lineHorizontalOffset):
         final double paintOffsetAlignment =
             _computePaintOffsetFraction(textAlign);
-        // The full height is not (height - caretPrototype.height)
-        // because MongolRenderEditable reserves cursor height on the bottom. Ideally this
-        // should be handled by MongolRenderEditable instead.
+        // 完整高度不是 (height - caretPrototype.height)
+        // 因为 MongolRenderEditable 在底部预留了光标高度。理想情况下，这
+        // 应该由 MongolRenderEditable 来处理。
         final double dy = paintOffsetAlignment == 0
             ? 0
             : paintOffsetAlignment * layoutCache.contentHeight;
@@ -1238,11 +1284,10 @@ class MongolTextPainter {
       case _LineCaretMetrics(:final Offset offset):
         rawOffset = offset;
     }
-    // If offset.dy is outside of the advertised content area, then the associated
-    // glyph cluster belongs to a trailing newline character. Ideally the behavior
-    // should be handled by higher-level implementations (for instance,
-    // MongolRenderEditable reserves height for showing the caret, it's best to handle
-    // the clamping there).
+    // 如果 offset.dy 超出了公布的内容区域，那么相关的字形集群属于尾随换行符。
+    // 理想情况下，这种行为应该由更高层的实现来处理（例如，
+    // MongolRenderEditable 为显示插入符预留了高度，最好在那里处理
+    // 截断）。
     final double adjustedDy = clampDouble(
         rawOffset.dy + layoutCache.paintOffset.dy,
         0,
@@ -1250,9 +1295,9 @@ class MongolTextPainter {
     return Offset(rawOffset.dx + layoutCache.paintOffset.dx, adjustedDy);
   }
 
-  /// Returns the strut bounded width of the glyph at the given `position`.
+  /// 返回给定 `position` 处字形的支柱边界宽度。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   double? getFullWidthForCaret(TextPosition position, Rect caretPrototype) {
     if (position.offset < 0) {
       return null;
@@ -1263,13 +1308,11 @@ class MongolTextPainter {
     };
   }
 
-  // Cached caret metrics. This allows multiple invokes of [getOffsetForCaret] and
-  // [getFullWidthForCaret] in a row without performing redundant and expensive
-  // get rect calls to the paragraph.
+  // 缓存的插入符度量。这允许连续多次调用 [getOffsetForCaret] 和
+  // [getFullWidthForCaret]，而无需对段落执行冗余且昂贵的获取矩形调用。
   late _CaretMetrics _caretMetrics;
 
-  // Checks if the [position] and [caretPrototype] have changed from the cached
-  // version and recomputes the metrics required to position the caret.
+  // 检查 [position] 和 [caretPrototype] 是否已从缓存版本更改，并重新计算定位插入符所需的度量。
   _CaretMetrics _computeCaretMetrics(TextPosition position) {
     assert(_debugAssertTextLayoutIsValid);
     assert(!_debugNeedsRelayout);
@@ -1284,22 +1327,20 @@ class MongolTextPainter {
       TextAffinity.downstream =>
         _getMetricsFromDownstream(offset) ?? _getMetricsFromUpstream(offset),
     };
-    // Cache the input parameters to prevent repeat work later.
+    // 缓存输入参数以防止以后重复工作。
     cachedLayout._previousCaretPosition = position;
     return _caretMetrics =
         metrics ?? const _EmptyLineCaretMetrics(lineHorizontalOffset: 0);
   }
 
-  /// Returns a list of rects that bound the given selection.
+  /// 返回界定给定选择范围的矩形列表。
   ///
-  /// The [selection] must be a valid range (with [TextSelection.isValid] true).
+  /// [selection] 必须是有效的范围（[TextSelection.isValid] 为 true）。
   ///
-  /// Leading or trailing newline characters will be represented by zero-height
-  /// `Rect`s.
+  /// 前导或尾随换行符将由零高度的 `Rect` 表示。
   ///
-  /// The method only returns `Rect`s of glyphs that are entirely enclosed by
-  /// the given `selection`: a multi-code-unit glyph will be excluded if only
-  /// part of its code units are in `selection`.
+  /// 该方法仅返回完全包含在给定 `selection` 中的字形的 `Rect`：
+  /// 如果仅部分代码单元在 `selection` 中，则多代码单元字形将被排除。
   List<Rect> getBoxesForSelection(TextSelection selection) {
     assert(_debugAssertTextLayoutIsValid);
     assert(selection.isValid);
@@ -1320,7 +1361,7 @@ class MongolTextPainter {
             .toList(growable: false);
   }
 
-  /// Returns the position within the text for the given pixel offset.
+  /// 返回给定像素偏移量在文本中的位置。
   TextPosition getPositionForOffset(Offset offset) {
     assert(_debugAssertTextLayoutIsValid);
     assert(!_debugNeedsRelayout);
@@ -1329,32 +1370,28 @@ class MongolTextPainter {
         .getPositionForOffset(offset - cachedLayout.paintOffset);
   }
 
-  /// Returns the text range of the word at the given offset. Characters not
-  /// part of a word, such as spaces, symbols, and punctuation, have word breaks
-  /// on both sides. In such cases, this method will return a text range that
-  /// contains the given text position.
+  /// 返回给定偏移量处单词的文本范围。不属于单词的字符（如空格、符号和标点符号）
+  /// 两侧都有单词分隔符。在这种情况下，此方法将返回包含给定文本位置的文本范围。
   ///
-  /// Word boundaries are defined more precisely in Unicode Standard Annex #29
-  /// <http://www.unicode.org/reports/tr29/#Word_Boundaries>.
+  /// 单词边界在 Unicode 标准附件 #29 中有更精确的定义
+  /// <http://www.unicode.org/reports/tr29/#Word_Boundaries>。
   TextRange getWordBoundary(TextPosition position) {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.paragraph.getWordBoundary(position);
   }
 
-  /// Returns a [TextBoundary] that can be used to perform word boundary analysis
-  /// on the current [text].
+  /// 返回一个 [TextBoundary]，可用于对当前 [text] 执行单词边界分析。
   ///
-  /// This [TextBoundary] uses word boundary rules defined in [Unicode Standard
-  /// Annex #29](http://www.unicode.org/reports/tr29/#Word_Boundaries).
+  /// 此 [TextBoundary] 使用 [Unicode 标准附件 #29]
+  /// (http://www.unicode.org/reports/tr29/#Word_Boundaries) 中定义的单词边界规则。
   ///
-  /// Currently word boundary analysis can only be performed after [layout]
-  /// has been called.
+  /// 目前，单词边界分析只能在调用 [layout] 后执行。
   MongolWordBoundary get wordBoundaries =>
       MongolWordBoundary._(text!, _layoutCache!.paragraph);
 
-  /// Returns the text range of the line at the given offset.
+  /// 返回给定偏移量处行的文本范围。
   ///
-  /// The newline (if any) is not returned as part of the range.
+  /// 换行符（如果有）不会作为范围的一部分返回。
   TextRange getLineBoundary(TextPosition position) {
     assert(_debugAssertTextLayoutIsValid);
     return _layoutCache!.paragraph.getLineBoundary(position);
@@ -1388,17 +1425,15 @@ class MongolTextPainter {
     );
   }
 
-  /// Returns the full list of [MongolLineMetrics] that describe in detail the various
-  /// metrics of each laid out line.
+  /// 返回详细描述每行布局的各种度量的完整 [MongolLineMetrics] 列表。
   ///
-  /// The [MongolLineMetrics] list is presented in the order of the lines they represent.
-  /// For example, the first line is in the zeroth index.
+  /// [MongolLineMetrics] 列表按它们表示的行顺序呈现。
+  /// 例如，第一行在索引 0 处。
   ///
-  /// [MongolLineMetrics] contains measurements such as ascent, descent, baseline, and
-  /// height for the line as a whole, and may be useful for aligning additional
-  /// widgets to a particular line.
+  /// [MongolLineMetrics] 包含整行的上升、下降、基线和高度等测量值，
+  /// 可能有助于将其他小部件与特定行对齐。
   ///
-  /// Valid only after [layout] has been called.
+  /// 仅在调用 [layout] 后有效。
   List<MongolLineMetrics> computeLineMetrics() {
     assert(_debugAssertTextLayoutIsValid);
     assert(!_debugNeedsRelayout);
@@ -1418,9 +1453,9 @@ class MongolTextPainter {
 
   bool _disposed = false;
 
-  /// Whether this object has been disposed or not.
+  /// 此对象是否已被释放。
   ///
-  /// Only for use when asserts are enabled.
+  /// 仅在启用断言时使用。
   bool get debugDisposed {
     bool? disposed;
     assert(() {
@@ -1431,9 +1466,9 @@ class MongolTextPainter {
         (throw StateError('debugDisposed only available when asserts are on.'));
   }
 
-  /// Releases the resources associated with this painter.
+  /// 释放与此绘制器关联的资源。
   ///
-  /// After disposal this painter is unusable.
+  /// 释放后，此绘制器将无法使用。
   void dispose() {
     assert(() {
       _disposed = true;

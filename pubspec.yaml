@@ -14,10 +14,10 @@ dependencies:
     sdk: flutter
   characters: ^1.2.1
   # 核心AI能力底座（已支持你的Flutter版本）
-  flutter_ai_kit: ^1.0.2  # 最新稳定版，适配Flutter 3.40+
+  #flutter_ai_kit: ^1.0.2  # 最新稳定版，适配Flutter 3.40+
   # 可选：如果需要设计稿转代码（图片识别），补充图片处理依赖
-  image_picker: ^1.1.0    # 读取本地设计稿截图
-  http: ^1.2.0            # 调用Figma/Google AI API
+  #image_picker: ^1.1.0    # 读取本地设计稿截图
+  #http: ^1.2.0            # 调用Figma/Google AI API
 
 dev_dependencies:
   flutter_test:

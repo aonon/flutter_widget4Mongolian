@@ -466,6 +466,29 @@ void main() {
     // });
   });
 
+  group('oversized runs -', () {
+    test('does not split long word without breaks', () {
+      // A long single word with no spaces should not be split into multiple
+      // boxes even when the available line length is small.
+      const text = 'AAAAAAAAAAAAAAAA'; // 16 chars
+      final paragraph = getParagraph(text, 42); // small height to force wrapping
+
+      final boxes = paragraph.getBoxesForRange(0, text.length);
+      // Expect a single box covering the whole run (not split across lines).
+      expect(boxes.length, 1);
+    });
+
+    test('splits at spaces when height is insufficient', () {
+      const text = 'AAAA AAAA AAAA';
+      final paragraph = getParagraph(text, 42);
+
+      final boxes = paragraph.getBoxesForRange(0, text.length);
+      // Because the text contains spaces, it should be possible to split
+      // across multiple lines/columns, resulting in multiple boxes.
+      expect(boxes.length, greaterThan(1));
+    });
+  });
+
   /// Keep this for testing Paragraph
   ///
   // test('Empty paragraph', () {

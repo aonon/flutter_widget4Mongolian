@@ -104,6 +104,13 @@ class MongolLineMetrics {
 /// - 按从上到下方向排列文字，从左到右换行
 /// - 对蒙古文字符进行90度旋转，确保正确的显示朝向
 /// - 处理行内对齐、间距和溢出等布局问题
+///
+/// 变量命名说明：
+/// - 内部横向（internal horizontal）：指代码内部使用的水平方向，对应外部显示的垂直方向
+/// - 外部纵向（external vertical）：指最终显示给用户的垂直方向，对应内部计算的水平方向
+/// 例如：
+/// - 内部的width实际对应外部的height
+/// - 内部的height实际对应外部的width
 class MongolParagraph {
   /// 由 [MongolParagraphBuilder] 创建，不应直接实例化
   MongolParagraph._(
@@ -113,12 +120,42 @@ class MongolParagraph {
     this._ellipsis,
     this._textAlign,
   );
+  
+  // Initialize source signatures after object construction.
+  // We can't use initializer list because the runs may be large; do it lazily
+  // when first needed.
+  void _ensureSourceSignatureInitialized() {
+    if (_sourceTextHash != 0 && _sourceRunsSignatureHash != 0) return;
+    _sourceTextHash = _text.hashCode;
+    _sourceRunsSignatureHash = _computeRunsSignature(_runs);
+  }
+
+  int _computeRunsSignature(List<_TextRun> runs) {
+    final List<int> parts = <int>[];
+    for (final r in runs) {
+      parts.add(r.start);
+      parts.add(r.end);
+      parts.add(r.isRotated ? 1 : 0);
+      parts.add(r.textStyle?.hashCode ?? 0);
+      parts.add(r.paragraphStyle?.hashCode ?? 0);
+    }
+    return Object.hashAll(parts);
+  }
 
   final String _text;
   final List<_TextRun> _runs;
   final int? _maxLines;
   final _TextRun? _ellipsis;
   final MongolTextAlign _textAlign;
+
+  // Signature/hash of the source text and runs at construction time. Used
+  // to detect external changes and to invalidate caches.
+  int _sourceTextHash = 0;
+  int _sourceRunsSignatureHash = 0;
+
+  // Signature of the inputs used by the last completed layout. If the
+  // current layout request produces the same signature, layout is skipped.
+  int? _lastLayoutSignatureHash;
 
   double? _width;
   double? _height;
@@ -169,171 +206,219 @@ class MongolParagraph {
 
   bool _didExceedMaxLines = false;
 
-    /// 计算段落中每个字形的大小和位置。
-    ///
-    /// 说明（面向 Flutter 初学者）:
-    /// - 这个库实现的是垂直排版（蒙古文从上到下）, 但内部使用的是水平文本测量。
-    /// - `MongolParagraphConstraints.height` 表示在竖直方向上可用的行长，
-    ///   在内部被当作水平的 "max line length" 来计算换行（随后在绘制时旋转画布）。
-    /// - 在调用这个方法后，需要调用 `draw` 才能把文本绘制到画布上。
-    void layout(MongolParagraphConstraints constraints) =>
+  /// 计算段落中每个字形的大小和位置
+  void layout(MongolParagraphConstraints constraints) =>
       _layout(constraints.height);
 
+  /// 执行段落布局计算
   void _layout(double height) {
-    if (height == _height) return;
+    _ensureSourceSignatureInitialized();
+
+    // Compute a signature (small int hash) of inputs that affect layout.
+    final currentSignatureHash = Object.hash(height, _sourceTextHash, _sourceRunsSignatureHash);
+    if (_lastLayoutSignatureHash != null && _lastLayoutSignatureHash == currentSignatureHash) {
+      return;
+    }
+    
+    // 1. 计算行断点，确定文本如何换行
     _calculateLineBreaks(height);
+    
+    // 2. 计算段落总宽度
     _calculateWidth();
+    
+    // 3. 更新段落高度
     _height = height;
+    
+    // 4. 计算内在高度（最小和最大）
     _calculateIntrinsicHeight();
+
+    // Update last layout signature after successful layout.
+    _lastLayoutSignatureHash = currentSignatureHash;
   }
 
   final List<_LineInfo> _lines = [];
-  // Cumulative horizontal offsets (in vertical layout terms) for each line.
-  // _lineOffsets[i] is the sum of heights of lines 0..i inclusive and
-  // is used to quickly map a vertical coordinate to a line index.
+  // 每行的累积水平偏移量
+  // _lineOffsets[i]是第0到第i行高度的总和，用于快速将垂直坐标映射到行索引
   final List<double> _lineOffsets = [];
 
-  // Internally this method uses "width" and "height" naming with regard
-  // to a horizontal line of text. Rotation doesn't happen until drawing.
+  /// 计算文本的换行位置
   void _calculateLineBreaks(double maxLineLength) {
-    // 解释：
-    // - `maxLineLength` 在外部看起来是段落的高度（因为我们最终是竖直排版），
-    //   但在内部我们把一行当作水平的一段文字来计算，所以这里称为 "maxLineLength"。
-    // - `_runs` 是已经按样式拆分并测量好的段落片段，一个 run 通常是一个可绘制的最小单位（字、词或 emoji）。
-    // - 本函数把这些 run 累加到一行（horizontal）中，超过 `maxLineLength` 时换到下一行。
+    // 如果没有文本 run，直接返回
     if (_runs.isEmpty) {
       return;
     }
+    
+    // 重置布局状态
     if (_lines.isNotEmpty) {
       _lines.clear();
       _lineOffsets.clear();
       _didExceedMaxLines = false;
     }
 
-    // add run lengths until exceeds length
-    var start = 0;
-    var end = 0;
-    var lineWidth = 0.0;
-    var lineHeight = 0.0;
-    var runEndsWithNewLine = false;
-    for (var i = 0; i < _runs.length; i++) {
-      end = i;
-      final run = _runs[i];
-      final runWidth = run.width;
-      final runHeight = run.height;
+    // 初始化行计算变量
+    int startRunIndex = 0;          // 当前行的起始 run 索引
+    int endRunIndex = 0;            // 当前行的结束 run 索引
+    double currentLineWidth = 0.0;  // 当前行的累积宽度
+    double currentLineHeight = 0.0; // 当前行的最大高度
+    bool lastRunEndsWithNewline = false; // 上一个 run 是否以换行符结束
+    
+    // 遍历所有文本 run，计算行断点
+    for (int runIndex = 0; runIndex < _runs.length; runIndex++) {
+      endRunIndex = runIndex;
+      final _TextRun currentRun = _runs[runIndex];
+      final double runWidth = currentRun.width;
+      final double runHeight = currentRun.height;
 
-      if (lineWidth + runWidth > maxLineLength) {
-        _addLine(start, end, lineWidth, lineHeight);
-        lineWidth = runWidth;
-        lineHeight = runHeight;
-        start = end;
+      // 检查当前 run 加入后是否超过行宽限制
+      if (currentLineWidth + runWidth > maxLineLength) {
+        // 超过限制，添加当前行为新行
+        _addLine(startRunIndex, endRunIndex, currentLineWidth, currentLineHeight);
+        
+        // 重置行变量，开始新行
+        currentLineWidth = runWidth;
+        currentLineHeight = runHeight;
+        startRunIndex = endRunIndex;
       } else {
-        lineWidth += runWidth;
-        lineHeight = math.max(lineHeight, run.height);
+        // 未超过限制，继续累积到当前行
+        currentLineWidth += runWidth;
+        currentLineHeight = math.max(currentLineHeight, runHeight);
       }
 
-      runEndsWithNewLine = _runEndsWithNewLine(run);
-      if (runEndsWithNewLine) {
-        end = i + 1;
-        _addLine(start, end, lineWidth, lineHeight);
-        lineWidth = 0;
-        lineHeight = 0;
-        start = end;
+      // 检查当前 run 是否以换行符结束
+      lastRunEndsWithNewline = _runEndsWithNewLine(currentRun);
+      if (lastRunEndsWithNewline) {
+        // 以换行符结束，添加当前行为新行
+        endRunIndex = runIndex + 1;
+        _addLine(startRunIndex, endRunIndex, currentLineWidth, currentLineHeight);
+        
+        // 重置行变量，开始新行
+        currentLineWidth = 0;
+        currentLineHeight = 0;
+        startRunIndex = endRunIndex;
       }
 
+      // 如果已经超过最大行数限制，停止处理
       if (_didExceedMaxLines) {
         break;
       }
     }
 
-    end = _runs.length;
-    if (start < end) {
-      _addLine(start, end, lineWidth, lineHeight);
+    // 添加最后一行（如果有剩余文本）
+    endRunIndex = _runs.length;
+    if (startRunIndex < endRunIndex) {
+      _addLine(startRunIndex, endRunIndex, currentLineWidth, currentLineHeight);
     }
 
-    // add empty line with invalid run indexes for final newline char
-    if (runEndsWithNewLine) {
-      final height = _lines.last.bounds.height;
-      _addLine(-1, -1, 0, height);
+    // 如果最后一个 run 以换行符结束，添加一个空行
+    if (lastRunEndsWithNewline) {
+      final double lastLineHeight = _lines.last.bounds.height;
+      _addLine(-1, -1, 0, lastLineHeight);
     }
   }
 
-  bool _runEndsWithNewLine(_TextRun run) {
-    final index = run.end - 1;
+  bool _runEndsWithNewLine(_TextRun? run) {
+    if (run == null) return false;
+    final int end = run.end;
+    if (end <= 0 || end > _text.length || run.start >= run.end) return false;
+    final int index = end - 1;
     return _text[index] == '\n';
   }
 
+  /// 添加新行到布局中
   void _addLine(int start, int end, double width, double height) {
+    // 检查是否超过最大行数限制
     if (_maxLines != null && _maxLines! <= _lines.length) {
       _didExceedMaxLines = true;
       return;
     }
+    
     _didExceedMaxLines = false;
-    final bounds = Rect.fromLTRB(0, 0, width, height);
-    // precompute cumulative run widths for faster hit testing later
-    final runCumWidths = <double>[];
+    
+    // 创建行边界矩形
+    final Rect bounds = Rect.fromLTRB(0, 0, width, height);
+    
+    // 预计算行内 run 的累积宽度，用于后续快速命中测试
+    final List<double> runCumulativeWidths = <double>[];
     if (start >= 0 && end > start) {
-      var acc = 0.0;
-      for (var i = start; i < end; i++) {
-        acc += _runs[i].width;
-        runCumWidths.add(acc);
+      double accumulatedWidth = 0.0;
+      for (int i = start; i < end; i++) {
+        accumulatedWidth += _runs[i].width;
+        runCumulativeWidths.add(accumulatedWidth);
       }
     }
-    final lineInfo = _LineInfo(start, end, bounds, runCumWidths);
+    
+    // 创建行信息对象并添加到行列表中
+    final _LineInfo lineInfo = _LineInfo(start, end, bounds, runCumulativeWidths);
     _lines.add(lineInfo);
+    
+    // 更新最长行记录
     _longestLine = math.max(longestLine, lineInfo.bounds.width);
 
-    // update line offsets
-    final lastOffset = _lineOffsets.isEmpty ? 0.0 : _lineOffsets.last;
+    // 更新行偏移量列表，用于快速映射垂直坐标到行索引
+    final double lastOffset = _lineOffsets.isEmpty ? 0.0 : _lineOffsets.last;
     _lineOffsets.add(lastOffset + bounds.height);
   }
 
+  /// 计算段落总宽度
   void _calculateWidth() {
-    var sum = 0.0;
-    for (final line in _lines) {
-      sum += line.bounds.height;
+    double totalWidth = 0.0;
+    for (final _LineInfo line in _lines) {
+      totalWidth += line.bounds.height;
     }
-    _width = sum;
+    _width = totalWidth;
   }
 
-  // Internally this translates a horizontal run width to the vertical name
-  // that it is known as externally.
+  /// 计算段落的内在高度
   void _calculateIntrinsicHeight() {
-    var sum = 0.0;
-    var maxRunWidth = 0.0;
-    var maxLineEndsWithNewLine = 0.0;
-    var minLineEndsWithoutNewLine = double.infinity;
-    for (var index = 0; index < _lines.length; index++) {
-      final line = _lines[index];
-      _TextRun? lastRun;
-      for (var i = line.textRunStart; i < line.textRunEnd; i++) {
-        lastRun = _runs[i];
-        final width = lastRun.width;
-        maxRunWidth = math.max(width, maxRunWidth);
-        sum += width;
+    double currentLineSum = 0.0;
+    double maxIndividualRunWidth = 0.0;
+    double maxHeightForLineWithNewLine = 0.0;
+    double minHeightForLineWithoutNewLine = double.infinity;
+    
+    // 遍历所有行，计算内在高度
+    for (int lineIndex = 0; lineIndex < _lines.length; lineIndex++) {
+      final _LineInfo line = _lines[lineIndex];
+      _TextRun? lastRunInLine;
+      
+      // 遍历行内所有 run
+      for (int runIndex = line.textRunStart; runIndex < line.textRunEnd; runIndex++) {
+        lastRunInLine = _runs[runIndex];
+        final double runWidth = lastRunInLine.width;
+        
+        // 更新最大单个 run 宽度
+        maxIndividualRunWidth = math.max(runWidth, maxIndividualRunWidth);
+        
+        // 累积当前行的宽度
+        currentLineSum += runWidth;
       }
-      final bool endsWithNewLine;
-      if (lastRun != null) {
-        endsWithNewLine = _runEndsWithNewLine(lastRun);
-      } else {
-        endsWithNewLine = false;
-      }
-      final hasNextLine = index < _lines.length - 1;
+      
+      // 检查当前行是否以换行符结束
+      final bool endsWithNewLine = lastRunInLine != null && _runEndsWithNewLine(lastRunInLine);
+      final bool hasNextLine = lineIndex < _lines.length - 1;
+      
       if (hasNextLine && !endsWithNewLine) {
-        final nextLine = _lines[index + 1];
-        sum += _runs[nextLine.textRunStart].width;
-        minLineEndsWithoutNewLine = math.min(minLineEndsWithoutNewLine, sum);
+        // 当前行不是最后一行且不以换行符结束，考虑与下一行合并的情况
+        final _LineInfo nextLine = _lines[lineIndex + 1];
+        currentLineSum += _runs[nextLine.textRunStart].width;
+        minHeightForLineWithoutNewLine = math.min(minHeightForLineWithoutNewLine, currentLineSum);
       } else {
-        maxLineEndsWithNewLine = math.max(maxLineEndsWithNewLine, sum);
+        // 当前行是最后一行或以换行符结束
+        maxHeightForLineWithNewLine = math.max(maxHeightForLineWithNewLine, currentLineSum);
       }
-      sum = 0;
+      
+      // 重置当前行宽度累积
+      currentLineSum = 0;
     }
-    if (minLineEndsWithoutNewLine == double.infinity) {
-      minLineEndsWithoutNewLine = 0;
+    
+    // 处理没有找到不带换行符行的情况
+    if (minHeightForLineWithoutNewLine == double.infinity) {
+      minHeightForLineWithoutNewLine = 0;
     }
-    _minIntrinsicHeight = maxRunWidth;
+    
+    // 更新内在高度属性
+    _minIntrinsicHeight = maxIndividualRunWidth;
     _maxIntrinsicHeight =
-        math.max(minLineEndsWithoutNewLine, maxLineEndsWithNewLine);
+        math.max(minHeightForLineWithoutNewLine, maxHeightForLineWithNewLine);
   }
 
   /// 获取最接近给定偏移量的文本位置
@@ -343,11 +428,10 @@ class MongolParagraph {
         offset: encoded[0], affinity: TextAffinity.values[encoded[1]]);
   }
 
-  // Both the line info and the text run are in horizontal orientation,
-  // but the [dx] and [dy] offsets are in vertical orientation.
+  // 行信息和文本 run 是水平方向的，但 [dx] 和 [dy] 偏移量是垂直方向的
   List<int> _getPositionForOffset(double dx, double dy) {
-    const upstream = 0;
-    const downstream = 1;
+    const int upstream = 0;
+    const int downstream = 1;
 
     // 说明：外部的 `dx`/`dy` 是在竖直布局坐标系中的坐标（段落的左上原点）。
     // 我们内部把行和 run 都当作水平（未旋转）来存储，所以这里需要把竖直坐标
@@ -356,80 +440,90 @@ class MongolParagraph {
       return [0, downstream];
     }
 
-    // find the line using binary search on _lineOffsets
+      // 使用二分查找找到对应的行
     _LineInfo matchedLine;
     if (_lineOffsets.isEmpty) {
       matchedLine = _lines.last;
     } else {
-      var low = 0;
-      var high = _lineOffsets.length - 1;
+      int low = 0;
+      int high = _lineOffsets.length - 1;
+      // 二分查找确保low和high的有效性
+      assert(low >= 0 && high >= 0 && high < _lineOffsets.length, 
+          'Invalid binary search bounds: low=$low, high=$high, length=${_lineOffsets.length}');
+      
       while (low <= high) {
-        final mid = (low + high) >> 1;
+        final int mid = (low + high) >> 1;
+        assert(mid >= 0 && mid < _lineOffsets.length, 
+            'Invalid binary search mid: $mid, length=${_lineOffsets.length}');
+            
         if (dx <= _lineOffsets[mid]) {
           high = mid - 1;
         } else {
           low = mid + 1;
         }
       }
-      final lineIndex = math.min(low, _lines.length - 1);
+      final int lineIndex = math.min(low, _lines.length - 1);
+      assert(lineIndex >= 0 && lineIndex < _lines.length, 
+          'Invalid line index: $lineIndex, length=${_lines.length}');
       matchedLine = _lines[lineIndex];
     }
 
-    // find the run in the line using cumulative run widths (binary search)
-    _TextRun? matchedRun;
-    double rotatedRunDy = 0.0;
-    final rotatedRunDx = matchedLine.bounds.top;
+    // 使用二分查找找到行中的对应 run
+    _TextRun matchedRun;
+    double runStartOffset = 0.0;
+    final double lineTopOffset = matchedLine.bounds.top;
+    
     if (matchedLine.runCumWidths.isEmpty) {
-      // fallback: select last run
-      final matchedRunIndex = matchedLine.textRunEnd - 1;
-      if (matchedRunIndex.isNegative) {
+      // 回退：选择最后一个 run
+      final int runIndex = matchedLine.textRunEnd - 1;
+      if (runIndex.isNegative) {
         matchedRun = _runs.last;
       } else {
-        matchedRun = _runs[matchedRunIndex];
+        assert(runIndex >= 0 && runIndex < _runs.length, 
+            'Invalid run index: $runIndex, length=${_runs.length}');
+        matchedRun = _runs[runIndex];
       }
     } else {
-      var low = 0;
-      var high = matchedLine.runCumWidths.length - 1;
+      int low = 0;
+      int high = matchedLine.runCumWidths.length - 1;
+      // 二分查找确保low和high的有效性
+      assert(low >= 0 && high >= 0 && high < matchedLine.runCumWidths.length, 
+          'Invalid binary search bounds: low=$low, high=$high, length=${matchedLine.runCumWidths.length}');
+      
       while (low <= high) {
-        final mid = (low + high) >> 1;
+        final int mid = (low + high) >> 1;
+        assert(mid >= 0 && mid < matchedLine.runCumWidths.length, 
+            'Invalid binary search mid: $mid, length=${matchedLine.runCumWidths.length}');
+            
         if (dy <= matchedLine.runCumWidths[mid]) {
           high = mid - 1;
         } else {
           low = mid + 1;
         }
       }
-      final runIndexInLine = math.min(low, matchedLine.runCumWidths.length - 1);
-      final matchedRunIndex = matchedLine.textRunStart + runIndexInLine;
-      matchedRun = _runs[math.min(matchedRunIndex, _runs.length - 1)];
-      rotatedRunDy = runIndexInLine == 0 ? 0.0 : matchedLine.runCumWidths[runIndexInLine - 1];
+      final int runIndexInLine = math.min(low, matchedLine.runCumWidths.length - 1);
+      final int runIndex = matchedLine.textRunStart + runIndexInLine;
+      assert(runIndex >= 0 && runIndex < _runs.length, 
+          'Invalid run index: $runIndex, length=${_runs.length}');
+      matchedRun = _runs[math.min(runIndex, _runs.length - 1)];
+      runStartOffset = runIndexInLine == 0 ? 0.0 : matchedLine.runCumWidths[runIndexInLine - 1];
     }
-    // matchedRun is guaranteed to be non-null here because both branches
-    // above assign a value.
 
-    // find the offset
-    final paragraphDx = dy - rotatedRunDy;
-    final paragraphDy = dx - rotatedRunDx;
-    // `offset` 是将外部的 (dx,dy) 转换为内部 paragraph 使用的坐标
-    final offset = Offset(paragraphDx, paragraphDy);
-    final runPosition = matchedRun.paragraph.getPositionForOffset(offset);
-    final textOffset = matchedRun.start + runPosition.offset;
+    // 计算在 run 内的偏移量
+    final double runLocalX = dy - runStartOffset;
+    final double runLocalY = dx - lineTopOffset;
+    final Offset runOffset = Offset(runLocalX, runLocalY);
+    final TextPosition runPosition = matchedRun.paragraph.getPositionForOffset(runOffset);
+    final int textOffset = matchedRun.start + runPosition.offset;
 
-    // find the affinity
-    final lineEndCharOffset = matchedRun.end;
-    final textAffinity =
-        (textOffset == lineEndCharOffset) ? upstream : downstream;
+    // 确定文本亲和性
+    final int lineEndOffset = matchedRun.end;
+    final int textAffinity = (textOffset == lineEndOffset) ? upstream : downstream;
+    
     return [textOffset, textAffinity];
   }
 
   /// 在画布上绘制垂直蒙古文
-  ///
-  /// 蒙古文绘制流程：
-  /// 1. 保存画布状态
-  /// 2. 应用偏移量
-  /// 3. 将整个画布旋转90度，建立垂直排版基础坐标系
-  /// 4. 按从上到下的顺序绘制每一行
-  /// 5. 对需要旋转的字符（如蒙古文）进行额外的90度旋转处理
-  /// 6. 恢复画布状态
   void draw(Canvas canvas, Offset offset) {
     final shouldDrawEllipsis = _didExceedMaxLines && _ellipsis != null;
 
@@ -698,23 +792,27 @@ class MongolParagraph {
   }
 
   _TextRun? _getRunFromOffset(int offset) {
-    if (offset >= _text.length) {
+    if (_runs.isEmpty || offset < 0 || offset >= _text.length) {
       return null;
     }
-    var min = 0;
-    var max = _runs.length - 1;
+    int min = 0;
+    int max = _runs.length - 1;
     // 使用二分查找在已测量的 runs 中定位包含 `offset` 的 run，
     // 这样比线性查找要快，尤其是在长文本时。
     while (min <= max) {
-      final guess = (max + min) ~/ 2;
-      if (offset >= _runs[guess].end) {
+      final int guess = (max + min) ~/ 2;
+      final _TextRun currentRun = _runs[guess];
+      
+      // 确保 run 的边界是有效的
+      assert(currentRun.start >= 0 && currentRun.end >= currentRun.start, 
+          'Invalid run bounds: start=${currentRun.start}, end=${currentRun.end}');
+      
+      if (offset >= currentRun.end) {
         min = guess + 1;
-        continue;
-      } else if (offset < _runs[guess].start) {
+      } else if (offset < currentRun.start) {
         max = guess - 1;
-        continue;
       } else {
-        return _runs[guess];
+        return currentRun;
       }
     }
     return null;
@@ -762,85 +860,110 @@ class MongolParagraph {
   /// 仅在调用 layout 后有效
   /// 可能返回大量数据，建议缓存结果而非重复调用
   List<MongolLineMetrics> computeLineMetrics() {
-    final List<MongolLineMetrics> metrics = <MongolLineMetrics>[];
-    for (int index = 0; index < _lines.length; index += 1) {
-      final line = _lines[index];
-      bool hardBreak = false;
-      double ascent = 0;
-      double descent = 0;
-      double unscaledAscent = 0;
-      double height = 0;
-      double width = 0;
-      double baseline = 0;
-      for (int j = line.textRunStart; j < line.textRunEnd; j += 1) {
-        final textRun = _runs[j];
-        final metricsList = textRun.paragraph.computeLineMetrics();
-        final runMetrics = metricsList.isEmpty ? null : metricsList.first;
+    final List<MongolLineMetrics> lineMetricsList = <MongolLineMetrics>[];
+    
+    for (int lineIndex = 0; lineIndex < _lines.length; lineIndex++) {
+      final _LineInfo line = _lines[lineIndex];
+      
+      bool isHardBreak = false;
+      double maxAscent = 0;
+      double maxDescent = 0;
+      double maxUnscaledAscent = 0;
+      double totalHeight = 0;
+      double maxLineWidth = 0;
+      double lineBaseline = 0;
+      
+          // 遍历当前行的所有文本 run，跳过无效的行（textRunStart 和 textRunEnd 都为 -1 的空行）
+      if (line.textRunStart != -1 && line.textRunEnd != -1) {
+        for (int runIndex = line.textRunStart; runIndex < line.textRunEnd; runIndex++) {
+          // 确保 runIndex 在有效范围内
+          if (runIndex < 0 || runIndex >= _runs.length) continue;
+          
+          final _TextRun textRun = _runs[runIndex];
+          final List<LineMetrics> runLineMetrics = textRun.paragraph.computeLineMetrics();
+          final LineMetrics? runMetrics = runLineMetrics.isNotEmpty ? runLineMetrics.first : null;
 
-        // last textRun of this line
-        if (j == line.textRunEnd - 1) {
-          hardBreak = _runEndsWithNewLine(textRun);
+          // 检查是否为行末换行符
+          if (runIndex == line.textRunEnd - 1) {
+            isHardBreak = _runEndsWithNewLine(textRun);
+          }
+          
+          // 计算行的最大上升高度、下降高度等
+          final double runAscent = runMetrics?.ascent ?? 0;
+          final double runDescent = runMetrics?.descent ?? 0;
+          final double runUnscaledAscent = runMetrics?.unscaledAscent ?? 0;
+          final double runHeight = runMetrics?.height ?? 0;
+          final double runWidth = runMetrics?.width ?? textRun.width;
+          
+          maxAscent = math.max(runAscent, maxAscent);
+          maxDescent = math.max(runDescent, maxDescent);
+          maxUnscaledAscent = math.max(runUnscaledAscent, maxUnscaledAscent);
+          maxLineWidth = math.max(runHeight, maxLineWidth);
+          totalHeight += runWidth;
+          
+          // 基线位置将在处理完本行所有 run 后，根据上一行的度量计算。
         }
-        ascent = math.max(runMetrics?.ascent ?? 0, ascent);
-        descent = math.max(runMetrics?.descent ?? 0, descent);
-        unscaledAscent =
-            math.max(runMetrics?.unscaledAscent ?? 0, unscaledAscent);
-        width = math.max(runMetrics?.height ?? 0, width);
-        height += runMetrics?.width ?? textRun.width;
-        final previousMetrics = index > 0 ? metrics[index - 1] : null;
-        final previousLineAscent = previousMetrics?.ascent ?? 0.0;
-        final previousLineBaseline = previousMetrics?.baseline ?? 0.0;
-        baseline = previousLineBaseline + previousLineAscent + descent;
       }
 
-      // ends with new line
+      MongolLineMetrics? previousLineMetrics =
+          (lineIndex > 0 && lineMetricsList.isNotEmpty) ? lineMetricsList[lineIndex - 1] : null;
+      if (previousLineMetrics != null) {
+        lineBaseline = previousLineMetrics.baseline + previousLineMetrics.ascent + maxDescent;
+      }
+
+      // 处理空行（由换行符创建的行）
       if (line.textRunStart == -1 && line.textRunEnd == -1) {
-        final previousMetrics = metrics[index - 1];
-        hardBreak = true;
-        ascent = previousMetrics.ascent;
-        descent = previousMetrics.descent;
-        unscaledAscent = previousMetrics.unscaledAscent;
-        height = previousMetrics.height;
-        width = previousMetrics.width;
-        baseline = previousMetrics.baseline + previousMetrics.ascent + descent;
+        // 空行：如果存在上一行，则借用上一行度量作为参考；否则保留默认 0。
+        isHardBreak = true;
+        if (previousLineMetrics != null) {
+          maxAscent = previousLineMetrics.ascent;
+          maxDescent = previousLineMetrics.descent;
+          maxUnscaledAscent = previousLineMetrics.unscaledAscent;
+          totalHeight = previousLineMetrics.height;
+          maxLineWidth = previousLineMetrics.width;
+          lineBaseline = previousLineMetrics.baseline + previousLineMetrics.ascent + maxDescent;
+        }
       }
 
-      double top = 0;
+      // 计算行的顶部偏移量，根据对齐方式调整
+      double lineTopOffset = 0;
       if (_textAlign == MongolTextAlign.center) {
-        top = (this.height - height) / 2;
+        lineTopOffset = (height - totalHeight) / 2;
       } else if (_textAlign == MongolTextAlign.bottom) {
-        top = this.height - height;
+        lineTopOffset = height - totalHeight;
       }
 
-      final lineMetrics = MongolLineMetrics(
-        hardBreak: hardBreak,
-        ascent: ascent,
-        descent: descent,
-        unscaledAscent: unscaledAscent,
-        height: height,
-        width: width,
-        top: top,
-        baseline: baseline,
-        lineNumber: index,
+      // 创建行度量信息对象
+      final MongolLineMetrics lineMetrics = MongolLineMetrics(
+        hardBreak: isHardBreak,
+        ascent: maxAscent,
+        descent: maxDescent,
+        unscaledAscent: maxUnscaledAscent,
+        height: totalHeight,
+        width: maxLineWidth,
+        top: lineTopOffset,
+        baseline: lineBaseline,
+        lineNumber: lineIndex,
       );
-      metrics.add(lineMetrics);
+      
+      lineMetricsList.add(lineMetrics);
     }
-    return metrics;
+    
+    return lineMetricsList;
   }
 
   /// 释放对象使用的资源
   /// 调用后对象不再可用
   void dispose() {
     assert(!_disposed);
-    assert(() {
-      _disposed = true;
-      return true;
-    }());
+    _disposed = true;
 
-    // Is this slow? Is it necessary?
-    // Do we need to dispose anything else?
     for (final run in _runs) {
-      run.paragraph.dispose();
+      try {
+        run.paragraph.dispose();
+      } catch (_) {
+        // Ignore errors during dispose to be defensive.
+      }
     }
     _runs.clear();
   }
@@ -1015,7 +1138,8 @@ class MongolParagraphBuilder {
         }
       }
 
-      final run = _TextRun(startIndex, endIndex, isRotated, paragraph);
+        final run = _TextRun(startIndex, endIndex, isRotated, paragraph,
+          textStyle: style, paragraphStyle: _paragraphStyle);
       runs.add(run);
       builder = null;
       startIndex = endIndex;
@@ -1073,7 +1197,8 @@ class MongolParagraphBuilder {
     builder.addText(_ellipsis!);
     final paragraph = builder.build();
     paragraph.layout(const ui.ParagraphConstraints(width: double.infinity));
-    return _TextRun(-1, -1, false, paragraph);
+    return _TextRun(-1, -1, false, paragraph,
+      textStyle: style, paragraphStyle: _paragraphStyle);
   }
 }
 
@@ -1252,7 +1377,8 @@ class _RawStyledTextRun {
 /// forms the run. The [paragraph] is the precomputed Paragraph object that
 /// contains the text run.
 class _TextRun {
-  _TextRun(this.start, this.end, this.isRotated, this.paragraph);
+  _TextRun(this.start, this.end, this.isRotated, this.paragraph,
+      {this.textStyle, this.paragraphStyle});
 
   /// The UTF-16 code unit index where this run starts within the entire text
   /// range. The value in inclusive (that is, this is the actual start index).
@@ -1273,6 +1399,10 @@ class _TextRun {
   ///
   /// It includes the size but should never be more than one line.
   final ui.Paragraph paragraph;
+
+  // Optional style information used to rebuild paragraphs when splitting runs.
+  final ui.TextStyle? textStyle;
+  final ui.ParagraphStyle? paragraphStyle;
 
   /// Returns the width of the run (in horizontal orientation).
   double get width {
@@ -1311,33 +1441,25 @@ class _TextRun {
   }
 }
 
-/// LineInfo stores information about each line in the paragraph.
-///
-/// [textRunStart] is the index of the first text run in the line (out of all the
-/// text runs in the paragraph). [textRunEnd] is the index of the last run.
-///
-/// The [bounds] is the size of the unrotated text line.
+/// 存储段落中每行的信息
 class _LineInfo {
   _LineInfo(this.textRunStart, this.textRunEnd, this.bounds, this.runCumWidths);
 
-  /// The index of the run in [_runs] where this line starts
+  /// 当前行起始run在[_runs]中的索引
   final int textRunStart;
 
-  /// The index (exclusive) of the run in [_runs] where this line end
+  /// 当前行结束run在[_runs]中的索引（不包含）
   final int textRunEnd;
 
-  /// The measured size of this unrotated line (horizontal orientation).
-  ///
-  /// There is no offset so [left] and [top] are `0`. Just use [width] and
-  /// [height].
+  /// 未旋转行的测量大小（水平方向）
   final Rect bounds;
 
-  /// Cumulative run widths for runs in this line.
-  /// Example: [w1, w1+w2, w1+w2+w3]
+  /// 行内run的累积宽度列表
+  /// 例如：[w1, w1+w2, w1+w2+w3]
   final List<double> runCumWidths;
 }
 
-// This is for keeping track of the text style stack.
+// 用于跟踪文本样式栈
 class _Stack<T> {
   final _stack = Queue<T>();
 
