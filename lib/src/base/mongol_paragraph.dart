@@ -222,27 +222,29 @@ class MongolParagraph {
     _lastLayoutSignatureHash = currentSignatureHash;
   }
 
-  final List<_LineInfo> _lines = [];
-  // 每一列在水平方向上的累积偏移量
-  final List<double> _lineOffsets = [];
+  // 内部坐标系中的"列"信息列表（每一列对应屏幕上竖排中的一竖列文字）
+  final List<_ColumnLayout> _columns = [];
+  // 每一列在水平方向上的累积偏移量（用于快速定位点击位置）
+  final List<double> _columnOffsets = [];
 
-  /// 【换行计算器】
-  /// 遍历文字片段，看看当前这一列还能不能塞下。塞不下了就另起一列。
+  /// 【换列计算器】
+  /// 遍历文字片段（run），根据约束条件计算换列点。
+  /// 在内部坐标系中，一"列"对应最终屏幕上蒙古文的一竖列。
   void _calculateLineBreaks(double maxLineLength) {
     if (_runs.isEmpty) {
       return;
     }
     
-    if (_lines.isNotEmpty) {
-      _lines.clear();
-      _lineOffsets.clear();
+    if (_columns.isNotEmpty) {
+      _columns.clear();
+      _columnOffsets.clear();
       _didExceedMaxLines = false;
     }
 
     int startRunIndex = 0;
     int endRunIndex = 0;
-    double currentLineWidth = 0.0;
-    double currentLineHeight = 0.0;
+    double currentColumnWidth = 0.0;  // 当前列的总宽度（所有 run 宽度之和）
+    double currentColumnHeight = 0.0;  // 当前列的高度（run 最大高度）
     bool lastRunEndsWithNewline = false;
     
     for (int runIndex = 0; runIndex < _runs.length; runIndex++) {
@@ -251,24 +253,26 @@ class MongolParagraph {
       final double runWidth = currentRun.width;
       final double runHeight = currentRun.height;
 
-      // 如果当前列塞不下了...
-      if (currentLineWidth + runWidth > maxLineLength) {
-        _addLine(startRunIndex, endRunIndex, currentLineWidth, currentLineHeight);
-        currentLineWidth = runWidth;
-        currentLineHeight = runHeight;
+      // 检查当前列是否能容纳此 run
+      if (currentColumnWidth + runWidth > maxLineLength) {
+        // 不能容纳，保存当前列，新建一列
+        _addColumn(startRunIndex, endRunIndex, currentColumnWidth, currentColumnHeight);
+        currentColumnWidth = runWidth;
+        currentColumnHeight = runHeight;
         startRunIndex = endRunIndex;
       } else {
-        currentLineWidth += runWidth;
-        currentLineHeight = math.max(currentLineHeight, runHeight);
+        // 能容纳，累加到当前列
+        currentColumnWidth += runWidth;
+        currentColumnHeight = math.max(currentColumnHeight, runHeight);
       }
 
-      // 碰到 '\n' 强制换到下一列
+      // 检查是否遇到硬换行符 (\n)，强制换列
       lastRunEndsWithNewline = _runEndsWithNewLine(currentRun);
       if (lastRunEndsWithNewline) {
         endRunIndex = runIndex + 1;
-        _addLine(startRunIndex, endRunIndex, currentLineWidth, currentLineHeight);
-        currentLineWidth = 0;
-        currentLineHeight = 0;
+        _addColumn(startRunIndex, endRunIndex, currentColumnWidth, currentColumnHeight);
+        currentColumnWidth = 0;
+        currentColumnHeight = 0;
         startRunIndex = endRunIndex;
       }
 
@@ -277,15 +281,16 @@ class MongolParagraph {
       }
     }
 
-    // 收尾：把剩下的文字放进最后一列
+    // 处理剩余的 run
     endRunIndex = _runs.length;
     if (startRunIndex < endRunIndex) {
-      _addLine(startRunIndex, endRunIndex, currentLineWidth, currentLineHeight);
+      _addColumn(startRunIndex, endRunIndex, currentColumnWidth, currentColumnHeight);
     }
 
+    // 如果最后一个 run 以换行符结尾，添加空列
     if (lastRunEndsWithNewline) {
-      final double lastLineHeight = _lines.last.bounds.height;
-      _addLine(-1, -1, 0, lastLineHeight);
+      final double lastColumnHeight = _columns.last.bounds.height;
+      _addColumn(-1, -1, 0, lastColumnHeight);
     }
   }
 
@@ -297,81 +302,85 @@ class MongolParagraph {
     return _text[index] == '\n';
   }
 
-  /// 将计算好的一列文字信息存入列表
-  void _addLine(int start, int end, double width, double height) {
-    if (_maxLines != null && _maxLines! <= _lines.length) {
+  /// 添加一列文字信息到列表
+  void _addColumn(int startRunIndex, int endRunIndex, double columnWidth, double columnHeight) {
+    if (_maxLines != null && _maxLines! <= _columns.length) {
       _didExceedMaxLines = true;
       return;
     }
     
     _didExceedMaxLines = false;
-    final Rect bounds = Rect.fromLTRB(0, 0, width, height);
+    final Rect bounds = Rect.fromLTRB(0, 0, columnWidth, columnHeight);
     
+    // 计算每个 run 在列内的累积宽度（用于快速定位鼠标点击）
     final List<double> runCumulativeWidths = <double>[];
-    if (start >= 0 && end > start) {
+    if (startRunIndex >= 0 && endRunIndex > startRunIndex) {
       double accumulatedWidth = 0.0;
-      for (int i = start; i < end; i++) {
+      for (int i = startRunIndex; i < endRunIndex; i++) {
         accumulatedWidth += _runs[i].width;
         runCumulativeWidths.add(accumulatedWidth);
       }
     }
     
-    final _LineInfo lineInfo = _LineInfo(start, end, bounds, runCumulativeWidths);
-    _lines.add(lineInfo);
-    _longestLine = math.max(longestLine, lineInfo.bounds.width);
+    final _ColumnLayout columnLayout = _ColumnLayout(startRunIndex, endRunIndex, bounds, runCumulativeWidths);
+    _columns.add(columnLayout);
+    _longestLine = math.max(longestLine, columnLayout.bounds.width);
 
-    final double lastOffset = _lineOffsets.isEmpty ? 0.0 : _lineOffsets.last;
-    _lineOffsets.add(lastOffset + bounds.height);
+    // 记录列的累积偏移（水平坐标）
+    final double lastOffset = _columnOffsets.isEmpty ? 0.0 : _columnOffsets.last;
+    _columnOffsets.add(lastOffset + bounds.height);
   }
 
-  /// 累加所有列的厚度，得到段落总宽度
+  /// 累加所有列的厚度（height），得到段落总宽度
   void _calculateWidth() {
     double totalWidth = 0.0;
-    for (final _LineInfo line in _lines) {
-      totalWidth += line.bounds.height;
+    for (final _ColumnLayout column in _columns) {
+      totalWidth += column.bounds.height;
     }
     _width = totalWidth;
   }
 
-  /// 计算如果不受高度限制，段落最小和最大可能的高度
+  /// 计算无高度限制时，段落的最小和最大可能高度
+  /// - minIntrinsicHeight：最宽单个 run 的宽度
+  /// - maxIntrinsicHeight：所有 run 不换列时的总宽度
   void _calculateIntrinsicHeight() {
-    double currentLineSum = 0.0;
+    double currentColumnSum = 0.0;
     double maxIndividualRunWidth = 0.0;
-    double maxHeightForLineWithNewLine = 0.0;
-    double minHeightForLineWithoutNewLine = double.infinity;
+    double maxHeightWithHardBreak = 0.0;
+    double minHeightWithoutHardBreak = double.infinity;
     
-    for (int lineIndex = 0; lineIndex < _lines.length; lineIndex++) {
-      final _LineInfo line = _lines[lineIndex];
-      _TextRun? lastRunInLine;
+    for (int columnIndex = 0; columnIndex < _columns.length; columnIndex++) {
+      final _ColumnLayout column = _columns[columnIndex];
+      _TextRun? lastRunInColumn;
       
-      for (int runIndex = line.textRunStart; runIndex < line.textRunEnd; runIndex++) {
-        lastRunInLine = _runs[runIndex];
-        final double runWidth = lastRunInLine.width;
+      for (int runIndex = column.textRunStart; runIndex < column.textRunEnd; runIndex++) {
+        lastRunInColumn = _runs[runIndex];
+        final double runWidth = lastRunInColumn.width;
         maxIndividualRunWidth = math.max(runWidth, maxIndividualRunWidth);
-        currentLineSum += runWidth;
+        currentColumnSum += runWidth;
       }
       
-      final bool endsWithNewLine = lastRunInLine != null && _runEndsWithNewLine(lastRunInLine);
-      final bool hasNextLine = lineIndex < _lines.length - 1;
+      final bool endsWithHardBreak = lastRunInColumn != null && _runEndsWithNewLine(lastRunInColumn);
+      final bool hasNextColumn = columnIndex < _columns.length - 1;
       
-      if (hasNextLine && !endsWithNewLine) {
-        final _LineInfo nextLine = _lines[lineIndex + 1];
-        currentLineSum += _runs[nextLine.textRunStart].width;
-        minHeightForLineWithoutNewLine = math.min(minHeightForLineWithoutNewLine, currentLineSum);
+      if (hasNextColumn && !endsWithHardBreak) {
+        final _ColumnLayout nextColumn = _columns[columnIndex + 1];
+        currentColumnSum += _runs[nextColumn.textRunStart].width;
+        minHeightWithoutHardBreak = math.min(minHeightWithoutHardBreak, currentColumnSum);
       } else {
-        maxHeightForLineWithNewLine = math.max(maxHeightForLineWithNewLine, currentLineSum);
+        maxHeightWithHardBreak = math.max(maxHeightWithHardBreak, currentColumnSum);
       }
       
-      currentLineSum = 0;
+      currentColumnSum = 0;
     }
     
-    if (minHeightForLineWithoutNewLine == double.infinity) {
-      minHeightForLineWithoutNewLine = 0;
+    if (minHeightWithoutHardBreak == double.infinity) {
+      minHeightWithoutHardBreak = 0;
     }
     
     _minIntrinsicHeight = maxIndividualRunWidth;
     _maxIntrinsicHeight =
-        math.max(minHeightForLineWithoutNewLine, maxHeightForLineWithNewLine);
+        math.max(minHeightWithoutHardBreak, maxHeightWithHardBreak);
   }
 
   /// 【点击位置检测】
@@ -383,40 +392,40 @@ class MongolParagraph {
         offset: encoded[0], affinity: TextAffinity.values[encoded[1]]);
   }
 
-  List<int> _getPositionForOffset(double dx, double dy) {
+  List<int> _getPositionForOffset(double externalX, double externalY) {
     const int upstream = 0;
     const int downstream = 1;
 
-    if (_lines.isEmpty) {
+    if (_columns.isEmpty) {
       return [0, downstream];
     }
 
-    // 1. 用二分查找法，快速定位点在了第几列。
-    _LineInfo matchedLine;
-    if (_lineOffsets.isEmpty) {
-      matchedLine = _lines.last;
+    // 1. 用二分查找法，快速定位点在了第几列（水平坐标）
+    _ColumnLayout matchedColumn;
+    if (_columnOffsets.isEmpty) {
+      matchedColumn = _columns.last;
     } else {
       int low = 0;
-      int high = _lineOffsets.length - 1;
+      int high = _columnOffsets.length - 1;
       while (low <= high) {
         final int mid = (low + high) >> 1;
-        if (dx <= _lineOffsets[mid]) {
+        if (externalX <= _columnOffsets[mid]) {
           high = mid - 1;
         } else {
           low = mid + 1;
         }
       }
-      final int lineIndex = math.min(low, _lines.length - 1);
-      matchedLine = _lines[lineIndex];
+      final int columnIndex = math.min(low, _columns.length - 1);
+      matchedColumn = _columns[columnIndex];
     }
 
-    // 2. 在那一列里，再次用二分查找定位点在哪个文字片段上。
+    // 2. 在该列内，用二分查找定位点在哪个 run 上（垂直坐标）
     _TextRun matchedRun;
     double runStartOffset = 0.0;
-    final double lineTopOffset = matchedLine.bounds.top;
+    final double columnTopOffset = matchedColumn.bounds.top;
     
-    if (matchedLine.runCumWidths.isEmpty) {
-      final int runIndex = matchedLine.textRunEnd - 1;
+    if (matchedColumn.runCumWidths.isEmpty) {
+      final int runIndex = matchedColumn.textRunEnd - 1;
       if (runIndex.isNegative) {
         matchedRun = _runs.last;
       } else {
@@ -424,30 +433,30 @@ class MongolParagraph {
       }
     } else {
       int low = 0;
-      int high = matchedLine.runCumWidths.length - 1;
+      int high = matchedColumn.runCumWidths.length - 1;
       while (low <= high) {
         final int mid = (low + high) >> 1;
-        if (dy <= matchedLine.runCumWidths[mid]) {
+        if (externalY <= matchedColumn.runCumWidths[mid]) {
           high = mid - 1;
         } else {
           low = mid + 1;
         }
       }
-      final int runIndexInLine = math.min(low, matchedLine.runCumWidths.length - 1);
-      final int runIndex = matchedLine.textRunStart + runIndexInLine;
+      final int runIndexInColumn = math.min(low, matchedColumn.runCumWidths.length - 1);
+      final int runIndex = matchedColumn.textRunStart + runIndexInColumn;
       matchedRun = _runs[math.min(runIndex, _runs.length - 1)];
-      runStartOffset = runIndexInLine == 0 ? 0.0 : matchedLine.runCumWidths[runIndexInLine - 1];
+      runStartOffset = runIndexInColumn == 0 ? 0.0 : matchedColumn.runCumWidths[runIndexInColumn - 1];
     }
 
-    // 3. 计算在片段内的具体偏移，返回文字索引。
-    final double runLocalX = dy - runStartOffset;
-    final double runLocalY = dx - lineTopOffset;
+    // 3. 计算在 run 内的相对位置
+    final double runLocalX = externalY - runStartOffset;
+    final double runLocalY = externalX - columnTopOffset;
     final Offset runOffset = Offset(runLocalX, runLocalY);
     final TextPosition runPosition = matchedRun.paragraph.getPositionForOffset(runOffset);
     final int textOffset = matchedRun.start + runPosition.offset;
 
-    final int lineEndOffset = matchedRun.end;
-    final int textAffinity = (textOffset == lineEndOffset) ? upstream : downstream;
+    final int columnEndOffset = matchedRun.end;
+    final int textAffinity = (textOffset == columnEndOffset) ? upstream : downstream;
     
     return [textOffset, textAffinity];
   }
@@ -463,64 +472,71 @@ class MongolParagraph {
     // 【核心变换】：顺时针旋转画布 90 度，让横向排版的“列”变成纵向显示。
     canvas.rotate(math.pi / 2);
 
-    for (var i = 0; i < _lines.length; i++) {
-      final line = _lines[i];
+    for (var i = 0; i < _columns.length; i++) {
+      final column = _columns[i];
 
-      // 移动到下一列的位置（因为旋转了，所以是往负 y 方向移）
-      final dy = -line.bounds.height;
-      canvas.translate(0, dy);
+      // 移动到下一列（旋转后沿负 y 轴）
+      final deltaY = -column.bounds.height;
+      canvas.translate(0, deltaY);
 
-      final isLastLine = i == _lines.length - 1;
-      _drawEachRunInCurrentLine(canvas, line, shouldDrawEllipsis, isLastLine);
+      final isLastColumn = i == _columns.length - 1;
+      _drawRunsInColumn(canvas, column, shouldDrawEllipsis, isLastColumn);
     }
 
     canvas.restore();
   }
 
-  void _drawEachRunInCurrentLine(
-      Canvas canvas, _LineInfo line, bool shouldDrawEllipsis, bool isLastLine) {
+  void _drawRunsInColumn(
+      Canvas canvas, _ColumnLayout column, bool shouldDrawEllipsis, bool isLastColumn) {
     canvas.save();
 
-    // 处理对齐方式（靠顶、居中、靠底、两端对齐）
+    // 根据文本对齐方式调整列的位置
     var runSpacing = 0.0;
     switch (_textAlign) {
       case MongolTextAlign.top:
+        // 靠顶对齐，无需调整
         break;
       case MongolTextAlign.center:
-        final offset = (_height! - line.bounds.width) / 2;
+        // 居中对齐
+        final offset = (_height! - column.bounds.width) / 2;
         canvas.translate(offset, 0);
         break;
       case MongolTextAlign.bottom:
-        final offset = _height! - line.bounds.width;
+        // 靠底对齐
+        final offset = _height! - column.bounds.width;
         canvas.translate(offset, 0);
         break;
       case MongolTextAlign.justify:
-        if (isLastLine) break;
-        final extraSpace = _height! - line.bounds.width;
-        final runsInLine = line.textRunEnd - line.textRunStart;
-        if (runsInLine <= 1) break;
-        runSpacing = extraSpace / (runsInLine - 1);
+        // 两端对齐（最后一列除外）
+        if (isLastColumn) break;
+        final extraSpace = _height! - column.bounds.width;
+        final runsInColumn = column.textRunEnd - column.textRunStart;
+        if (runsInColumn <= 1) break;
+        runSpacing = extraSpace / (runsInColumn - 1);
         break;
     }
 
-    final startIndex = line.textRunStart;
-    final endIndex = line.textRunEnd - 1;
+    final startIndex = column.textRunStart;
+    final endIndex = column.textRunEnd - 1;
     for (var j = startIndex; j <= endIndex; j++) {
       final run = _runs[j];
 
+      // 计算 run 的绘制偏移
       var alignmentOffset = 0.0;
       if (run.isRotated) {
-        alignmentOffset = (line.bounds.height - run.width) / 2;
+        // 需要旋转的文字在列内垂直居中
+        alignmentOffset = (column.bounds.height - run.width) / 2;
       }
       var verticalShift = 0.0;
       if (run.isRotated) {
+        // 调整基线以获得更好的视觉效果
         final descent = run.paragraph.height - run.paragraph.alphabeticBaseline;
         verticalShift = -descent / 2;
       }
       final offset = Offset(verticalShift, alignmentOffset);
 
-      // 处理省略号 (...)
-      if (shouldDrawEllipsis && isLastLine && j == endIndex) {
+      // 处理省略号
+      if (shouldDrawEllipsis && isLastColumn && j == endIndex) {
         if (maxIntrinsicHeight + _ellipsis!.height < height) {
           run.draw(canvas, offset);
           canvas.translate(run.width, 0);
@@ -536,7 +552,7 @@ class MongolParagraph {
     canvas.restore();
   }
 
-  /// 获取给定文本范围的包围矩形列表（用于选中文光标或背景）
+  /// 获取给定文本范围的包围矩形列表（用于文本选中或光标显示）
   List<Rect> getBoxesForRange(int start, int end) {
     final boxes = <Rect>[];
     final textLength = _text.length;
@@ -545,69 +561,73 @@ class MongolParagraph {
     }
 
     final effectiveEnd = math.min(textLength, end);
-    var dx = 0.0;
+    var columnPosition = 0.0;  // 当前列的水平位置
 
-    for (var i = 0; i < _lines.length; i++) {
-      final line = _lines[i];
-      final lastRunIndex = line.textRunEnd - 1;
+    for (var i = 0; i < _columns.length; i++) {
+      final column = _columns[i];
+      final lastRunIndex = column.textRunEnd - 1;
 
       if (lastRunIndex < 0) {
         if (end > textLength) {
-          boxes.add(_lineBoundsAsBox(line, dx));
+          boxes.add(_getColumnBoundsAsBox(column, columnPosition));
         }
         continue;
       }
 
-      final lineLastCharIndex = _runs[lastRunIndex].end - 1;
-      if (lineLastCharIndex < start) {
-        dx += line.bounds.height;
+      final columnLastCharIndex = _runs[lastRunIndex].end - 1;
+      if (columnLastCharIndex < start) {
+        columnPosition += column.bounds.height;
         continue;
       }
 
-      final firstRunIndex = line.textRunStart;
-      final lineFirstCharIndex = _runs[firstRunIndex].start;
+      final firstRunIndex = column.textRunStart;
+      final columnFirstCharIndex = _runs[firstRunIndex].start;
 
-      if (lineFirstCharIndex >= start && lineLastCharIndex < effectiveEnd) {
-        boxes.add(_lineBoundsAsBox(line, dx));
+      if (columnFirstCharIndex >= start && columnLastCharIndex < effectiveEnd) {
+        boxes.add(_getColumnBoundsAsBox(column, columnPosition));
       } else {
-        final lineBox = _getBoxFromLine(line, start, effectiveEnd, dx);
-        if (lineBox != Rect.zero) {
-          boxes.add(lineBox);
+        final columnBox = _getBoxFromColumn(column, start, effectiveEnd, columnPosition);
+        if (columnBox != Rect.zero) {
+          boxes.add(columnBox);
         }
-        if (lineLastCharIndex >= effectiveEnd - 1) {
+        if (columnLastCharIndex >= effectiveEnd - 1) {
           return boxes;
         }
       }
-      dx += line.bounds.height;
+      columnPosition += column.bounds.height;
     }
     return boxes;
   }
 
-  Rect _lineBoundsAsBox(_LineInfo line, double dx) {
-    final lineBounds = line.bounds;
-    return Rect.fromLTWH(dx, 0, lineBounds.height, lineBounds.width);
+  /// 获取一整列的包围矩形
+  Rect _getColumnBoundsAsBox(_ColumnLayout column, double columnPosition) {
+    final bounds = column.bounds;
+    return Rect.fromLTWH(columnPosition, 0, bounds.height, bounds.width);
   }
 
-  Rect _getBoxFromLine(_LineInfo line, int start, int end, double dx) {
+  /// 获取列中指定范围的包围矩形
+  Rect _getBoxFromColumn(_ColumnLayout column, int start, int end, double columnPosition) {
     var boxWidth = 0.0;
     var boxHeight = 0.0;
-    var dy = 0.0;
+    var positionInColumn = 0.0;  // 在列内的垂直位置
 
-    for (var j = line.textRunStart; j < line.textRunEnd; j++) {
+    for (var j = column.textRunStart; j < column.textRunEnd; j++) {
       final run = _runs[j];
       if (run.start >= end) break;
       if (run.end <= start) {
-        dy += run.width;
+        positionInColumn += run.width;  // 跳过此 run
         continue;
       }
 
       if (run.start >= start && run.end <= end) {
+        // run 完全在范围内
         boxWidth = math.max(boxWidth, run.height);
         boxHeight += run.width;
         if (run.end == end) break;
         continue;
       }
 
+      // run 部分在范围内
       final localStart = math.max(start, run.start) - run.start;
       final localEnd = math.min(end, run.end) - run.start;
       final textBoxes = run.paragraph.getBoxesForRange(localStart, localEnd);
@@ -616,13 +636,13 @@ class MongolParagraph {
         if (end <= run.end) {
           break;
         } else {
-          dy += run.width;
+          positionInColumn += run.width;
           continue;
         }
       }
 
       final box = textBoxes.first;
-      dy += box.left;
+      positionInColumn += box.left;
       double verticalWidth = box.bottom;
       double verticalHeight = box.right - box.left;
       boxWidth = math.max(boxWidth, verticalWidth);
@@ -634,7 +654,7 @@ class MongolParagraph {
     if (boxWidth == 0.0 || boxHeight == 0.0) {
       return Rect.zero;
     }
-    return Rect.fromLTWH(dx, dy, boxWidth, boxHeight);
+    return Rect.fromLTWH(columnPosition, positionInColumn, boxWidth, boxHeight);
   }
 
   /// 获取给定文本位置处的单词边界
@@ -684,21 +704,21 @@ class MongolParagraph {
     return null;
   }
 
-  /// 获取给定文本位置所在的这一列的起始和结束位置
+  /// 获取给定文本位置所在列的起始和结束位置
   TextRange getLineBoundary(TextPosition position) {
     final offset = position.offset;
     if (offset > _text.length) {
       return TextRange.empty;
     }
     var min = 0;
-    var max = _lines.length - 1;
+    var max = _columns.length - 1;
     var start = -1;
     var end = -1;
     while (min <= max) {
       final guess = (max + min) ~/ 2;
-      final line = _lines[guess];
-      start = _runs[line.textRunStart].start;
-      end = _runs[line.textRunEnd - 1].end;
+      final column = _columns[guess];
+      start = _runs[column.textRunStart].start;
+      end = _runs[column.textRunEnd - 1].end;
       if (offset >= end) {
         min = guess + 1;
         continue;
@@ -710,7 +730,7 @@ class MongolParagraph {
       }
     }
     if (end > start && _text[end - 1] == '\n') {
-      end--;
+      end--;  // 排除硬换行符
     }
     return TextRange(start: start, end: end);
   }
@@ -719,8 +739,8 @@ class MongolParagraph {
   List<MongolLineMetrics> computeLineMetrics() {
     final List<MongolLineMetrics> lineMetricsList = <MongolLineMetrics>[];
     
-    for (int lineIndex = 0; lineIndex < _lines.length; lineIndex++) {
-      final _LineInfo line = _lines[lineIndex];
+    for (int columnIndex = 0; columnIndex < _columns.length; columnIndex++) {
+      final _ColumnLayout column = _columns[columnIndex];
       
       bool isHardBreak = false;
       double maxAscent = 0;
@@ -730,15 +750,15 @@ class MongolParagraph {
       double maxLineWidth = 0;
       double lineBaseline = 0;
       
-      if (line.textRunStart != -1 && line.textRunEnd != -1) {
-        for (int runIndex = line.textRunStart; runIndex < line.textRunEnd; runIndex++) {
+      if (column.textRunStart != -1 && column.textRunEnd != -1) {
+        for (int runIndex = column.textRunStart; runIndex < column.textRunEnd; runIndex++) {
           if (runIndex < 0 || runIndex >= _runs.length) continue;
           
           final _TextRun textRun = _runs[runIndex];
           final List<LineMetrics> runLineMetrics = textRun.paragraph.computeLineMetrics();
           final LineMetrics? runMetrics = runLineMetrics.isNotEmpty ? runLineMetrics.first : null;
 
-          if (runIndex == line.textRunEnd - 1) {
+          if (runIndex == column.textRunEnd - 1) {
             isHardBreak = _runEndsWithNewLine(textRun);
           }
           
@@ -757,12 +777,12 @@ class MongolParagraph {
       }
 
       MongolLineMetrics? previousLineMetrics =
-          (lineIndex > 0 && lineMetricsList.isNotEmpty) ? lineMetricsList[lineIndex - 1] : null;
+          (columnIndex > 0 && lineMetricsList.isNotEmpty) ? lineMetricsList[columnIndex - 1] : null;
       if (previousLineMetrics != null) {
         lineBaseline = previousLineMetrics.baseline + previousLineMetrics.ascent + maxDescent;
       }
 
-      if (line.textRunStart == -1 && line.textRunEnd == -1) {
+      if (column.textRunStart == -1 && column.textRunEnd == -1) {
         isHardBreak = true;
         if (previousLineMetrics != null) {
           maxAscent = previousLineMetrics.ascent;
@@ -790,7 +810,7 @@ class MongolParagraph {
         width: maxLineWidth,
         top: lineTopOffset,
         baseline: lineBaseline,
-        lineNumber: lineIndex,
+        lineNumber: columnIndex,
       );
       
       lineMetricsList.add(lineMetrics);
@@ -1198,12 +1218,29 @@ class _TextRun {
   }
 }
 
-/// 内部数据结构：记录每一列的信息
-class _LineInfo {
-  _LineInfo(this.textRunStart, this.textRunEnd, this.bounds, this.runCumWidths);
+/// 【内部坐标系】列布局信息
+/// 
+/// 在蒙古文排版中，内部将竖排视为"列"。此类记录一列的详细布局数据。
+/// 每一列最终在屏幕上显示为竖排的一竖列文字。
+class _ColumnLayout {
+  /// 创建列布局信息
+  /// 
+  /// [textRunStart] - 此列包含的第一个 run 的索引
+  /// [textRunEnd] - 此列包含的最后一个 run 的下一个索引
+  /// [bounds] - 列的包围矩形（width:列宽，height:列高）
+  /// [runCumWidths] - 每个 run 在列内的累积宽度（用于鼠标点击定位）
+  _ColumnLayout(this.textRunStart, this.textRunEnd, this.bounds, this.runCumWidths);
+  
+  /// 此列包含的第一个 run 的索引
   final int textRunStart;
+  
+  /// 此列包含的最后一个 run 的下一个索引
   final int textRunEnd;
+  
+  /// 列的包围矩形（内部坐标系）
   final Rect bounds;
+  
+  /// 列内每个 run 的累积宽度，用于快速定位鼠标点击位置
   final List<double> runCumWidths;
 }
 
