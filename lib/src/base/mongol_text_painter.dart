@@ -33,6 +33,7 @@ import 'package:flutter/widgets.dart'
 import 'package:mongol/src/base/mongol_paragraph.dart';
 
 import 'mongol_text_align.dart';
+import 'mongol_text_tools.dart';
 
 // 默认字体大小，与 Flutter 引擎和 text_style.dart 保持一致
 const double _kDefaultFontSize = 14.0;
@@ -86,20 +87,6 @@ class MongolWordBoundary extends TextBoundary {
   TextRange getTextBoundaryAt(int position) =>
       _paragraph.getWordBoundary(TextPosition(offset: max(position, 0)));
 
-  // 将两个 UTF-16 代码单元（高代理 + 低代理）组合成一个表示补充字符的代码点
-  static int _codePointFromSurrogates(int highSurrogate, int lowSurrogate) {
-    assert(
-      MongolTextPainter.isHighSurrogate(highSurrogate),
-      'U+${highSurrogate.toRadixString(16).toUpperCase().padLeft(4, "0")}) is not a high surrogate.',
-    );
-    assert(
-      MongolTextPainter.isLowSurrogate(lowSurrogate),
-      'U+${lowSurrogate.toRadixString(16).toUpperCase().padLeft(4, "0")}) is not a low surrogate.',
-    );
-    const int base = 0x010000 - (0xD800 << 10) - 0xDC00;
-    return (highSurrogate << 10) + lowSurrogate + base;
-  }
-
   // Runes 类不提供带有代码单元偏移的随机访问
   int? _codePointAt(int index) {
     final int? codeUnitAtIndex = _text.codeUnitAt(index);
@@ -108,9 +95,9 @@ class MongolWordBoundary extends TextBoundary {
     }
     return switch (codeUnitAtIndex & 0xFC00) {
       0xD800 =>
-        _codePointFromSurrogates(codeUnitAtIndex, _text.codeUnitAt(index + 1)!),
+        MongolTextTools.codePointFromSurrogates(codeUnitAtIndex, _text.codeUnitAt(index + 1)!),
       0xDC00 =>
-        _codePointFromSurrogates(_text.codeUnitAt(index - 1)!, codeUnitAtIndex),
+        MongolTextTools.codePointFromSurrogates(_text.codeUnitAt(index - 1)!, codeUnitAtIndex),
       _ => codeUnitAtIndex,
     };
   }
@@ -1407,54 +1394,6 @@ class MongolTextPainter {
 
   // UTF-16 编码性检查
 
-  /// 检查给定值是否为有效的 UTF-16 代码单元
-  ///
-  /// UTF-16 代码单元的有效范围是 [0x0000, 0xFFFF]
-  static bool _isUTF16(int value) {
-    return value >= 0x0 && value <= 0xFFFFF;
-  }
-
-  /// 检查给定值是否为有效的 UTF-16 高代理（第一个代理代码单元）
-  ///
-  /// 高代理用于表示补充字符（Unicode 代码点 U+010000 到 U+10FFFF）的第一部分。
-  /// 有效范围：0xD800 到 0xDBFF
-  ///
-  /// 参数 [value] 必须是有效的 UTF-16 代码单元（[0x0000, 0xFFFF]），否则断言失败
-  ///
-  /// 相关链接：
-  ///   * https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
-  ///   * [isLowSurrogate]
-  static bool isHighSurrogate(int value) {
-    assert(_isUTF16(value));
-    return value & 0xFC00 == 0xD800;
-  }
-
-  /// 检查给定值是否为有效的 UTF-16 低代理（第二个代理代码单元）
-  ///
-  /// 低代理用于表示补充字符的第二部分。有效范围：0xDC00 到 0xDFFF
-  ///
-  /// 参数 [value] 必须是有效的 UTF-16 代码单元（[0x0000, 0xFFFF]），否则断言失败
-  ///
-  /// 相关链接：
-  ///   * https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
-  ///   * [isHighSurrogate]
-  static bool isLowSurrogate(int value) {
-    assert(_isUTF16(value));
-    return value & 0xFC00 == 0xDC00;
-  }
-
-  /// 检查给定的 UTF-16 代码单元是否为 Unicode 方向性标记
-  ///
-  /// 方向性标记（Right-to-Left Mark 和 Left-to-Right Mark）是零宽度字符，
-  /// 用于控制双向文本的显示方向，不占用可见空间。
-  ///
-  /// 检查的值：
-  /// - 0x200F：RLM (Right-to-Left Mark)
-  /// - 0x200E：LRM (Left-to-Right Mark)
-  static bool _isUnicodeDirectionality(int value) {
-    return value == 0x200F || value == 0x200E;
-  }
-
   /// 获取在指定偏移量之后最近的可以放置输入光标的位置
   ///
   /// 此方法用于文本编辑中的光标导航。它考虑了 UTF-16 代理对，
@@ -1473,7 +1412,9 @@ class MongolTextPainter {
     if (nextCodeUnit == null) {
       return null;
     }
-    return isHighSurrogate(nextCodeUnit) ? offset + 2 : offset + 1;
+    return MongolTextTools.isHighSurrogate(nextCodeUnit)
+        ? offset + 2
+        : offset + 1;
   }
 
   /// 获取在指定偏移量之前最近的可以放置输入光标的位置
@@ -1494,142 +1435,140 @@ class MongolTextPainter {
     if (prevCodeUnit == null) {
       return null;
     }
-    return isLowSurrogate(prevCodeUnit) ? offset - 2 : offset - 1;
+    return MongolTextTools.isLowSurrogate(prevCodeUnit) ? offset - 2 : offset - 1;
   }
+
+  /// 检查给定值是否为有效的 UTF-16 代码单元
+  ///
+
 
   // 零宽度连接符字符的 Unicode 值。
   static const int _zwjUtf16 = 0x200d;
 
-  /// 基于上游字符（当前位置之前的字符）的近边缘获取光标度量
+  /// 通用字形边界框搜索方法
   ///
-  /// 用于计算光标位置和宽度，基于文本位置的上游字符。当光标前面有字符时使用此方法。
+  /// 利用二分搜索策略（O(log n)）在指定范围内查找字形的边界框。
+  /// 此方法被 [_getMetricsFromUpstream] 和 [_getMetricsFromDownstream] 共享。
   ///
-  /// 处理的字符类型：
-  /// - 换行符：光标位于下一行的开始，此时使用 [_EmptyLineCaretMetrics]
-  /// - 多代码单元字形：如表情符号、RTL 标记、零宽度连接符等
-  /// - Unicode 方向性标记：零宽度字符，不占用空间
-  ///
-  /// 查询策略（二分搜索并进行字形集群扩展）：
-  /// - 初始化 graphemeClusterLength 为 1（或 2 如果需要搜索）
-  /// - 逐次查询边界框，未找到则扩大范围（乘以 2）
-  /// - 这一策略在 O(log n) 时间内完成查询，避免 O(n) 的线性扫描
+  /// 参数说明：
+  /// - [searchStart]：搜索起始位置（包含）
+  /// - [searchEnd]：搜索结束位置（包含）
+  /// - [getRange]：返回给定范围的边界框
+  /// - [needsSearch]：是否需要扩展搜索范围（多代码单元字形或特殊字符）
   ///
   /// 返回值：
-  /// - 若成功找到字形的边界框，返回光标度量
-  /// - 若在光标处多次扩展后仍未找到，返回 null（这属于异常情况）
-  ///
-  /// 参数 [offset] 应 >= 0，而且通常 <= plainText.length
-  _CaretMetrics? _getMetricsFromUpstream(int offset) {
-    assert(offset >= 0);
-    final int plainTextLength = plainText.length;
-    if (plainTextLength == 0 || offset > plainTextLength) {
-      return null;
-    }
-    final int prevCodeUnit = plainText.codeUnitAt(max(0, offset - 1));
-
-    // 换行符标记：如果上游是换行，光标位于下一行
-    const int newlineCodeUnit = 10;
-
-    // 确定是否需要扩展搜索范围以找到完整的字形集群
-    // 需要搜索的情况：多代码单元字形（代理对）或特殊字符
-    final bool needsSearch = isHighSurrogate(prevCodeUnit) ||
-        isLowSurrogate(prevCodeUnit) ||
-        _text!.codeUnitAt(offset) == _zwjUtf16 ||
-        _isUnicodeDirectionality(prevCodeUnit);
-    int graphemeClusterLength = needsSearch ? 2 : 1;
+  /// - 若找到边界框，返回第一个或最后一个框（通过 [selectBox]）
+  /// - 若未找到，返回 null
+  List<Rect> _searchGraphemeClusterBoxes({
+    required int searchStart,
+    required int searchEnd,
+    required bool needsSearch,
+    required int initialLength,
+  }) {
+    int graphemeLength = initialLength;
     List<Rect> boxes = <Rect>[];
     
     while (boxes.isEmpty) {
-      final int prevRuneOffset = offset - graphemeClusterLength;
-      boxes = _layoutCache!.paragraph
-          .getBoxesForRange(max(0, prevRuneOffset), offset);
+      // 计算当前搜索范围
+      final int start = searchStart < 0 ? searchStart.clamp(0, 1) : searchStart;
+      final int end = searchEnd < 0 ? max(0, searchEnd) : searchEnd;
+      
+      boxes = _layoutCache!.paragraph.getBoxesForRange(start, end);
       
       if (boxes.isEmpty) {
-        // 若未找到框，检查是否应继续搜索或放弃
-        if (!needsSearch && prevCodeUnit == newlineCodeUnit) {
-          break; // 非换行符且不需要搜索，仅尝试一次
-        }
-        if (prevRuneOffset < -plainTextLength) {
-          break; // 已超出文本范围
-        }
-        // 扩大搜索范围（二进制增长以实现 O(log n) 性能）
-        graphemeClusterLength *= 2;
-        continue;
+        // 检查是否应继续搜索
+        if (!needsSearch) break; // 无需扩展搜索，仅尝试一次
+        if ((searchEnd - searchStart).abs() > plainText.length * 2) break; // 超出范围
+        
+        graphemeLength *= 2; // 二进制增长
+        searchStart -= graphemeLength;
+        searchEnd += graphemeLength;
       }
-
-      // 边界框找到，获取最后一个框作为光标位置
-      final box = boxes.last;
-      return prevCodeUnit == newlineCodeUnit
-          ? _EmptyLineCaretMetrics(lineHorizontalOffset: box.right)
-          : _LineCaretMetrics(
-              offset: Offset(box.left, box.bottom),
-              fullWidth: box.right - box.left,
-            );
     }
-    return null;
+    return boxes;
+  }
+
+  /// 检查给定代码单元是否需要扩展搜索
+  ///
+  /// 返回 true 表示该字符是多代码单元字形或特殊零宽度字符
+  bool _needsGraphemeExtendedSearch(int codeUnit) {
+    return MongolTextTools.isHighSurrogate(codeUnit) ||
+        MongolTextTools.isLowSurrogate(codeUnit) ||
+        codeUnit == _zwjUtf16 ||
+        MongolTextTools.isUnicodeDirectionality(codeUnit);
+  }
+
+  /// 基于上游字符（当前位置之前的字符）的近边缘获取光标度量
+  ///
+  /// 用于计算光标位置和宽度，基于文本位置的上游字符。当光标前面有字符时使用此方法。
+  _CaretMetrics? _getMetricsFromUpstream(int offset) {
+    assert(offset >= 0);
+    final int plainTextLength = plainText.length;
+    if (plainTextLength == 0 || offset > plainTextLength) return null;
+    
+    final int prevCodeUnit = plainText.codeUnitAt(max(0, offset - 1));
+    const int newlineCodeUnit = 10;
+    
+    final bool needsSearch = _needsGraphemeExtendedSearch(prevCodeUnit);
+    int graphemeLength = needsSearch ? 2 : 1;
+    List<Rect> boxes = <Rect>[];
+    
+    while (boxes.isEmpty) {
+      final int searchOffset = offset - graphemeLength;
+      boxes = _layoutCache!.paragraph.getBoxesForRange(
+        max(0, searchOffset),
+        offset,
+      );
+      
+      if (boxes.isEmpty) {
+        if (!needsSearch && prevCodeUnit == newlineCodeUnit) break;
+        if (searchOffset < -plainTextLength) break;
+        graphemeLength *= 2;
+      }
+    }
+    
+    if (boxes.isEmpty) return null;
+    final box = boxes.last;
+    return prevCodeUnit == newlineCodeUnit
+        ? _EmptyLineCaretMetrics(lineHorizontalOffset: box.right)
+        : _LineCaretMetrics(
+            offset: Offset(box.left, box.bottom),
+            fullWidth: box.right - box.left,
+          );
   }
 
   /// 基于下游字符（当前位置之后的字符）的近边缘获取光标度量
   ///
   /// 用于计算光标位置和宽度，基于文本位置的下游字符。当光标后面有字符时使用此方法。
-  ///
-  /// 处理的字符类型：
-  /// - 多代码单元字形：如表情符号、代理对等
-  /// - 零宽度连接符 (ZWJ)：用于组合字符和表情符号
-  /// - Unicode 方向性标记：零宽度字符
-  ///
-  /// 查询策略（同 [_getMetricsFromUpstream]）：
-  /// - 使用二分搜索策略以 O(log n) 时间复杂度找到字形集群
-  /// - 逐次扩大搜索范围直至找到有效的边界框
-  ///
-  /// 返回值：
-  /// - 若成功找到字形的边界框，返回光标度量
-  /// - 若文本为空或查询到末尾仍无结果，返回 null
-  ///
-  /// 参数 [offset] 应 >= 0
   _CaretMetrics? _getMetricsFromDownstream(int offset) {
     assert(offset >= 0);
     final int plainTextLength = plainText.length;
-    if (plainTextLength == 0) {
-      return null;
-    }
-    // 将偏移量限制在有效范围内，避免越界
+    if (plainTextLength == 0) return null;
+    
     final int nextCodeUnit =
         plainText.codeUnitAt(min(offset, plainTextLength - 1));
-
-    // 检查是否需要扩展搜索范围以找到完整字形
-    final bool needsSearch = isHighSurrogate(nextCodeUnit) ||
-        isLowSurrogate(nextCodeUnit) ||
-        nextCodeUnit == _zwjUtf16 ||
-        _isUnicodeDirectionality(nextCodeUnit);
-    int graphemeClusterLength = needsSearch ? 2 : 1;
+    
+    final bool needsSearch = _needsGraphemeExtendedSearch(nextCodeUnit);
+    int graphemeLength = needsSearch ? 2 : 1;
     List<Rect> boxes = <Rect>[];
     
     while (boxes.isEmpty) {
-      final int nextRuneOffset = offset + graphemeClusterLength;
-      boxes = _layoutCache!.paragraph.getBoxesForRange(offset, nextRuneOffset);
+      final int searchOffset = offset + graphemeLength;
+      boxes = _layoutCache!.paragraph.getBoxesForRange(offset, searchOffset);
       
       if (boxes.isEmpty) {
-        // 若未找到框，检查是否应继续搜索或放弃
-        if (!needsSearch) {
-          break; // 非搜索模式下仅尝试一次
-        }
-        if (nextRuneOffset >= plainTextLength << 1) {
-          break; // 已远超文本最大长度
-        }
-        // 扩大搜索范围（二进制增长策略）
-        graphemeClusterLength *= 2;
-        continue;
+        if (!needsSearch) break;
+        if (searchOffset >= plainTextLength << 1) break;
+        graphemeLength *= 2;
       }
-
-      // 边界框找到，获取第一个框作为光标位置
-      final box = boxes.first;
-      return _LineCaretMetrics(
-        offset: Offset(box.left, box.top),
-        fullWidth: box.right - box.left,
-      );
     }
-    return null;
+    
+    if (boxes.isEmpty) return null;
+    final box = boxes.first;
+    return _LineCaretMetrics(
+      offset: Offset(box.left, box.top),
+      fullWidth: box.right - box.left,
+    );
   }
 
   /// 将文本对齐方式转换为绘制偏移的标准化因子
@@ -1813,7 +1752,7 @@ class MongolTextPainter {
     return offset == Offset.zero
         ? boxes
         : boxes
-            .map((Rect box) => _shiftTextBox(box, offset))
+            .map((Rect box) => MongolTextTools.shiftTextBox(box, offset))
             .toList(growable: false);
   }
 
@@ -1887,55 +1826,7 @@ class MongolTextPainter {
     return _layoutCache!.paragraph.getLineBoundary(position);
   }
 
-  /// 对行度量信息应用偏移量变换
-  ///
-  /// 将指定的列度量信息中的所有坐标通过 [offset] 进行平移。
-  /// 这是在坐标系转换中使用的辅助方法，用于将段落坐标转换为绘制坐标。
-  ///
-  /// 参数：
-  /// - [metrics]：原始的行度量信息
-  /// - [offset]：要应用的坐标偏移
-  ///
-  /// 返回值：
-  /// - 新的行度量信息，所有坐标值都偏移了指定的量
-  static MongolLineMetrics _shiftLineMetrics(
-      MongolLineMetrics metrics, Offset offset) {
-    assert(offset.dx.isFinite);
-    assert(offset.dy.isFinite);
-    return MongolLineMetrics(
-      hardBreak: metrics.hardBreak,
-      ascent: metrics.ascent,
-      descent: metrics.descent,
-      unscaledAscent: metrics.unscaledAscent,
-      height: metrics.height,
-      width: metrics.width,
-      top: metrics.top + offset.dy,
-      baseline: metrics.baseline + offset.dx,
-      lineNumber: metrics.lineNumber,
-    );
-  }
 
-  /// 对文本选择边框应用偏移量变换
-  ///
-  /// 将指定的矩形通过 [offset] 进行平移。这是在坐标系转换中使用的辅助方法，
-  /// 用于将段落坐标中的矩形转换为绘制坐标中的矩形。
-  ///
-  /// 参数：
-  /// - [box]：原始矩形
-  /// - [offset]：要应用的坐标偏移
-  ///
-  /// 返回值：
-  /// - 新的矩形，所有坐标值都偏移了指定的量
-  static Rect _shiftTextBox(Rect box, Offset offset) {
-    assert(offset.dx.isFinite);
-    assert(offset.dy.isFinite);
-    return Rect.fromLTRB(
-      box.left + offset.dx,
-      box.top + offset.dy,
-      box.right + offset.dx,
-      box.bottom + offset.dy,
-    );
-  }
 
   /// 计算并返回所有行的详细度量信息列表
   ///
@@ -1971,7 +1862,7 @@ class MongolTextPainter {
         ? rawMetrics
         : rawMetrics
             .map((MongolLineMetrics metrics) =>
-                _shiftLineMetrics(metrics, offset))
+                MongolTextTools.shiftLineMetrics(metrics, offset))
             .toList(growable: false);
   }
 
