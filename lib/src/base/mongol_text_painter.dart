@@ -1445,49 +1445,6 @@ class MongolTextPainter {
   // 零宽度连接符字符的 Unicode 值。
   static const int _zwjUtf16 = 0x200d;
 
-  /// 通用字形边界框搜索方法
-  ///
-  /// 利用二分搜索策略（O(log n)）在指定范围内查找字形的边界框。
-  /// 此方法被 [_getMetricsFromUpstream] 和 [_getMetricsFromDownstream] 共享。
-  ///
-  /// 参数说明：
-  /// - [searchStart]：搜索起始位置（包含）
-  /// - [searchEnd]：搜索结束位置（包含）
-  /// - [getRange]：返回给定范围的边界框
-  /// - [needsSearch]：是否需要扩展搜索范围（多代码单元字形或特殊字符）
-  ///
-  /// 返回值：
-  /// - 若找到边界框，返回第一个或最后一个框（通过 [selectBox]）
-  /// - 若未找到，返回 null
-  List<Rect> _searchGraphemeClusterBoxes({
-    required int searchStart,
-    required int searchEnd,
-    required bool needsSearch,
-    required int initialLength,
-  }) {
-    int graphemeLength = initialLength;
-    List<Rect> boxes = <Rect>[];
-    
-    while (boxes.isEmpty) {
-      // 计算当前搜索范围
-      final int start = searchStart < 0 ? searchStart.clamp(0, 1) : searchStart;
-      final int end = searchEnd < 0 ? max(0, searchEnd) : searchEnd;
-      
-      boxes = _layoutCache!.paragraph.getBoxesForRange(start, end);
-      
-      if (boxes.isEmpty) {
-        // 检查是否应继续搜索
-        if (!needsSearch) break; // 无需扩展搜索，仅尝试一次
-        if ((searchEnd - searchStart).abs() > plainText.length * 2) break; // 超出范围
-        
-        graphemeLength *= 2; // 二进制增长
-        searchStart -= graphemeLength;
-        searchEnd += graphemeLength;
-      }
-    }
-    return boxes;
-  }
-
   /// 检查给定代码单元是否需要扩展搜索
   ///
   /// 返回 true 表示该字符是多代码单元字形或特殊零宽度字符
