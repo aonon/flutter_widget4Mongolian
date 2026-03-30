@@ -9,7 +9,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-  show ValueListenable, defaultTargetPlatform, kIsWeb, listEquals;
+    show ValueListenable, defaultTargetPlatform, kIsWeb, listEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' show kMinInteractiveDimension;
 import 'package:flutter/scheduler.dart' show SchedulerBinding, SchedulerPhase;
@@ -25,6 +25,7 @@ export 'package:flutter/services.dart' show TextSelectionDelegate;
 import 'package:flutter/widgets.dart';
 
 import '../mongol_editable_text.dart';
+import '../platform_utils.dart';
 import '../mongol_render_editable.dart';
 
 /// 管理一对文本选择手柄的对象。
@@ -34,7 +35,7 @@ class MongolTextSelectionOverlay {
   /// 创建一个管理选择手柄覆盖项的对象。
   ///
   /// [context] 不能为空，并且必须有一个 [Overlay] 作为祖先。
-  /// 
+  ///
   /// 参数：
   /// - value: 文本编辑值
   /// - context: 构建上下文
@@ -426,6 +427,89 @@ class MongolTextSelectionOverlay {
   // 从 _endHandleDragPosition 到它对应的线的中心的距离。
   late double _endHandleDragPositionToCenterOfLine;
 
+  double _handleCenterDx({required bool isEnd}) {
+    final Offset handlePoint = renderObject.localToGlobal(
+      isEnd
+          ? _selectionOverlay.selectionEndpoints.last.point
+          : _selectionOverlay.selectionEndpoints.first.point,
+    );
+    return handlePoint.dx - renderObject.preferredLineWidth / 2;
+  }
+
+  void _showMagnifierAt({
+    required TextPosition position,
+    required Offset globalGesturePosition,
+  }) {
+    _selectionOverlay.showMagnifier(
+      _buildMagnifier(
+        currentTextPosition: position,
+        globalGesturePosition: globalGesturePosition,
+        renderEditable: renderObject,
+      ),
+    );
+  }
+
+  void _updateMagnifierAt({
+    required TextPosition position,
+    required Offset globalGesturePosition,
+  }) {
+    _selectionOverlay.updateMagnifier(
+      _buildMagnifier(
+        currentTextPosition: position,
+        globalGesturePosition: globalGesturePosition,
+        renderEditable: renderObject,
+      ),
+    );
+  }
+
+  TextSelection? _selectionForHandleDrag({
+    required bool isEnd,
+    required TextPosition position,
+  }) {
+    if (_selection.isCollapsed) {
+      return TextSelection.fromPosition(position);
+    }
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        if (isEnd) {
+          if (position.offset <= _selection.start) {
+            return null;
+          }
+          return TextSelection(
+            extentOffset: position.offset,
+            baseOffset: _selection.start,
+          );
+        }
+
+        if (position.offset >= _selection.end) {
+          return null;
+        }
+        return TextSelection(
+          extentOffset: position.offset,
+          baseOffset: _selection.end,
+        );
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        final TextSelection candidate = isEnd
+            ? TextSelection(
+                baseOffset: _selection.baseOffset,
+                extentOffset: position.offset,
+              )
+            : TextSelection(
+                baseOffset: position.offset,
+                extentOffset: _selection.extentOffset,
+              );
+        if (candidate.baseOffset >= candidate.extentOffset) {
+          return null;
+        }
+        return candidate;
+    }
+  }
+
   void _handleSelectionEndHandleDragStart(DragStartDetails details) {
     if (!renderObject.attached) {
       return;
@@ -433,10 +517,7 @@ class MongolTextSelectionOverlay {
 
     // 这是为了调整选择手柄可能不完全覆盖它们对应的 TextPosition 的事实。
     _endHandleDragPosition = details.globalPosition.dx;
-    final Offset endPoint = renderObject
-        .localToGlobal(_selectionOverlay.selectionEndpoints.last.point);
-    final double centerOfLine =
-        endPoint.dx - renderObject.preferredLineWidth / 2;
+    final double centerOfLine = _handleCenterDx(isEnd: true);
     _endHandleDragPositionToCenterOfLine =
         centerOfLine - _endHandleDragPosition;
     final TextPosition position = renderObject.getPositionForPoint(
@@ -446,12 +527,9 @@ class MongolTextSelectionOverlay {
       ),
     );
 
-    _selectionOverlay.showMagnifier(
-      _buildMagnifier(
-        currentTextPosition: position,
-        globalGesturePosition: details.globalPosition,
-        renderEditable: renderObject,
-      ),
+    _showMagnifierAt(
+      position: position,
+      globalGesturePosition: details.globalPosition,
     );
   }
 
@@ -482,53 +560,17 @@ class MongolTextSelectionOverlay {
     final TextPosition position =
         renderObject.getPositionForPoint(adjustedOffset);
 
-    if (_selection.isCollapsed) {
-      _selectionOverlay.updateMagnifier(_buildMagnifier(
-        currentTextPosition: position,
-        globalGesturePosition: details.globalPosition,
-        renderEditable: renderObject,
-      ));
-
-      final TextSelection currentSelection =
-          TextSelection.fromPosition(position);
-      _handleSelectionHandleChanged(currentSelection, isEnd: true);
+    final TextSelection? newSelection =
+        _selectionForHandleDrag(isEnd: true, position: position);
+    if (newSelection == null) {
       return;
     }
 
-    final TextSelection newSelection;
-    switch (defaultTargetPlatform) {
-      // 在 Apple 平台上，拖动基础手柄使其成为范围。
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-        newSelection = TextSelection(
-          extentOffset: position.offset,
-          baseOffset: _selection.start,
-        );
-        if (position.offset <= _selection.start) {
-          return; // 不允许顺序交换。
-        }
-        break;
-      case TargetPlatform.android:
-      case TargetPlatform.fuchsia:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-        newSelection = TextSelection(
-          baseOffset: _selection.baseOffset,
-          extentOffset: position.offset,
-        );
-        if (newSelection.baseOffset >= newSelection.extentOffset) {
-          return; // 不允许顺序交换。
-        }
-        break;
-    }
-
-    _handleSelectionHandleChanged(newSelection, isEnd: true);
-
-    _selectionOverlay.updateMagnifier(_buildMagnifier(
-      currentTextPosition: newSelection.extent,
+    _updateMagnifierAt(
+      position: position,
       globalGesturePosition: details.globalPosition,
-      renderEditable: renderObject,
-    ));
+    );
+    _handleSelectionHandleChanged(newSelection, isEnd: true);
   }
 
   // 手势在当前开始手柄位置的接触位置。
@@ -545,10 +587,7 @@ class MongolTextSelectionOverlay {
 
     // 这是为了调整选择手柄可能不完全覆盖它们对应的 TextPosition 的事实。
     _startHandleDragPosition = details.globalPosition.dx;
-    final Offset startPoint = renderObject
-        .localToGlobal(_selectionOverlay.selectionEndpoints.first.point);
-    final double centerOfLine =
-        startPoint.dx - renderObject.preferredLineWidth / 2;
+    final double centerOfLine = _handleCenterDx(isEnd: false);
     _startHandleDragPositionToCenterOfLine =
         centerOfLine - _startHandleDragPosition;
     final TextPosition position = renderObject.getPositionForPoint(
@@ -558,12 +597,9 @@ class MongolTextSelectionOverlay {
       ),
     );
 
-    _selectionOverlay.showMagnifier(
-      _buildMagnifier(
-        currentTextPosition: position,
-        globalGesturePosition: details.globalPosition,
-        renderEditable: renderObject,
-      ),
+    _showMagnifierAt(
+      position: position,
+      globalGesturePosition: details.globalPosition,
     );
   }
 
@@ -581,54 +617,16 @@ class MongolTextSelectionOverlay {
     final TextPosition position =
         renderObject.getPositionForPoint(adjustedOffset);
 
-    if (_selection.isCollapsed) {
-      _selectionOverlay.updateMagnifier(_buildMagnifier(
-        currentTextPosition: position,
-        globalGesturePosition: details.globalPosition,
-        renderEditable: renderObject,
-      ));
-
-      final TextSelection currentSelection =
-          TextSelection.fromPosition(position);
-      _handleSelectionHandleChanged(currentSelection, isEnd: false);
+    final TextSelection? newSelection =
+        _selectionForHandleDrag(isEnd: false, position: position);
+    if (newSelection == null) {
       return;
     }
 
-    final TextSelection newSelection;
-    switch (defaultTargetPlatform) {
-      // 在 Apple 平台上，拖动基础手柄使其成为范围。
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-        newSelection = TextSelection(
-          extentOffset: position.offset,
-          baseOffset: _selection.end,
-        );
-        if (newSelection.extentOffset >= _selection.end) {
-          return; // 不允许顺序交换。
-        }
-        break;
-      case TargetPlatform.android:
-      case TargetPlatform.fuchsia:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-        newSelection = TextSelection(
-          baseOffset: position.offset,
-          extentOffset: _selection.extentOffset,
-        );
-        if (newSelection.baseOffset >= newSelection.extentOffset) {
-          return; // 不允许顺序交换。
-        }
-        break;
-    }
-
-    _selectionOverlay.updateMagnifier(_buildMagnifier(
-      currentTextPosition: newSelection.extent.offset < newSelection.base.offset
-          ? newSelection.extent
-          : newSelection.base,
+    _updateMagnifierAt(
+      position: position,
       globalGesturePosition: details.globalPosition,
-      renderEditable: renderObject,
-    ));
-
+    );
     _handleSelectionHandleChanged(newSelection, isEnd: false);
   }
 
@@ -699,7 +697,7 @@ abstract class MongolTextSelectionGestureDetectorBuilderDelegate {
 ///  * [MongolTextField]，它使用子类实现 [MongolEditableText] 的 Material 特定手势逻辑。
 class MongolTextSelectionGestureDetectorBuilder {
   /// 创建一个 [MongolTextSelectionGestureDetectorBuilder]。
-  /// 
+  ///
   /// 参数：
   /// - delegate: 此构建器的委托
   MongolTextSelectionGestureDetectorBuilder({
@@ -2605,11 +2603,12 @@ class _SelectionHandleOverlayState extends State<_SelectionHandleOverlay>
                   GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
                 () => PanGestureRecognizer(
                   debugOwner: this,
-                  // On web, mouse should be allowed to drag selection handles.
+                  // Web and desktop allow dragging selection handles with a mouse.
                   supportedDevices: <PointerDeviceKind>{
                     PointerDeviceKind.touch,
                     PointerDeviceKind.stylus,
-                    if (kIsWeb) PointerDeviceKind.mouse,
+                    if (kIsWeb || isDesktopPlatform(defaultTargetPlatform))
+                      PointerDeviceKind.mouse,
                     PointerDeviceKind.unknown,
                   },
                 ),

@@ -4,7 +4,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/material.dart' show Theme, Brightness, Colors, IconButton;
+import 'package:flutter/material.dart'
+    show Theme, Brightness, Colors, IconButton;
 import 'package:flutter/widgets.dart';
 
 enum _TextSelectionToolbarItemPosition {
@@ -34,6 +35,14 @@ class MongolTextSelectionToolbarButton extends StatelessWidget {
   // 这些值是在运行 Android 10 的 Pixel 2 上目测以匹配原生文本选择菜单。
   static const double _kMiddlePadding = 9.5;
   static const double _kEndPadding = 14.5;
+  static const EdgeInsets _kFirstPadding =
+      EdgeInsets.only(top: _kEndPadding, bottom: _kMiddlePadding);
+  static const EdgeInsets _kMiddleItemPadding =
+      EdgeInsets.only(top: _kMiddlePadding, bottom: _kMiddlePadding);
+  static const EdgeInsets _kLastPadding =
+      EdgeInsets.only(top: _kMiddlePadding, bottom: _kEndPadding);
+  static const EdgeInsets _kOnlyPadding =
+      EdgeInsets.only(top: _kEndPadding, bottom: _kEndPadding);
 
   /// 此按钮的子项。
   ///
@@ -54,27 +63,16 @@ class MongolTextSelectionToolbarButton extends StatelessWidget {
   /// 返回基于总按钮数中索引位置的按钮的标准填充。
   static EdgeInsets getPadding(int index, int total) {
     assert(total > 0 && index >= 0 && index < total);
-    final position = _getPosition(index, total);
-    return EdgeInsets.only(
-      top: _getTopPadding(position),
-      bottom: _getBottomPadding(position),
-    );
-  }
-
-  static double _getTopPadding(_TextSelectionToolbarItemPosition position) {
-    if (position == _TextSelectionToolbarItemPosition.first
-        || position == _TextSelectionToolbarItemPosition.only) {
-      return _kEndPadding;
+    switch (_getPosition(index, total)) {
+      case _TextSelectionToolbarItemPosition.first:
+        return _kFirstPadding;
+      case _TextSelectionToolbarItemPosition.middle:
+        return _kMiddleItemPadding;
+      case _TextSelectionToolbarItemPosition.last:
+        return _kLastPadding;
+      case _TextSelectionToolbarItemPosition.only:
+        return _kOnlyPadding;
     }
-    return _kMiddlePadding;
-  }
-
-  static double _getBottomPadding(_TextSelectionToolbarItemPosition position) {
-    if (position == _TextSelectionToolbarItemPosition.last
-        || position == _TextSelectionToolbarItemPosition.only) {
-      return _kEndPadding;
-    }
-    return _kMiddlePadding;
   }
 
   static _TextSelectionToolbarItemPosition _getPosition(int index, int total) {

@@ -108,6 +108,7 @@ class _InputBorderTween extends Tween<InputBorder> {
   _InputBorderTween({super.begin, super.end});
 
   @override
+
   /// 在指定的进度值 t 处插值两个边框
   InputBorder lerp(double t) => ShapeBorder.lerp(begin, end, t)! as InputBorder;
 }
@@ -147,6 +148,7 @@ class _InputBorderPainter extends CustomPainter {
       Color.alphaBlend(hoverColorTween.evaluate(hoverAnimation)!, fillColor);
 
   @override
+
   /// 绘制边框
   void paint(Canvas canvas, Size size) {
     final borderValue = border.evaluate(borderAnimation);
@@ -172,6 +174,7 @@ class _InputBorderPainter extends CustomPainter {
   }
 
   @override
+
   /// 确定是否需要重绘
   bool shouldRepaint(_InputBorderPainter oldPainter) {
     return borderAnimation != oldPainter.borderAnimation ||
@@ -219,7 +222,8 @@ class _BorderContainer extends StatefulWidget {
 
 class _BorderContainerState extends State<_BorderContainer>
     with TickerProviderStateMixin {
-  static const Duration _kHoverDuration = Duration(milliseconds: 15); // 悬停动画持续时间
+  static const Duration _kHoverDuration =
+      Duration(milliseconds: 15); // 悬停动画持续时间
 
   late AnimationController _controller; // 边框动画控制器
   late AnimationController _hoverColorController; // 悬停颜色动画控制器
@@ -348,6 +352,7 @@ class _Shaker extends AnimatedWidget {
   }
 
   @override
+
   /// 构建摇晃效果的组件
   Widget build(BuildContext context) {
     return Transform(
@@ -691,8 +696,9 @@ class _Decoration {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
         contentPadding,
+        isCollapsed,
         floatingLabelWidth,
         floatingLabelProgress,
         floatingLabelAlignment,
@@ -712,7 +718,7 @@ class _Decoration {
         helperError,
         counter,
         container,
-      );
+      ]);
 }
 
 /// 存储 _RenderDecoration._layout 计算的布局值的容器
@@ -915,6 +921,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 访问语义子节点
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     if (icon != null) {
@@ -959,6 +966,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 布局是否由父节点决定
   bool get sizedByParent => false;
 
@@ -1004,8 +1012,7 @@ class _RenderDecoration extends RenderBox
         return true;
       }
       throw FlutterError.fromParts(<DiagnosticsNode>[
-        ErrorSummary(
-            "MongolInputDecorator 的一个子项报告了负基线偏移。"),
+        ErrorSummary("MongolInputDecorator 的一个子项报告了负基线偏移。"),
         ErrorDescription(
           '${box.runtimeType}，大小为 ${box.size}，报告了负的 '
           '字母基线 $baseline。',
@@ -1311,6 +1318,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 计算最小内在高度
   double computeMinIntrinsicHeight(double width) {
     return _minHeight(icon, width) +
@@ -1324,6 +1332,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 计算最大内在高度
   double computeMaxIntrinsicHeight(double width) {
     return _maxHeight(icon, width) +
@@ -1349,6 +1358,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 计算最小内在宽度
   double computeMinIntrinsicWidth(double height) {
     final double iconWidth = _minWidth(icon, height);
@@ -1412,6 +1422,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 计算最大内在宽度
   /// 对于输入装饰器，最大内在宽度与最小内在宽度相同
   double computeMaxIntrinsicWidth(double height) {
@@ -1419,6 +1430,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 计算到实际基线的距离
   double computeDistanceToActualBaseline(TextBaseline baseline) {
     return _boxParentData(input!).offset.dx +
@@ -1429,18 +1441,19 @@ class _RenderDecoration extends RenderBox
   Matrix4? _labelTransform;
 
   @override
+
   /// 计算干布局大小
   /// 由于布局需要基线度量，而基线度量只有在完整布局后才能获得，
   /// 因此此方法返回 Size.zero
   Size computeDryLayout(BoxConstraints constraints) {
     assert(debugCannotComputeDryLayout(
-      reason:
-          '布局需要基线度量，而基线度量只有在完整布局后才能获得。',
+      reason: '布局需要基线度量，而基线度量只有在完整布局后才能获得。',
     ));
     return Size.zero;
   }
 
   @override
+
   /// 执行布局
   void performLayout() {
     final BoxConstraints constraints = this.constraints;
@@ -1569,6 +1582,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 绘制装饰器
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
@@ -1631,11 +1645,13 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 自身命中测试
   /// 始终返回 true，表示装饰器区域内的任何位置都被视为命中
   bool hitTestSelf(Offset position) => true;
 
   @override
+
   /// 子组件命中测试
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     for (final RenderBox child in children) {
@@ -1657,6 +1673,7 @@ class _RenderDecoration extends RenderBox
   }
 
   @override
+
   /// 应用绘制变换
   void applyPaintTransform(RenderObject child, Matrix4 transform) {
     // 对标签应用特殊变换
@@ -1697,10 +1714,12 @@ class _Decorator
   final bool isEmpty; // 是否为空
 
   @override
+
   /// 获取所有插槽
   Iterable<_DecorationSlot> get slots => _DecorationSlot.values;
 
   @override
+
   /// 根据插槽获取子组件
   Widget? childForSlot(_DecorationSlot slot) {
     switch (slot) {
@@ -1730,6 +1749,7 @@ class _Decorator
   }
 
   @override
+
   /// 创建渲染对象
   _RenderDecoration createRenderObject(BuildContext context) {
     return _RenderDecoration(
@@ -1743,6 +1763,7 @@ class _Decorator
   }
 
   @override
+
   /// 更新渲染对象
   void updateRenderObject(
       BuildContext context, _RenderDecoration renderObject) {

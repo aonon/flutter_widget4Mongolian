@@ -33,7 +33,8 @@ class MongolRenderParagraph extends RenderBox
   /// - textAlign: 文本垂直对齐方式，默认为顶部对齐
   /// - softWrap: 是否在软换行符处换行，默认为 true
   /// - overflow: 文本溢出处理方式，默认为裁剪
-  /// - textScaleFactor: 文本缩放因子，默认为 1.0
+  /// - textScaleFactor: 已弃用，请使用 [textScaler] 替代
+  /// - textScaler: 文本缩放策略，默认为无缩放
   /// - maxLines: 最大行数，默认为 null（无限制）
   /// - rotateCJK: 是否将 CJK 字符旋转 90 度以在垂直列中显示，默认为 true
   MongolRenderParagraph(
@@ -41,16 +42,28 @@ class MongolRenderParagraph extends RenderBox
     MongolTextAlign textAlign = MongolTextAlign.top,
     bool softWrap = true,
     TextOverflow overflow = TextOverflow.clip,
+    @Deprecated(
+      'Use textScaler instead. '
+      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+      'This feature was deprecated after v3.12.0-2.0.pre.',
+    )
     double textScaleFactor = 1.0,
+    TextScaler textScaler = TextScaler.noScaling,
     int? maxLines,
     bool rotateCJK = true,
   })  : assert(maxLines == null || maxLines > 0),
+        assert(
+          textScaleFactor == 1.0 || identical(textScaler, TextScaler.noScaling),
+          'Use textScaler instead.',
+        ),
         _softWrap = softWrap,
         _overflow = overflow,
         _textPainter = MongolTextPainter(
           text: text,
           textAlign: textAlign,
-          textScaleFactor: textScaleFactor,
+          textScaler: textScaler == TextScaler.noScaling
+              ? TextScaler.linear(textScaleFactor)
+              : textScaler,
           maxLines: maxLines,
           ellipsis: overflow == TextOverflow.ellipsis ? _kEllipsis : null,
           rotateCJK: rotateCJK,
@@ -123,11 +136,27 @@ class MongolRenderParagraph extends RenderBox
 
   /// 每个逻辑像素的字体像素数。
   ///
-  /// 例如，如果文本缩放因子为 1.5，文本将比指定的字体大小大 50%。
+  /// 已弃用，请使用 [textScaler] 替代。
+  @Deprecated(
+    'Use textScaler instead. '
+    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+    'This feature was deprecated after v3.12.0-2.0.pre.',
+  )
   double get textScaleFactor => _textPainter.textScaleFactor;
+  @Deprecated(
+    'Use textScaler instead. '
+    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+    'This feature was deprecated after v3.12.0-2.0.pre.',
+  )
   set textScaleFactor(double value) {
-    if (_textPainter.textScaleFactor == value) return;
-    _textPainter.textScaleFactor = value;
+    textScaler = TextScaler.linear(value);
+  }
+
+  /// 文本缩放策略，用于根据系统或用户设置调整字体大小。
+  TextScaler get textScaler => _textPainter.textScaler;
+  set textScaler(TextScaler value) {
+    if (_textPainter.textScaler == value) return;
+    _textPainter.textScaler = value;
     markNeedsLayout();
   }
 
@@ -291,7 +320,7 @@ class MongolRenderParagraph extends RenderBox
           _needsClipping = true;
           final fadeSizePainter = MongolTextPainter(
             text: TextSpan(style: _textPainter.text!.style, text: '\u2026'),
-            textScaleFactor: textScaleFactor,
+            textScaler: textScaler,
           )..layout();
           if (didOverflowWidth) {
             double fadeEnd, fadeStart;
@@ -375,8 +404,8 @@ class MongolRenderParagraph extends RenderBox
       showName: true,
     ));
     properties.add(EnumProperty<TextOverflow>('overflow', overflow));
-    properties.add(
-        DoubleProperty('textScaleFactor', textScaleFactor, defaultValue: 1.0));
+    properties.add(DiagnosticsProperty<TextScaler>(
+        'textScaler', textScaler, defaultValue: TextScaler.noScaling));
     properties.add(IntProperty('maxLines', maxLines, ifNull: 'unlimited'));
   }
 }

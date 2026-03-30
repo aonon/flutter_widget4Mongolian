@@ -25,13 +25,14 @@ import 'package:flutter/material.dart'
         TextSelectionThemeData,
         iOSHorizontalOffset,
         MaterialStateProperty,
-        MaterialStateMouseCursor,
         MaterialState;
 import 'package:mongol/src/base/mongol_text_align.dart';
 
 import 'alignment.dart';
 import 'mongol_editable_text.dart';
 import 'mongol_input_decorator.dart';
+import 'mongol_mouse_cursors.dart';
+import 'platform_utils.dart';
 import 'text_selection/mongol_text_selection.dart';
 import 'text_selection/mongol_text_selection_controls.dart';
 
@@ -39,7 +40,7 @@ import 'text_selection/mongol_text_selection_controls.dart';
 class _TextFieldSelectionGestureDetectorBuilder
     extends MongolTextSelectionGestureDetectorBuilder {
   /// 创建文本选择手势检测器构建器
-  /// 
+  ///
   /// [state]：文本字段的状态对象
   _TextFieldSelectionGestureDetectorBuilder({
     required _TextFieldState state,
@@ -49,8 +50,24 @@ class _TextFieldSelectionGestureDetectorBuilder
   /// 文本字段的状态对象
   final _TextFieldState _state;
 
+  TargetPlatform get _platform => Theme.of(_state.context).platform;
+
+  bool get _isApplePlatform {
+    switch (_platform) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return true;
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        return false;
+    }
+  }
+
   void _showToolbarOnWebIfSelectionActive() {
-    if (!kIsWeb || !delegate.selectionEnabled) {
+    if ((!kIsWeb && !isDesktopPlatform(defaultTargetPlatform)) ||
+        !delegate.selectionEnabled) {
       return;
     }
 
@@ -64,7 +81,7 @@ class _TextFieldSelectionGestureDetectorBuilder
   }
 
   /// 处理强制按压开始事件
-  /// 
+  ///
   /// 当用户在支持3D Touch的设备上用力按压时触发
   @override
   void onForcePressStart(ForcePressDetails details) {
@@ -75,7 +92,7 @@ class _TextFieldSelectionGestureDetectorBuilder
   }
 
   /// 处理强制按压结束事件
-  /// 
+  ///
   /// 此方法为空实现，因为不需要特殊处理
   @override
   void onForcePressEnd(ForcePressDetails details) {
@@ -83,38 +100,34 @@ class _TextFieldSelectionGestureDetectorBuilder
   }
 
   /// 处理长按移动更新事件
-  /// 
+  ///
   /// 根据不同平台的行为，选择不同的文本选择方式
   @override
   void onSingleLongTapMoveUpdate(LongPressMoveUpdateDetails details) {
-    if (delegate.selectionEnabled) {
-      switch (Theme.of(_state.context).platform) {
-        case TargetPlatform.iOS:
-        case TargetPlatform.macOS:
-          // 在iOS和macOS上，直接选择指定位置的文本
-          renderEditable.selectPositionAt(
-            from: details.globalPosition,
-            cause: SelectionChangedCause.longPress,
-          );
-          break;
-        case TargetPlatform.android:
-        case TargetPlatform.fuchsia:
-        case TargetPlatform.linux:
-        case TargetPlatform.windows:
-          // 在其他平台上，选择从起始位置到当前位置的所有单词
-          renderEditable.selectWordsInRange(
-            from: details.globalPosition - details.offsetFromOrigin,
-            to: details.globalPosition,
-            cause: SelectionChangedCause.longPress,
-          );
-          break;
-      }
-      _showToolbarOnWebIfSelectionActive();
+    if (!delegate.selectionEnabled) {
+      return;
     }
+
+    if (_isApplePlatform) {
+      // 在 iOS/macOS 上，长按拖动直接更新到手势位置。
+      renderEditable.selectPositionAt(
+        from: details.globalPosition,
+        cause: SelectionChangedCause.longPress,
+      );
+    } else {
+      // 其他平台按原行为选择从起点到当前点的词范围。
+      renderEditable.selectWordsInRange(
+        from: details.globalPosition - details.offsetFromOrigin,
+        to: details.globalPosition,
+        cause: SelectionChangedCause.longPress,
+      );
+    }
+
+    _showToolbarOnWebIfSelectionActive();
   }
 
   /// 处理单击抬起事件
-  /// 
+  ///
   /// 触发键盘请求并调用用户定义的点击回调
   @override
   void onSingleTapUp(TapDragUpDetails details) {
@@ -144,7 +157,7 @@ class _TextFieldSelectionGestureDetectorBuilder
       return;
     }
 
-    if (kIsWeb) {
+    if (kIsWeb || isDesktopPlatform(defaultTargetPlatform)) {
       if (!renderEditable.hasFocus) {
         renderEditable.selectPosition(cause: SelectionChangedCause.tap);
       }
@@ -157,31 +170,27 @@ class _TextFieldSelectionGestureDetectorBuilder
   }
 
   /// 处理长按开始事件
-  /// 
+  ///
   /// 根据不同平台的行为，选择不同的文本选择方式
   @override
   void onSingleLongTapStart(LongPressStartDetails details) {
-    if (delegate.selectionEnabled) {
-      switch (Theme.of(_state.context).platform) {
-        case TargetPlatform.iOS:
-        case TargetPlatform.macOS:
-          // 在iOS和macOS上，直接选择指定位置的文本
-          renderEditable.selectPositionAt(
-            from: details.globalPosition,
-            cause: SelectionChangedCause.longPress,
-          );
-          break;
-        case TargetPlatform.android:
-        case TargetPlatform.fuchsia:
-        case TargetPlatform.linux:
-        case TargetPlatform.windows:
-          // 在其他平台上，选择当前单词并提供长按反馈
-          renderEditable.selectWord(cause: SelectionChangedCause.longPress);
-          Feedback.forLongPress(_state.context);
-          break;
-      }
-      _showToolbarOnWebIfSelectionActive();
+    if (!delegate.selectionEnabled) {
+      return;
     }
+
+    if (_isApplePlatform) {
+      // 在 iOS/macOS 上，长按开始时直接定位光标。
+      renderEditable.selectPositionAt(
+        from: details.globalPosition,
+        cause: SelectionChangedCause.longPress,
+      );
+    } else {
+      // 其他平台沿用原行为：先选词并触发长按反馈。
+      renderEditable.selectWord(cause: SelectionChangedCause.longPress);
+      Feedback.forLongPress(_state.context);
+    }
+
+    _showToolbarOnWebIfSelectionActive();
   }
 }
 
@@ -319,6 +328,7 @@ class MongolTextField extends StatefulWidget {
     this.scrollPadding = const EdgeInsets.all(20.0),
     this.dragStartBehavior = DragStartBehavior.start,
     this.enableInteractiveSelection = true,
+    this.enableWebReadOnlyInputConnection = true,
     this.selectionControls,
     this.onTap,
     this.mouseCursor,
@@ -747,6 +757,12 @@ class MongolTextField extends StatefulWidget {
   /// 且用户无法从剪贴板粘贴到文本字段
   final bool enableInteractiveSelection;
 
+  /// 是否允许只读字段在 Web 上建立输入连接。
+  ///
+  /// 默认为 true，以保留浏览器原生的复制、全选和键盘选区行为。
+  /// 将其设为 false 可避免只读字段在 Web 上创建输入连接。
+  final bool enableWebReadOnlyInputConnection;
+
   /// 用于构建文本选择手柄和工具栏的可选委托
   ///
   /// 单独使用的[MongolEditableText]部件不会自行触发选择工具栏的显示。
@@ -808,7 +824,7 @@ class MongolTextField extends StatefulWidget {
   ///  * [MaterialState.focused]
   ///  * [MaterialState.disabled]
   ///
-  /// 如果此属性为null，将使用[MaterialStateMouseCursor.textable]
+  /// 如果此属性为null，将使用适合竖排文本的水平I形光标
   ///
   /// [mouseCursor]是[MongolTextField]中唯一控制鼠标指针外观的属性。
   /// 所有其他与"cursor"相关的属性都代表文本光标，通常是编辑位置的闪烁水平线
@@ -1047,18 +1063,18 @@ class _TextFieldState extends State<MongolTextField>
     implements MongolTextSelectionGestureDetectorBuilderDelegate {
   /// 可恢复的文本编辑控制器
   RestorableTextEditingController? _controller;
-  
+
   /// 获取有效的文本编辑控制器
-  /// 
+  ///
   /// 如果用户提供了控制器，则使用用户提供的；否则使用本地创建的
   TextEditingController get _effectiveController =>
       widget.controller ?? _controller!.value;
 
   /// 焦点节点
   FocusNode? _focusNode;
-  
+
   /// 获取有效的焦点节点
-  /// 
+  ///
   /// 如果用户提供了焦点节点，则使用用户提供的；否则创建一个新的
   FocusNode get _effectiveFocusNode =>
       widget.focusNode ?? (_focusNode ??= FocusNode());
@@ -1090,7 +1106,7 @@ class _TextFieldState extends State<MongolTextField>
   late bool forcePressEnabled;
 
   @override
-  final GlobalKey<MongolEditableTextState> editableTextKey = 
+  final GlobalKey<MongolEditableTextState> editableTextKey =
       GlobalKey<MongolEditableTextState>();
 
   @override
@@ -1114,7 +1130,7 @@ class _TextFieldState extends State<MongolTextField>
       widget.decoration?.errorText != null || _hasIntrinsicError;
 
   /// 获取有效的装饰
-  /// 
+  ///
   /// 根据当前状态和配置，计算出最终使用的装饰
   InputDecoration _getEffectiveDecoration() {
     final localizations = MaterialLocalizations.of(context);
@@ -1156,7 +1172,8 @@ class _TextFieldState extends State<MongolTextField>
       return effectiveDecoration.copyWith(counter: counter);
     }
 
-    if (widget.maxLength == null) {
+    final maxLength = widget.maxLength;
+    if (maxLength == null) {
       return effectiveDecoration; // 没有计数器部件
     }
 
@@ -1164,12 +1181,11 @@ class _TextFieldState extends State<MongolTextField>
     var semanticCounterText = '';
 
     // 处理真实的maxLength（正数）
-    if (widget.maxLength! > 0) {
+    if (maxLength > 0) {
       // 在计数器中显示maxLength
-      counterText += '/${widget.maxLength}';
-      final remaining = 
-          (widget.maxLength! - currentLength).clamp(0, widget.maxLength!);
-      semanticCounterText = 
+      counterText += '/$maxLength';
+      final remaining = (maxLength - currentLength).clamp(0, maxLength);
+      semanticCounterText =
           localizations.remainingTextFieldCharacterCount(remaining);
     }
 
@@ -1194,7 +1210,7 @@ class _TextFieldState extends State<MongolTextField>
   @override
   void initState() {
     super.initState();
-    _selectionGestureDetectorBuilder = 
+    _selectionGestureDetectorBuilder =
         _TextFieldSelectionGestureDetectorBuilder(state: this);
     if (widget.controller == null) {
       _createLocalController();
@@ -1287,9 +1303,23 @@ class _TextFieldState extends State<MongolTextField>
     _editableText?.requestKeyboard();
   }
 
+  bool _supportsMouseDrivenSelectionUi(TargetPlatform platform) {
+    switch (platform) {
+      case TargetPlatform.macOS:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        return true;
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.iOS:
+        return false;
+    }
+  }
+
   /// 是否应该显示选择手柄
   bool _shouldShowSelectionHandles(SelectionChangedCause? cause) {
-    if (kIsWeb &&
+    if ((kIsWeb ||
+            _supportsMouseDrivenSelectionUi(Theme.of(context).platform)) &&
         _effectiveController.selection.isValid &&
         !_effectiveController.selection.isCollapsed) {
       return true;
@@ -1310,9 +1340,7 @@ class _TextFieldState extends State<MongolTextField>
 
     if (cause == SelectionChangedCause.longPress) return true;
 
-    if (_effectiveController.text.isNotEmpty) return true;
-
-    return false;
+    return _effectiveController.text.isNotEmpty;
   }
 
   /// 处理选择更改
@@ -1336,7 +1364,7 @@ class _TextFieldState extends State<MongolTextField>
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-        // Do nothing.
+      // Do nothing.
     }
   }
 
@@ -1495,6 +1523,8 @@ class _TextFieldState extends State<MongolTextField>
           scrollPadding: widget.scrollPadding,
           keyboardAppearance: keyboardAppearance,
           enableInteractiveSelection: widget.enableInteractiveSelection,
+          enableWebReadOnlyInputConnection:
+              widget.enableWebReadOnlyInputConnection,
           dragStartBehavior: widget.dragStartBehavior,
           scrollController: widget.scrollController,
           scrollPhysics: widget.scrollPhysics,
@@ -1526,7 +1556,7 @@ class _TextFieldState extends State<MongolTextField>
       );
     }
     final effectiveMouseCursor = MaterialStateProperty.resolveAs<MouseCursor>(
-      widget.mouseCursor ?? MaterialStateMouseCursor.textable,
+      widget.mouseCursor ?? mongolVerticalTextCursor,
       <MaterialState>{
         if (!_isEnabled) MaterialState.disabled,
         if (_isHovering) MaterialState.hovered,

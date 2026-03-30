@@ -114,6 +114,7 @@ class HorizontalCaretMovementRun implements Iterator<TextPosition> {
   }
 
   @override
+
   /// 获取当前文本位置
   TextPosition get current {
     assert(isValid);
@@ -121,6 +122,7 @@ class HorizontalCaretMovementRun implements Iterator<TextPosition> {
   }
 
   @override
+
   /// 移动到下一行
   bool moveNext() {
     assert(isValid);
@@ -265,6 +267,7 @@ class MongolRenderEditable extends RenderBox
   _MongolRenderEditableCustomPaint? _backgroundRenderObject; // 背景渲染对象
 
   @override
+
   /// 释放资源
   void dispose() {
     _foregroundRenderObject?.dispose();
@@ -283,24 +286,41 @@ class MongolRenderEditable extends RenderBox
   }
 
   /// 更新前景 painter
-  void _updateForegroundPainter(MongolRenderEditablePainter? newPainter) {
-    final effectivePainter = (newPainter == null)
-        ? _builtInForegroundPainters
+  MongolRenderEditablePainter _effectivePainter(
+    MongolRenderEditablePainter? customPainter,
+    _CompositeRenderEditablePainter builtInPainter,
+  ) {
+    return customPainter == null
+        ? builtInPainter
         : _CompositeRenderEditablePainter(
             painters: <MongolRenderEditablePainter>[
-              _builtInForegroundPainters,
-              newPainter,
+              builtInPainter,
+              customPainter,
             ],
           );
+  }
 
-    if (_foregroundRenderObject == null) {
-      final foregroundRenderObject =
-          _MongolRenderEditableCustomPaint(painter: effectivePainter);
-      adoptChild(foregroundRenderObject);
-      _foregroundRenderObject = foregroundRenderObject;
-    } else {
-      _foregroundRenderObject?.painter = effectivePainter;
+  _MongolRenderEditableCustomPaint _createOrUpdatePainterRenderObject({
+    required _MongolRenderEditableCustomPaint? current,
+    required MongolRenderEditablePainter painter,
+  }) {
+    if (current == null) {
+      final _MongolRenderEditableCustomPaint created =
+          _MongolRenderEditableCustomPaint(painter: painter);
+      adoptChild(created);
+      return created;
     }
+    current.painter = painter;
+    return current;
+  }
+
+  void _updateForegroundPainter(MongolRenderEditablePainter? newPainter) {
+    final MongolRenderEditablePainter effectivePainter =
+        _effectivePainter(newPainter, _builtInForegroundPainters);
+    _foregroundRenderObject = _createOrUpdatePainterRenderObject(
+      current: _foregroundRenderObject,
+      painter: effectivePainter,
+    );
     _foregroundPainter = newPainter;
   }
 
@@ -318,23 +338,12 @@ class MongolRenderEditable extends RenderBox
 
   /// 更新背景 painter
   void _updatePainter(MongolRenderEditablePainter? newPainter) {
-    final effectivePainter = (newPainter == null)
-        ? _builtInPainters
-        : _CompositeRenderEditablePainter(
-            painters: <MongolRenderEditablePainter>[
-              _builtInPainters,
-              newPainter,
-            ],
-          );
-
-    if (_backgroundRenderObject == null) {
-      final backgroundRenderObject =
-          _MongolRenderEditableCustomPaint(painter: effectivePainter);
-      adoptChild(backgroundRenderObject);
-      _backgroundRenderObject = backgroundRenderObject;
-    } else {
-      _backgroundRenderObject?.painter = effectivePainter;
-    }
+    final MongolRenderEditablePainter effectivePainter =
+        _effectivePainter(newPainter, _builtInPainters);
+    _backgroundRenderObject = _createOrUpdatePainterRenderObject(
+      current: _backgroundRenderObject,
+      painter: effectivePainter,
+    );
     _painter = newPainter;
   }
 
@@ -451,7 +460,7 @@ class MongolRenderEditable extends RenderBox
       return;
     }
     _obscureText = value;
-    _cachedAttributedValue = null;
+    _invalidateAttributedValueCache();
     markNeedsSemanticsUpdate();
   }
 
@@ -484,26 +493,34 @@ class MongolRenderEditable extends RenderBox
   ///
   /// 检查选中文本的开始和结束位置是否在视口内
   /// [effectiveOffset] 是文本的有效偏移量
+  bool _isCaretVisibleInViewport(
+    TextPosition position,
+    Offset effectiveOffset,
+    Rect visibleRegion,
+  ) {
+    const double visibleRegionSlop = 0.5;
+    final Offset caretOffset =
+        _textPainter.getOffsetForCaret(position, _caretPrototype);
+    return visibleRegion
+        .inflate(visibleRegionSlop)
+        .contains(caretOffset + effectiveOffset);
+  }
+
   void _updateSelectionExtentsVisibility(Offset effectiveOffset) {
     assert(selection != null);
     final visibleRegion = Offset.zero & size; // 可见区域
 
-    final startOffset = _textPainter.getOffsetForCaret(
+    _selectionStartInViewport.value = _isCaretVisibleInViewport(
       TextPosition(offset: selection!.start, affinity: selection!.affinity),
-      _caretPrototype,
+      effectiveOffset,
+      visibleRegion,
     );
-    const visibleRegionSlop = 0.5; // 可见区域的容差
-    _selectionStartInViewport.value = visibleRegion
-        .inflate(visibleRegionSlop)
-        .contains(startOffset + effectiveOffset);
 
-    final endOffset = _textPainter.getOffsetForCaret(
+    _selectionEndInViewport.value = _isCaretVisibleInViewport(
       TextPosition(offset: selection!.end, affinity: selection!.affinity),
-      _caretPrototype,
+      effectiveOffset,
+      visibleRegion,
     );
-    _selectionEndInViewport.value = visibleRegion
-        .inflate(visibleRegionSlop)
-        .contains(endOffset + effectiveOffset);
   }
 
   /// 设置文本编辑值
@@ -588,8 +605,7 @@ class MongolRenderEditable extends RenderBox
     int? lastNonWhitespace;
     for (final currentString in string.characters) {
       if (!includeWhitespace &&
-          !TextLayoutMetrics.isWhitespace(
-              currentString.characters.first.toString().codeUnitAt(0))) {
+          !TextLayoutMetrics.isWhitespace(currentString.codeUnitAt(0))) {
         lastNonWhitespace = count;
       }
       if (count + currentString.length >= index) {
@@ -660,6 +676,7 @@ class MongolRenderEditable extends RenderBox
   // 结束 TextLayoutMetrics 实现
 
   @override
+
   /// 标记渲染对象需要重新绘制
   ///
   /// 同时通知前景和背景渲染对象也需要重新绘制
@@ -681,6 +698,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 系统字体更改时调用
   ///
   /// 重新标记文本布局为需要更新
@@ -703,15 +721,25 @@ class MongolRenderEditable extends RenderBox
   TextSpan? get text => _textPainter.text;
   final MongolTextPainter _textPainter; // 文本绘制器
   AttributedString? _cachedAttributedValue; // 缓存的属性字符串
-  List<InlineSpanSemanticsInformation>? _cachedCombinedSemanticsInfos; // 缓存的组合语义信息
+  List<InlineSpanSemanticsInformation>?
+      _cachedCombinedSemanticsInfos; // 缓存的组合语义信息
+
+  void _invalidateAttributedValueCache() {
+    _cachedAttributedValue = null;
+  }
+
+  void _invalidateTextSemanticsCaches() {
+    _cachedAttributedValue = null;
+    _cachedCombinedSemanticsInfos = null;
+  }
+
   set text(TextSpan? value) {
     if (_textPainter.text == value) {
       return;
     }
     _cachedLineBreakCount = null;
     _textPainter.text = value;
-    _cachedAttributedValue = null;
-    _cachedCombinedSemanticsInfos = null;
+    _invalidateTextSemanticsCaches();
     markNeedsTextLayout();
     markNeedsSemanticsUpdate();
   }
@@ -1087,6 +1115,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 描述此渲染对象的语义配置
   ///
   /// 为辅助功能系统提供关于此对象的信息
@@ -1178,6 +1207,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 组装语义节点
   ///
   /// 为文本的每个片段创建语义节点，以便辅助功能系统能够识别和交互
@@ -1403,6 +1433,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 附加到管道所有者
   ///
   /// 当渲染对象被添加到渲染树时调用
@@ -1427,6 +1458,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 从管道所有者分离
   ///
   /// 当渲染对象从渲染树中移除时调用
@@ -1441,6 +1473,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 重新深度排序子节点
   ///
   /// 当子节点的深度需要更新时调用
@@ -1452,6 +1485,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 访问所有子渲染对象
   ///
   /// 用于遍历和处理此渲染对象的所有子节点
@@ -1695,6 +1729,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 计算最小内在宽度
   ///
   /// [height] 是可用高度
@@ -1704,6 +1739,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 计算最大内在宽度
   ///
   /// [height] 是可用高度
@@ -1713,6 +1749,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 计算到实际基线的距离
   ///
   /// [baseline] 是基线类型
@@ -1723,6 +1760,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 测试点是否命中此渲染对象
   ///
   /// 始终返回 true，表示此渲染对象会响应所有点击事件
@@ -1732,6 +1770,7 @@ class MongolRenderEditable extends RenderBox
   late LongPressGestureRecognizer _longPress;
 
   @override
+
   /// 处理指针事件
   ///
   /// [event] 是指针事件
@@ -2067,6 +2106,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 计算干布局尺寸
   ///
   /// 在不实际执行布局的情况下，计算渲染对象在给定约束下的尺寸
@@ -2083,6 +2123,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 执行布局
   ///
   /// 计算渲染对象的实际尺寸和位置
@@ -2098,7 +2139,7 @@ class MongolRenderEditable extends RenderBox
     final Size textPainterSize = _textPainter.size;
     final double height = forceLine
         ? constraints.maxHeight
-        : constraints.constrainWidth(_textPainter.size.height + _caretMargin);
+        : constraints.constrainWidth(textPainterSize.height + _caretMargin);
     final double preferredWidth = _preferredWidth(constraints.maxHeight);
     size = Size(constraints.constrainWidth(preferredWidth), height);
     final Size contentSize = Size(
@@ -2134,10 +2175,6 @@ class MongolRenderEditable extends RenderBox
         );
       }
     }
-    assert(
-      startPosition.offset == 0,
-      'unable to find the line for $startPosition',
-    );
     return MapEntry<int, Offset>(
       math.max(0, metrics.length - 1),
       Offset(
@@ -2232,6 +2269,7 @@ class MongolRenderEditable extends RenderBox
   }
 
   @override
+
   /// 绘制渲染对象
   ///
   /// [context] 是绘制上下文

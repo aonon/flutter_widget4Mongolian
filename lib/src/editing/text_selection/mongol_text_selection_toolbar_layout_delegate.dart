@@ -13,9 +13,10 @@ import 'package:flutter/rendering.dart';
 /// 另请参阅：
 ///
 ///   * [MongolTextSelectionToolbar]，它使用此来定位自己。
-class MongolTextSelectionToolbarLayoutDelegate extends SingleChildLayoutDelegate {
+class MongolTextSelectionToolbarLayoutDelegate
+    extends SingleChildLayoutDelegate {
   /// 创建 MongolTextSelectionToolbarLayoutDelegate 的实例。
-  MongolTextSelectionToolbarLayoutDelegate({
+  const MongolTextSelectionToolbarLayoutDelegate({
     required this.anchorLeft,
     required this.anchorRight,
     this.fitsLeft,
@@ -69,9 +70,7 @@ class MongolTextSelectionToolbarLayoutDelegate extends SingleChildLayoutDelegate
     final anchor = fitsLeft ? anchorLeft : anchorRight;
 
     return Offset(
-      fitsLeft
-        ? math.max(0.0, anchor.dx - childSize.width)
-        : anchor.dx,
+      fitsLeft ? math.max(0.0, anchor.dx - childSize.width) : anchor.dx,
       _centerOn(
         anchor.dy,
         childSize.height,
@@ -82,8 +81,8 @@ class MongolTextSelectionToolbarLayoutDelegate extends SingleChildLayoutDelegate
 
   @override
   bool shouldRelayout(MongolTextSelectionToolbarLayoutDelegate oldDelegate) {
-    return anchorLeft != oldDelegate.anchorLeft
-        || anchorRight != oldDelegate.anchorRight
-        || fitsLeft != oldDelegate.fitsLeft;
+    return anchorLeft != oldDelegate.anchorLeft ||
+        anchorRight != oldDelegate.anchorRight ||
+        fitsLeft != oldDelegate.fitsLeft;
   }
 }

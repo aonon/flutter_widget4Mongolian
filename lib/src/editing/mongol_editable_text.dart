@@ -122,6 +122,7 @@ import 'package:flutter/widgets.dart'
         TransposeCharactersIntent,
         UndoTextIntent,
         UpdateSelectionIntent,
+        View,
         Widget,
         WidgetsBinding,
         WidgetsBindingObserver,
@@ -133,6 +134,8 @@ import 'package:mongol/src/editing/text_selection/mongol_text_selection.dart';
 
 import 'text_editing_controller_extension.dart';
 import 'mongol_text_editing_intents.dart';
+import 'mongol_mouse_cursors.dart';
+import 'web_text_cursor_helper.dart';
 
 export 'package:flutter/services.dart'
     show
@@ -355,6 +358,7 @@ class MongolEditableText extends StatefulWidget {
     this.keyboardAppearance = Brightness.light,
     this.dragStartBehavior = DragStartBehavior.start,
     bool? enableInteractiveSelection,
+    this.enableWebReadOnlyInputConnection = true,
     this.scrollController,
     this.scrollPhysics,
     @Deprecated(
@@ -381,8 +385,7 @@ class MongolEditableText extends StatefulWidget {
           !expands || (maxLines == null && minLines == null),
           '当 expands 为 true 时，minLines 和 maxLines 必须为 null。',
         ),
-        assert(!obscureText || maxLines == 1,
-            '模糊字段不能是多行的。'),
+        assert(!obscureText || maxLines == 1, '模糊字段不能是多行的。'),
         assert(
           !readOnly || autofillHints == null,
           "只读字段不能有自动填充提示。",
@@ -745,7 +748,7 @@ class MongolEditableText extends StatefulWidget {
 
   /// 鼠标指针进入或悬停在 widget 上时的光标。
   ///
-  /// 如果此属性为 null，将使用 [SystemMouseCursors.text]。
+  /// 如果此属性为 null，将使用适合竖排文本的水平I形光标。
   ///
   /// [mouseCursor] 是 [MongolEditableText] 中唯一控制鼠标指针外观的属性。
   /// 所有其他与 "cursor" 相关的属性都代表文本光标，
@@ -813,6 +816,12 @@ class MongolEditableText extends StatefulWidget {
   /// 当此值为 false 时，用户无法调整文本选择，无法复制文本，
   /// 也无法从剪贴板粘贴到文本字段中。
   final bool enableInteractiveSelection;
+
+  /// 是否允许只读字段在 Web 上建立输入连接。
+  ///
+  /// 默认为 true，以保留浏览器原生的复制、全选和键盘选区行为。
+  /// 将其设为 false 可避免只读字段在 Web 上创建输入连接。
+  final bool enableWebReadOnlyInputConnection;
 
   /// 将此属性设置为 true 会使光标在获得焦点后停止闪烁或淡入淡出。
   /// 此属性对测试目的很有用。
@@ -1064,38 +1073,30 @@ class MongolEditableText extends StatefulWidget {
           const Map<String, TextInputType> iOSKeyboardType =
               <String, TextInputType>{
             AutofillHints.addressCity: TextInputType.name,
-            AutofillHints.addressCityAndState:
-                TextInputType.name, // 自动填充不工作。
+            AutofillHints.addressCityAndState: TextInputType.name, // 自动填充不工作。
             AutofillHints.addressState: TextInputType.name,
             AutofillHints.countryName: TextInputType.name,
-            AutofillHints.creditCardNumber:
-                TextInputType.number, // 无法测试。
+            AutofillHints.creditCardNumber: TextInputType.number, // 无法测试。
             AutofillHints.email: TextInputType.emailAddress,
             AutofillHints.familyName: TextInputType.name,
             AutofillHints.fullStreetAddress: TextInputType.name,
             AutofillHints.givenName: TextInputType.name,
             AutofillHints.jobTitle: TextInputType.name, // 自动填充不工作。
             AutofillHints.location: TextInputType.name, // 自动填充不工作。
-            AutofillHints.middleName:
-                TextInputType.name, // 自动填充不工作。
+            AutofillHints.middleName: TextInputType.name, // 自动填充不工作。
             AutofillHints.name: TextInputType.name,
-            AutofillHints.namePrefix:
-                TextInputType.name, // 自动填充不工作。
-            AutofillHints.nameSuffix:
-                TextInputType.name, // 自动填充不工作。
+            AutofillHints.namePrefix: TextInputType.name, // 自动填充不工作。
+            AutofillHints.nameSuffix: TextInputType.name, // 自动填充不工作。
             AutofillHints.newPassword: TextInputType.text,
             AutofillHints.newUsername: TextInputType.text,
             AutofillHints.nickname: TextInputType.name, // 自动填充不工作。
             AutofillHints.oneTimeCode: TextInputType.number,
-            AutofillHints.organizationName:
-                TextInputType.text, // 自动填充不工作。
+            AutofillHints.organizationName: TextInputType.text, // 自动填充不工作。
             AutofillHints.password: TextInputType.text,
             AutofillHints.postalCode: TextInputType.name,
             AutofillHints.streetAddressLine1: TextInputType.name,
-            AutofillHints.streetAddressLine2:
-                TextInputType.name, // 自动填充不工作。
-            AutofillHints.sublocality:
-                TextInputType.name, // 自动填充不工作。
+            AutofillHints.streetAddressLine2: TextInputType.name, // 自动填充不工作。
+            AutofillHints.sublocality: TextInputType.name, // 自动填充不工作。
             AutofillHints.telephoneNumber: TextInputType.name,
             AutofillHints.url: TextInputType.url, // 自动填充不工作。
             AutofillHints.username: TextInputType.text,
@@ -1270,7 +1271,8 @@ class MongolEditableTextState extends State<MongolEditableText>
       kIsWeb ? null : ClipboardStatusNotifier();
 
   TextInputConnection? _textInputConnection; // 与平台文本输入系统的连接
-  bool get _hasInputConnection => _textInputConnection?.attached ?? false; // 是否有活跃的输入连接
+  bool get _hasInputConnection =>
+      _textInputConnection?.attached ?? false; // 是否有活跃的输入连接
 
   MongolTextSelectionOverlay? _selectionOverlay; // 文本选择覆盖层
 
@@ -1291,7 +1293,8 @@ class MongolEditableTextState extends State<MongolEditableText>
   @override
   AutofillScope? get currentAutofillScope => _currentAutofillScope;
 
-  AutofillClient get _effectiveAutofillClient => widget.autofillClient ?? this; // 有效的自动填充客户端
+  AutofillClient get _effectiveAutofillClient =>
+      widget.autofillClient ?? this; // 有效的自动填充客户端
 
   /// 是否与平台创建文本编辑的输入连接。
   ///
@@ -1305,9 +1308,12 @@ class MongolEditableTextState extends State<MongolEditableText>
   /// - cmd/ctrl+c shortcut to copy.
   /// - cmd/ctrl+a to select all.
   /// - Changing the selection using a physical keyboard.
-  bool get _shouldCreateInputConnection => kIsWeb || !widget.readOnly;
+  bool get _shouldCreateInputConnection =>
+      !widget.readOnly || (kIsWeb && widget.enableWebReadOnlyInputConnection);
 
   Orientation? _lastOrientation;
+
+  int? _viewId;
 
   @override
   bool get wantKeepAlive => widget.focusNode.hasFocus;
@@ -1558,9 +1564,9 @@ class MongolEditableTextState extends State<MongolEditableText>
       if (toolbarOptions.cut && cutEnabled)
         ContextMenuButtonItem(
           onPressed: () {
-            selectAll(SelectionChangedCause.toolbar);
+            cutSelection(SelectionChangedCause.toolbar);
           },
-          type: ContextMenuButtonType.selectAll,
+          type: ContextMenuButtonType.cut,
         ),
       if (toolbarOptions.copy && copyEnabled)
         ContextMenuButtonItem(
@@ -1691,6 +1697,7 @@ class MongolEditableTextState extends State<MongolEditableText>
   @override
   void initState() {
     super.initState();
+    injectVerticalTextCursorStyle();
     clipboardStatus?.addListener(_onChangedClipboardStatus);
     widget.controller.addListener(_didChangeTextEditingValue);
     widget.focusNode.addListener(_handleFocusChanged);
@@ -1734,8 +1741,16 @@ class MongolEditableTextState extends State<MongolEditableText>
       }
     }
 
-    if (defaultTargetPlatform != TargetPlatform.iOS &&
-        defaultTargetPlatform != TargetPlatform.android) {
+    // Check for changes in viewId.
+    if (_hasInputConnection) {
+      final int newViewId = View.of(context).viewId;
+      if (newViewId != _viewId) {
+        _textInputConnection!
+            .updateConfig(_effectiveAutofillClient.textInputConfiguration);
+      }
+    }
+
+    if (!_isIOS && !_isAndroid) {
       return;
     }
 
@@ -1747,10 +1762,10 @@ class MongolEditableTextState extends State<MongolEditableText>
     }
     if (orientation != _lastOrientation) {
       _lastOrientation = orientation;
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
+      if (_isIOS) {
         hideToolbar(false);
       }
-      if (defaultTargetPlatform == TargetPlatform.android) {
+      if (_isAndroid) {
         hideToolbar();
       }
     }
@@ -2120,6 +2135,21 @@ class MongolEditableTextState extends State<MongolEditableText>
   }
 
   bool get _hasFocus => widget.focusNode.hasFocus;
+
+  // On desktop platforms there is no virtual keyboard and the focus system
+  // does not set a keyboard token on requestFocus(), so consumeKeyboardToken()
+  // always returns false. We must open the TextInputConnection unconditionally
+  // whenever the field gains focus on desktop.
+  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+  bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _isMobilePlatform =>
+      _isAndroid || _isIOS || defaultTargetPlatform == TargetPlatform.fuchsia;
+
+  bool get _isDesktop =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.windows);
   bool get _isMultiline => widget.maxLines != 1;
 
   // Finds the closest scroll offset to the current scroll offset that fully
@@ -2242,7 +2272,7 @@ class MongolEditableTextState extends State<MongolEditableText>
   }
 
   void _openOrCloseInputConnectionIfNeeded() {
-    if (_hasFocus && widget.focusNode.consumeKeyboardToken()) {
+    if (_hasFocus && (widget.focusNode.consumeKeyboardToken() || _isDesktop)) {
       _openInputConnection();
     } else if (!_hasFocus) {
       _closeInputConnectionIfNeeded();
@@ -2916,7 +2946,9 @@ class MongolEditableTextState extends State<MongolEditableText>
           )
         : AutofillConfiguration.disabled;
 
+    _viewId = View.of(context).viewId;
     return TextInputConfiguration(
+      viewId: _viewId,
       inputType: widget.keyboardType,
       readOnly: widget.readOnly,
       obscureText: widget.obscureText,
@@ -3064,6 +3096,32 @@ class MongolEditableTextState extends State<MongolEditableText>
         context: context, defaultAction: defaultAction);
   }
 
+  Action<T> _makeOverridableCallback<T extends Intent>(
+    Object? Function(T intent) onInvoke,
+  ) {
+    return _makeOverridable(CallbackAction<T>(onInvoke: onInvoke));
+  }
+
+  Action<T>
+      _makeSelectionUpdateAction<T extends DirectionalCaretMovementIntent>(
+    bool ignoreNonCollapsedSelection,
+    _TextBoundary Function(DirectionalTextEditingIntent intent) getTextBoundary,
+  ) {
+    return _makeOverridable(
+      _UpdateTextSelectionAction<T>(
+        this,
+        ignoreNonCollapsedSelection,
+        getTextBoundary,
+      ),
+    );
+  }
+
+  Action<T> _makeDeleteAction<T extends DirectionalTextEditingIntent>(
+    _TextBoundary Function(DirectionalTextEditingIntent intent) getTextBoundary,
+  ) {
+    return _makeOverridable(_DeleteTextAction<T>(this, getTextBoundary));
+  }
+
   /// Transpose the characters immediately before and after the current
   /// collapsed selection.
   ///
@@ -3128,6 +3186,61 @@ class MongolEditableTextState extends State<MongolEditableText>
 
   late final Action<ReplaceTextIntent> _replaceTextAction =
       CallbackAction<ReplaceTextIntent>(onInvoke: _replaceText);
+
+  late final Action<DeleteCharacterIntent> _deleteCharacterAction =
+      _makeDeleteAction<DeleteCharacterIntent>(_characterBoundary);
+  late final Action<DeleteToNextWordBoundaryIntent>
+      _deleteToNextWordBoundaryAction =
+      _makeDeleteAction<DeleteToNextWordBoundaryIntent>(_nextWordBoundary);
+  late final Action<DeleteToLineBreakIntent> _deleteToLineBreakAction =
+      _makeDeleteAction<DeleteToLineBreakIntent>(_linebreak);
+
+  late final Action<ExtendSelectionByCharacterIntent>
+      _extendSelectionByCharacterAction =
+      _makeSelectionUpdateAction<ExtendSelectionByCharacterIntent>(
+    false,
+    _characterBoundary,
+  );
+  late final Action<ExtendSelectionToNextWordBoundaryIntent>
+      _extendSelectionToNextWordBoundaryAction =
+      _makeSelectionUpdateAction<ExtendSelectionToNextWordBoundaryIntent>(
+    true,
+    _nextWordBoundary,
+  );
+  late final Action<ExtendSelectionToLineBreakIntent>
+      _extendSelectionToLineBreakAction =
+      _makeSelectionUpdateAction<ExtendSelectionToLineBreakIntent>(
+    true,
+    _linebreak,
+  );
+  late final Action<ExtendSelectionToDocumentBoundaryIntent>
+      _extendSelectionToDocumentBoundaryAction =
+      _makeSelectionUpdateAction<ExtendSelectionToDocumentBoundaryIntent>(
+    true,
+    _documentBoundary,
+  );
+  late final Action<ExtendSelectionToNextWordBoundaryOrCaretLocationIntent>
+      _extendSelectionToNextWordBoundaryOrCaretLocationAction =
+      _makeOverridable(_ExtendSelectionOrCaretPositionAction(
+    this,
+    _nextWordBoundary,
+  ));
+
+  late final Action<ExpandSelectionToLineBreakIntent>
+      _expandSelectionToLineBreakAction =
+      _makeOverridableCallback<ExpandSelectionToLineBreakIntent>(
+    _expandSelectionToLinebreak,
+  );
+  late final Action<ExpandSelectionToDocumentBoundaryIntent>
+      _expandSelectionToDocumentBoundaryAction =
+      _makeOverridableCallback<ExpandSelectionToDocumentBoundaryIntent>(
+    _expandSelectionToDocumentBoundary,
+  );
+  late final Action<ScrollToDocumentBoundaryIntent>
+      _scrollToDocumentBoundaryAction =
+      _makeOverridableCallback<ScrollToDocumentBoundaryIntent>(
+    _scrollToDocumentBoundary,
+  );
 
   // Scrolls either to the beginning or end of the document depending on the
   // intent's `forward` parameter.
@@ -3326,69 +3439,39 @@ class MongolEditableTextState extends State<MongolEditableText>
         CallbackAction<DismissIntent>(onInvoke: _hideToolbarIfVisible),
 
     // Delete
-    DeleteCharacterIntent: _makeOverridable(
-        _DeleteTextAction<DeleteCharacterIntent>(this, _characterBoundary)),
-    DeleteToNextWordBoundaryIntent: _makeOverridable(
-        _DeleteTextAction<DeleteToNextWordBoundaryIntent>(
-            this, _nextWordBoundary)),
-    DeleteToLineBreakIntent: _makeOverridable(
-        _DeleteTextAction<DeleteToLineBreakIntent>(this, _linebreak)),
+    DeleteCharacterIntent: _deleteCharacterAction,
+    DeleteToNextWordBoundaryIntent: _deleteToNextWordBoundaryAction,
+    DeleteToLineBreakIntent: _deleteToLineBreakAction,
 
     // Extend/Move Selection
-    ExtendSelectionByCharacterIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionByCharacterIntent>(
-      this,
-      false,
-      _characterBoundary,
-    )),
+    ExtendSelectionByCharacterIntent: _extendSelectionByCharacterAction,
     ExtendSelectionByPageIntent: _makeOverridable(
         CallbackAction<ExtendSelectionByPageIntent>(
             onInvoke: _extendSelectionByPage)),
-    MongolExtendSelectionByCharacterIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionByCharacterIntent>(
-      this,
-      false,
-      _characterBoundary,
-    )),
-    ExtendSelectionToNextWordBoundaryIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionToNextWordBoundaryIntent>(
-            this, true, _nextWordBoundary)),
-    MongolExtendSelectionToNextWordBoundaryIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionToNextWordBoundaryIntent>(
-            this, true, _nextWordBoundary)),
-    ExtendSelectionToLineBreakIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionToLineBreakIntent>(
-            this, true, _linebreak)),
-    MongolExtendSelectionToLineBreakIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionToLineBreakIntent>(
-            this, true, _linebreak)),
-    ExpandSelectionToLineBreakIntent: _makeOverridable(
-        CallbackAction<ExpandSelectionToLineBreakIntent>(
-            onInvoke: _expandSelectionToLinebreak)),
-    MongolExpandSelectionToLineBreakIntent: _makeOverridable(
-        CallbackAction<ExpandSelectionToLineBreakIntent>(
-            onInvoke: _expandSelectionToLinebreak)),
-    ExpandSelectionToDocumentBoundaryIntent: _makeOverridable(
-        CallbackAction<ExpandSelectionToDocumentBoundaryIntent>(
-            onInvoke: _expandSelectionToDocumentBoundary)),
+    MongolExtendSelectionByCharacterIntent: _extendSelectionByCharacterAction,
+    ExtendSelectionToNextWordBoundaryIntent:
+        _extendSelectionToNextWordBoundaryAction,
+    MongolExtendSelectionToNextWordBoundaryIntent:
+        _extendSelectionToNextWordBoundaryAction,
+    ExtendSelectionToLineBreakIntent: _extendSelectionToLineBreakAction,
+    MongolExtendSelectionToLineBreakIntent: _extendSelectionToLineBreakAction,
+    ExpandSelectionToLineBreakIntent: _expandSelectionToLineBreakAction,
+    MongolExpandSelectionToLineBreakIntent: _expandSelectionToLineBreakAction,
+    ExpandSelectionToDocumentBoundaryIntent:
+        _expandSelectionToDocumentBoundaryAction,
     ExtendSelectionVerticallyToAdjacentLineIntent:
         _makeOverridable(_adjacentLineAction),
     MongolExtendSelectionHorizontallyToAdjacentLineIntent:
         _makeOverridable(_adjacentLineAction),
-    ExtendSelectionToDocumentBoundaryIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionToDocumentBoundaryIntent>(
-            this, true, _documentBoundary)),
-    MongolExtendSelectionToDocumentBoundaryIntent: _makeOverridable(
-        _UpdateTextSelectionAction<ExtendSelectionToDocumentBoundaryIntent>(
-            this, true, _documentBoundary)),
-    ExtendSelectionToNextWordBoundaryOrCaretLocationIntent: _makeOverridable(
-        _ExtendSelectionOrCaretPositionAction(this, _nextWordBoundary)),
+    ExtendSelectionToDocumentBoundaryIntent:
+        _extendSelectionToDocumentBoundaryAction,
+    MongolExtendSelectionToDocumentBoundaryIntent:
+        _extendSelectionToDocumentBoundaryAction,
+    ExtendSelectionToNextWordBoundaryOrCaretLocationIntent:
+        _extendSelectionToNextWordBoundaryOrCaretLocationAction,
     MongolExtendSelectionToNextWordBoundaryOrCaretLocationIntent:
-        _makeOverridable(
-            _ExtendSelectionOrCaretPositionAction(this, _nextWordBoundary)),
-    ScrollToDocumentBoundaryIntent: _makeOverridable(
-        CallbackAction<ScrollToDocumentBoundaryIntent>(
-            onInvoke: _scrollToDocumentBoundary)),
+        _extendSelectionToNextWordBoundaryOrCaretLocationAction,
+    ScrollToDocumentBoundaryIntent: _scrollToDocumentBoundaryAction,
     ScrollIntent: CallbackAction<ScrollIntent>(onInvoke: _scroll),
 
     // Copy Paste
@@ -3410,7 +3493,7 @@ class MongolEditableTextState extends State<MongolEditableText>
       onTapOutside: widget.onTapOutside ?? _defaultOnTapOutside,
       debugLabel: kReleaseMode ? null : 'MongolEditableText',
       child: MouseRegion(
-        cursor: widget.mouseCursor ?? SystemMouseCursors.text,
+        cursor: widget.mouseCursor ?? mongolVerticalTextCursor,
         child: Actions(
           actions: _actions,
           child: _TextEditingHistory(
@@ -3500,9 +3583,7 @@ class MongolEditableTextState extends State<MongolEditableText>
       var text = _value.text;
       text = widget.obscuringCharacter * text.length;
       // Reveal the latest character in an obscured field only on mobile.
-      if (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.fuchsia) {
+      if (_isMobilePlatform) {
         final o =
             _obscureShowCharTicksPending > 0 ? _obscureLatestCharIndex : null;
         if (o != null && o >= 0 && o < text.length) {
@@ -3981,9 +4062,6 @@ class _DeleteTextAction<T extends DirectionalTextEditingIntent>
 
   @override
   Object? invoke(T intent, [BuildContext? context]) {
-    if (kDebugMode) {
-      print('mongol_editable_text -> _DeleteTextAction.invoke');
-    }
     final TextSelection selection = state._value.selection;
     assert(selection.isValid);
 
@@ -4408,22 +4486,12 @@ class _TextEditingHistoryState extends State<_TextEditingHistory> {
       return;
     }
 
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-      case TargetPlatform.fuchsia:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-        // Composing text is not counted in history coalescing.
-        if (!widget.controller.value.composing.isCollapsed) {
-          return;
-        }
-        break;
-      case TargetPlatform.android:
-        // Gboard on Android puts non-CJK words in composing regions. Coalesce
-        // composing text in order to allow the saving of partial words in that
-        // case.
-        break;
+    // Gboard on Android puts non-CJK words in composing regions. Keep Android
+    // behavior unchanged and coalesce composing text there; other platforms
+    // skip composing text in history coalescing.
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        !widget.controller.value.composing.isCollapsed) {
+      return;
     }
 
     _throttleTimer = _throttledPush(widget.controller.value);

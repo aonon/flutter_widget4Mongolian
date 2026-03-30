@@ -2,31 +2,35 @@
 
 ## 概述
 
-`MongolSelectableText` 是一个用于显示可选择和可复制蒙古文文本的 Flutter 组件。它允许用户通过长按、拖动等手势与文本交互，并可以将选中的内容复制到系统剪切板。
+`MongolSelectableText` 是一个用于显示可选择和可复制蒙古文文本的 Flutter 组件。它基于只读 `MongolTextField` 实现，复用系统文本选择与上下文菜单。支持 Web、桌面（Windows/macOS/Linux）和移动平台。
 
 ## 特性
 
-- ✅ **垂直蒙古文显示** - 完整支持蒙古文垂直方向书写
-- ✅ **文本选择** - 支持长按选择、拖动扩展选择范围
-- ✅ **复制功能** - 选中文本可复制到剪切板
-- ✅ **富文本支持** - 支持 `TextSpan` 实现混合样式文本
-- ✅ **自定义样式** - 支持文本样式、排列、溢出处理等参数
-- ✅ **选区高亮** - 支持自定义选区高亮颜色
-- ✅ **文本对齐** - 支持垂直文本的对齐方式设置
+- ✅ **垂直蒙古文显示** — 完整支持蒙古文垂直方向书写
+- ✅ **文本选择** — 支持长按选择、拖动扩展选择范围
+- ✅ **复制功能** — 选中文本可复制到剪切板
+- ✅ **富文本支持** — 支持 `TextSpan` 实现混合样式文本
+- ✅ **上下文菜单** — 选中文本后自动弹出"全选"和"复制"菜单，支持自定义菜单构建器
+- ✅ **自定义样式** — 支持文本样式、对齐、溢出处理等参数
+- ✅ **选区高亮** — 支持自定义选区高亮颜色
+- ✅ **桌面平台支持** — 鼠标指针为竖排文本光标、选择手柄可鼠标拖动、右键弹出上下文菜单
+- ✅ **Web 平台支持** — 浏览器右键菜单已禁用以避免冲突，使用自定义上下文菜单
+- ✅ **多实例互斥选区** — 同一页面多个 `MongolSelectableText` 实例时，新选区自动取消旧选区
 
 ## 架构
 
 ### 核心组件
 
-1. **MongolSelectableText** (Widget)
-   - 有状态 Widget，处理选择状态管理
-   - 实现了 `TextSelectionDelegate` 接口
-   - 管理手势识别和选择变化回调
+1. **MongolSelectableText** (`StatefulWidget`)
+   - 有状态 Widget，管理选区状态和焦点
+   - 通过 `TextEditingController` 跟踪选区变化
+   - 使用静态 `ValueNotifier` 实现多实例间选区互斥
+   - 内部构建只读 `MongolTextField`
 
-2. **MongolRenderSelectableText** (RenderObject)
-   - 继承自 `RenderBox`
-   - 利用 `MongolTextPainter` 处理文本布局和绘制
-   - 负责选区高亮的绘制
+2. **MongolTextField**（底层组件）
+   - 以 `readOnly: true`、`showCursor: false` 配置为只读模式
+   - 提供手势识别、选择手柄、上下文菜单等交互能力
+   - 通过 `MongolEditableText` → `MongolRenderEditable` 完成文本布局和绘制
 
 ## 基础用法
 
@@ -69,7 +73,9 @@ MongolSelectableText.rich(
 | `overflow` | `TextOverflow` | `TextOverflow.clip` | 溢出处理方式 |
 | `rotateCJK` | `bool` | true | CJK字符是否旋转90度 |
 | `selectionColor` | `Color` | 蓝色(64%) | 选区高亮颜色 |
+| `controller` | `TextEditingController?` | null | 外部文本控制器 |
 | `onSelectionChanged` | `SelectionChangedCallback?` | null | 选择改变时的回调 |
+| `contextMenuBuilder` | `MongolEditableTextContextMenuBuilder?` | null | 自定义上下文菜单构建器 |
 
 ## 高级用法
 
@@ -90,6 +96,27 @@ MongolSelectableText(
   onSelectionChanged: (selection, cause) {
     print('选中范围：${selection.start}-${selection.end}');
     print('原因：$cause');
+  },
+)
+```
+
+### 自定义上下文菜单
+
+```dart
+MongolSelectableText(
+  '自定义菜单的文本',
+  contextMenuBuilder: (context, editableTextState) {
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: editableTextState.contextMenuAnchors,
+      buttonItems: [
+        ContextMenuButtonItem(
+          label: '复制',
+          onPressed: () {
+            editableTextState.copySelection(SelectionChangedCause.toolbar);
+          },
+        ),
+      ],
+    );
   },
 )
 ```
@@ -124,61 +151,61 @@ MongolSelectableText.rich(
 
 ## 交互流程
 
+### 移动端（Android / iOS）
 ```
-长按文本
-  ↓
-选择点击位置的单词
-  ↓
-显示上下文菜单（复制、全选）
-  ↓
-用户可以：
-  - 点击"复制" → 复制选中的文本到剪切板
-  - 点击"全选" → 选中全部文本
-  - 拖动 → 扩展选择范围
-  - 单击其他位置 → 取消选择
+长按文本 → 选择单词 → 显示上下文菜单（复制、全选）
+拖动选择手柄 → 扩展选择范围
+单击其他位置 → 取消选择
+```
+### Web
+```
+鼠标悬停 → 显示竖排文本光标
+点击拖动 → 选择文本范围 → 自动弹出上下文菜单
+右键点击 → 弹出上下文菜单（复制、全选）
+拖动选择手柄 → 扩展选择范围（支持鼠标拖动）
+Ctrl+C → 复制选中文本
+Ctrl+A → 全选
+浏览器默认右键菜单已自动禁用
+```
+### 桌面端（Windows / macOS / Linux）
+```
+交互行为与移动端一致
+
 ```
 
 ## 与现有组件的对比
 
-| 特性 | MongolText | MongolSelectableText | MongolTextField |
-|------|-----------|-------------------|-----------------|
-| 显示文本 | ✅ | ✅ | ✅ |
-| 只读 | ✅ | ✅ | ❌ |
-| 可选择 | ❌ | ✅ | ✅ |
-| 可复制 | ❌ | ✅ | ✅ |
-| 可编辑 | ❌ | ❌ | ✅ |
-| 富文本 | ❌ | ✅ | ❌ |
+| 特性 | MongolText | MongolRichText | MongolSelectableText | MongolTextField |
+|------|-----------|---------------|---------------------|-----------------|
+| 显示文本 | ✅ | ✅ | ✅ | ✅ |
+| 只读 | ✅ | ✅ | ✅ | 可配置 |
+| 可选择 | ❌ | ❌ | ✅ | ✅ |
+| 可复制 | ❌ | ❌ | ✅ | ✅ |
+| 可编辑 | ❌ | ❌ | ❌ | ✅ |
+| 富文本 | ❌ | ✅ | ✅ | ❌ |
+| 上下文菜单 | ❌ | ❌ | ✅ | ✅ |
 
 ## 依赖关系
 
 ```
-MongolSelectableText
-├── MongolRenderSelectableText
-│   └── MongolTextPainter
-│       ├── MongolParagraph
-│       └── MongolTextTools (工具函数集)
-├── TextSelection (Flutter)
-├── Clipboard (Flutter)
-└── GestureDetector (Flutter)
+MongolSelectableText (StatefulWidget)
+├── MongolTextField (readOnly: true)
+│   ├── MongolEditableText
+│   │   └── MongolRenderEditable
+│   │       └── MongolTextPainter
+│   │           ├── MongolParagraph
+│   │           └── MongolTextTools
+│   └── MongolTextSelectionGestureDetectorBuilder
+│       └── 选择手柄 / 上下文菜单
+├── TextEditingController (Flutter)
+├── FocusNode (Flutter)
+└── ValueNotifier (多实例选区互斥)
 ```
-
-## 性能考虑
-
-- 文本选择使用 `TextSelection` 对象缓存来避免重复计算
-- 手势识别整合到 `GestureDetector` 中，避免多层次的手势冲突
-- 选区高亮绘制利用 `getBoxesForSelection()` 进行高效的区块绘制
 
 ## 已知限制
 
-1. 暂不支持系统快捷菜单（如 macOS 的查词、翻译等）
-2. 选择时的手势响应可能在某些场景需要微调
-3. 极长文本的选择性能需要性能测试验证
-
-## 测试覆盖
-
-- ✅ 10个单元测试通过
-- ✅ 与133个现有测试兼容无冲突
-- ✅ 支持各种文本长度和样式的测试场景
+1. 暂不支持系统级快捷菜单集成（如 macOS 的查词、翻译等）
+2. 极长文本的选择性能需要进一步测试验证
 
 ## 示例代码
 
@@ -192,11 +219,9 @@ flutter run -t lib/selectable_text_demo.dart
 
 ## 未来计划
 
-- [ ] 支持系统上下文菜单（复制、粘贴、全选等）
+- [ ] 支持系统级上下文菜单集成（macOS 查词、翻译等）
 - [ ] 支持拖放操作
-- [ ] 支持查词翻译集成
 - [ ] 支持辅助功能（可访问性）增强
-- [ ] 性能优化和基准测试
 
 ## 反馈和贡献
 

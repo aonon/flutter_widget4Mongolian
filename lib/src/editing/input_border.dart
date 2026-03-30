@@ -71,7 +71,10 @@ class SidelineInputBorder extends InputBorder {
 
   @override
   SidelineInputBorder scale(double t) {
-    return SidelineInputBorder(borderSide: borderSide.scale(t));
+    return SidelineInputBorder(
+      borderSide: borderSide.scale(t),
+      borderRadius: borderRadius * t,
+    );
   }
 
   @override
@@ -131,11 +134,13 @@ class SidelineInputBorder extends InputBorder {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other.runtimeType != runtimeType) return false;
-    return other is InputBorder && other.borderSide == borderSide;
+    return other is SidelineInputBorder &&
+        other.borderSide == borderSide &&
+        other.borderRadius == borderRadius;
   }
 
   @override
-  int get hashCode => borderSide.hashCode;
+  int get hashCode => Object.hash(borderSide, borderRadius);
 }
 
 /// 在 [MongolInputDecorator] 的容器周围绘制一个圆角矩形。
@@ -225,7 +230,7 @@ class MongolOutlineInputBorder extends InputBorder {
       return MongolOutlineInputBorder(
         borderRadius: BorderRadius.lerp(outline.borderRadius, borderRadius, t)!,
         borderSide: BorderSide.lerp(outline.borderSide, borderSide, t),
-        gapPadding: outline.gapPadding,
+        gapPadding: lerpDouble(outline.gapPadding, gapPadding, t)!,
       );
     }
     return super.lerpFrom(a, t);
@@ -238,7 +243,7 @@ class MongolOutlineInputBorder extends InputBorder {
       return MongolOutlineInputBorder(
         borderRadius: BorderRadius.lerp(borderRadius, outline.borderRadius, t)!,
         borderSide: BorderSide.lerp(borderSide, outline.borderSide, t),
-        gapPadding: outline.gapPadding,
+        gapPadding: lerpDouble(gapPadding, outline.gapPadding, t)!,
       );
     }
     return super.lerpTo(b, t);
@@ -286,7 +291,7 @@ class MongolOutlineInputBorder extends InputBorder {
       scaledRRect.left,
       scaledRRect.bottom - scaledRRect.blRadiusY * 2.0,
       scaledRRect.blRadiusX * 2.0,
-      scaledRRect.blRadiusX * 2.0,
+      scaledRRect.blRadiusY * 2.0,
     );
 
     // 与 OutlineInputBorder 不同，MongolOutlineInputBorder 忽略角落周围的部分扫描。
@@ -365,7 +370,7 @@ class MongolOutlineInputBorder extends InputBorder {
     if (other.runtimeType != runtimeType) {
       return false;
     }
-    return other is OutlineInputBorder &&
+    return other is MongolOutlineInputBorder &&
         other.borderSide == borderSide &&
         other.borderRadius == borderRadius &&
         other.gapPadding == gapPadding;

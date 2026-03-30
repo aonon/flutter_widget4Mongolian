@@ -42,16 +42,36 @@ import '../base/mongol_text_align.dart';
 ///  * [MongolText.rich] - 支持富文本的常量文本组件
 class MongolRichText extends LeafRenderObjectWidget {
   /// 创建垂直方向的蒙古文富文本段落
-  const MongolRichText({
+  MongolRichText({
     super.key,
     required this.text,
     this.textAlign = MongolTextAlign.top,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
-    this.textScaleFactor = 1.0,
+    @Deprecated(
+      'Use textScaler instead. '
+      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+      'This feature was deprecated after v3.12.0-2.0.pre.',
+    )
+    double textScaleFactor = 1.0,
+    TextScaler textScaler = TextScaler.noScaling,
     this.maxLines,
     this.rotateCJK = true,
-  }) : assert(maxLines == null || maxLines > 0);
+  }) : assert(maxLines == null || maxLines > 0),
+       assert(
+         textScaleFactor == 1.0 || identical(textScaler, TextScaler.noScaling),
+         'Use textScaler instead.',
+       ),
+       textScaler = _effectiveTextScalerFrom(textScaler, textScaleFactor);
+
+  static TextScaler _effectiveTextScalerFrom(
+      TextScaler textScaler, double textScaleFactor) {
+    return switch ((textScaler, textScaleFactor)) {
+      (final TextScaler scaler, 1.0) => scaler,
+      (TextScaler.noScaling, final double factor) => TextScaler.linear(factor),
+      (final TextScaler scaler, _) => scaler,
+    };
+  }
 
   /// 要显示的富文本内容
   final TextSpan text;
@@ -65,8 +85,16 @@ class MongolRichText extends LeafRenderObjectWidget {
   /// 文本溢出时的处理方式
   final TextOverflow overflow;
 
-  /// 文本缩放因子
-  final double textScaleFactor;
+  /// 文本缩放因子（已弃用，请使用 [textScaler]）
+  @Deprecated(
+    'Use textScaler instead. '
+    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+    'This feature was deprecated after v3.12.0-2.0.pre.',
+  )
+  double get textScaleFactor => textScaler.textScaleFactor;
+
+  /// 文本缩放策略
+  final TextScaler textScaler;
 
   /// 文本最大行数
   final int? maxLines;
@@ -82,7 +110,7 @@ class MongolRichText extends LeafRenderObjectWidget {
       textAlign: textAlign,
       softWrap: softWrap,
       overflow: overflow,
-      textScaleFactor: textScaleFactor,
+      textScaler: textScaler,
       maxLines: maxLines,
       rotateCJK: rotateCJK,
     );
@@ -96,7 +124,7 @@ class MongolRichText extends LeafRenderObjectWidget {
       ..textAlign = textAlign
       ..softWrap = softWrap
       ..overflow = overflow
-      ..textScaleFactor = textScaleFactor
+      ..textScaler = textScaler
       ..maxLines = maxLines
       ..rotateCJK = rotateCJK;
   }
@@ -114,8 +142,8 @@ class MongolRichText extends LeafRenderObjectWidget {
         showName: true));
     properties.add(EnumProperty<TextOverflow>('overflow', overflow,
         defaultValue: TextOverflow.clip));
-    properties.add(
-        DoubleProperty('textScaleFactor', textScaleFactor, defaultValue: 1.0));
+    properties.add(DiagnosticsProperty<TextScaler>(
+        'textScaler', textScaler, defaultValue: TextScaler.noScaling));
     properties.add(IntProperty('maxLines', maxLines, ifNull: 'unlimited'));
     properties.add(FlagProperty('rotateCJK',
         value: rotateCJK,

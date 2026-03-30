@@ -14,8 +14,8 @@ void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('MongolRichText has text', (WidgetTester tester) async {
-    await tester.pumpWidget(const MongolRichText(
-      text: TextSpan(text: 'T'),
+    await tester.pumpWidget(MongolRichText(
+      text: const TextSpan(text: 'T'),
     ));
 
     final finder = find.byType(MongolRichText);

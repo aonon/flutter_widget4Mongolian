@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../base/mongol_text_align.dart';
 import '../editing/mongol_editable_text.dart'
     show MongolEditableTextContextMenuBuilder, MongolEditableTextState;
+import '../editing/mongol_mouse_cursors.dart';
 import '../editing/mongol_text_field.dart';
 
 /// 垂直可选择的蒙古文文本组件
@@ -228,7 +229,10 @@ class _MongolSelectableTextState extends State<MongolSelectableText>
 
     // Keep the active selectable instance focused so copy/shortcut actions map
     // to the current selection when multiple MongolSelectableText widgets exist.
-    if (selection.isValid && !selection.isCollapsed && !_focusNode.hasFocus) {
+    if (selection.isValid &&
+        !selection.isCollapsed &&
+        !_focusNode.hasFocus &&
+        !kIsWeb) {
       _focusNode.requestFocus();
     }
 
@@ -357,8 +361,10 @@ class _MongolSelectableTextState extends State<MongolSelectableText>
         controller: _effectiveController,
         focusNode: _focusNode,
         readOnly: true,
+        enableWebReadOnlyInputConnection: false,
         showCursor: false,
         enableInteractiveSelection: true,
+        mouseCursor: mongolVerticalTextCursor,
         toolbarOptions: const ToolbarOptions(
           copy: true,
           cut: false,

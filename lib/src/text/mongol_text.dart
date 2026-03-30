@@ -49,39 +49,51 @@ import '../base/mongol_text_align.dart';
 class MongolText extends StatelessWidget {
   /// 创建用于垂直蒙古文布局的文本小部件
   const MongolText(
-    this.data, {
+    String this.data, {
     super.key,
     this.style,
     this.textAlign,
     this.softWrap,
     this.overflow,
+    @Deprecated(
+      'Use textScaler instead. '
+      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+      'This feature was deprecated after v3.12.0-2.0.pre.',
+    )
     this.textScaleFactor,
+    this.textScaler,
     this.maxLines,
     this.semanticsLabel,
     this.rotateCJK = true,
-  })  : assert(
-          data != null,
-          'A non-null String must be provided to a MongolText widget.',
-        ),
-        textSpan = null;
+  })  : textSpan = null,
+        assert(
+          textScaler == null || textScaleFactor == null,
+          'textScaleFactor is deprecated and cannot be specified when textScaler is specified.',
+        );
 
   /// 使用 [TextSpan] 创建垂直蒙古文文本小部件
   const MongolText.rich(
-    this.textSpan, {
+    TextSpan this.textSpan, {
     super.key,
     this.style,
     this.textAlign,
     this.softWrap,
     this.overflow,
+    @Deprecated(
+      'Use textScaler instead. '
+      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+      'This feature was deprecated after v3.12.0-2.0.pre.',
+    )
     this.textScaleFactor,
+    this.textScaler,
     this.maxLines,
     this.semanticsLabel,
     this.rotateCJK = true,
-  })  : assert(
-          textSpan != null,
-          'A non-null TextSpan must be provided to a Text.rich widget.',
-        ),
-        data = null;
+  })  : data = null,
+        assert(
+          textScaler == null || textScaleFactor == null,
+          'textScaleFactor is deprecated and cannot be specified when textScaler is specified.',
+        );
 
   /// 要显示的文本内容
   final String? data;
@@ -101,8 +113,16 @@ class MongolText extends StatelessWidget {
   /// 文本溢出时的处理方式
   final TextOverflow? overflow;
 
-  /// 文本缩放因子
+  /// 文本缩放因子（已弃用，请使用 [textScaler]）
+  @Deprecated(
+    'Use textScaler instead. '
+    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+    'This feature was deprecated after v3.12.0-2.0.pre.',
+  )
   final double? textScaleFactor;
+
+  /// 文本缩放策略
+  final TextScaler? textScaler;
 
   /// 文本最大行数
   final int? maxLines;
@@ -116,9 +136,6 @@ class MongolText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 验证参数合法性（防止传入非正的 maxLines）
-    // 使用 `maxLines!` 在断言里解除可空性，避免 analyzer 报错。
-    assert(maxLines == null || (maxLines! > 0));
     final defaultTextStyle = DefaultTextStyle.of(context);
     var effectiveTextStyle = style;
     if (style == null || style!.inherit) {
@@ -130,21 +147,23 @@ class MongolText extends StatelessWidget {
     }
     final defaultTextAlign =
         mapHorizontalToMongolTextAlign(defaultTextStyle.textAlign);
-    // Always wrap the provided text (or data) in a parent TextSpan that
-    // supplies the `effectiveTextStyle`. This mirrors Flutter's Text.rich
-    // behavior so that missing style properties (like fontFamily) inherit
-    // from the computed effective style (which itself merged DefaultTextStyle).
     final TextSpan effectiveSpan = TextSpan(
       style: effectiveTextStyle,
       text: data,
       children: textSpan != null ? <TextSpan>[textSpan!] : null,
     );
 
+    final TextScaler effectiveTextScaler = switch ((textScaler, textScaleFactor)) {
+      (final TextScaler scaler, _) => scaler,
+      (null, final double factor) => TextScaler.linear(factor),
+      (null, null) => MediaQuery.textScalerOf(context),
+    };
+
     Widget result = MongolRichText(
       textAlign: textAlign ?? defaultTextAlign ?? MongolTextAlign.top,
       softWrap: softWrap ?? defaultTextStyle.softWrap,
       overflow: overflow ?? defaultTextStyle.overflow,
-      textScaleFactor: textScaleFactor ?? MediaQuery.textScalerOf(context).scale(1.0),
+      textScaler: effectiveTextScaler,
       maxLines: maxLines ?? defaultTextStyle.maxLines,
       rotateCJK: rotateCJK,
       text: effectiveSpan,
@@ -182,7 +201,9 @@ class MongolText extends StatelessWidget {
     properties.add(
         EnumProperty<TextOverflow>('overflow', overflow, defaultValue: null));
     properties.add(
-        DoubleProperty('textScaleFactor', textScaleFactor, defaultValue: 1.0));
+        DoubleProperty('textScaleFactor', textScaleFactor, defaultValue: null));
+    properties.add(DiagnosticsProperty<TextScaler>(
+        'textScaler', textScaler, defaultValue: null));
     properties.add(IntProperty('maxLines', maxLines, defaultValue: null));
     if (semanticsLabel != null) {
       properties.add(StringProperty('semanticsLabel', semanticsLabel));
