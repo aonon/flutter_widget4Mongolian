@@ -19,3 +19,17 @@ bool isDesktopPlatform(TargetPlatform platform) {
       return false;
   }
 }
+
+/// Returns whether the [platform] follows Apple text-editing interactions.
+bool isApplePlatform(TargetPlatform platform) {
+  switch (platform) {
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return true;
+    case TargetPlatform.android:
+    case TargetPlatform.fuchsia:
+    case TargetPlatform.linux:
+    case TargetPlatform.windows:
+      return false;
+  }
+}

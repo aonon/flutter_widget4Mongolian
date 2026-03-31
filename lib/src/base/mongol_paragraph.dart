@@ -14,13 +14,8 @@ import 'package:flutter/painting.dart';
 import 'mongol_text_align.dart';
 
 /// ---------------------------------------------------------------------------
-/// MongolLineMetrics：每一行文字的“体检报告”
-///
-/// 当文字排版完成后，我们需要知道每一行到底占了多大地方、基线在哪里。
-/// 这个类就像一把尺子，记录了这一竖行文字的各项物理数据。
-/// ---------------------------------------------------------------------------
+/// Metrics for a line of Mongolian text.
 class MongolLineMetrics {
-  /// 创建行度量信息
   MongolLineMetrics({
     required this.hardBreak,
     required this.ascent,
@@ -33,31 +28,22 @@ class MongolLineMetrics {
     required this.lineNumber,
   });
 
-  /// 这一行是不是因为你敲了回车键才换行的？
   final bool hardBreak;
 
-  /// 基线以上的距离（文字的“额头”高度）
   final double ascent;
 
-  /// 基线以下的距离（文字的“下巴”深度）
   final double descent;
 
-  /// 忽略行高的原始上升高度（未缩放）
   final double unscaledAscent;
 
-  /// 这一行的总高度（在竖排逻辑中，它代表这一列的“厚度”/宽度）
   final double height;
 
-  /// 这一行的总宽度（在竖排逻辑中，它代表这一列从上到下的“长度”）
   final double width;
 
-  /// 这一行顶部的坐标
   final double top;
 
-  /// 这一行基线的位置
   final double baseline;
 
-  /// 这是第几行？（从 0 开始算）
   final int lineNumber;
 
   @override
@@ -96,21 +82,12 @@ class MongolLineMetrics {
 }
 
 /// ---------------------------------------------------------------------------
-/// MongolParagraph：蒙古文垂直排版的“总指挥”
+/// Layout engine for Mongolian vertical text.
 ///
-/// 蒙古文非常特殊：它是从上往下写，然后一列一列从左往右排。
-///
-/// 【核心设计思想】：
-/// 为了复用 Flutter 强大的排版引擎，我们采用了一个“旋转”策略：
-/// 1. 计算时：假装文字是普通的横排（Internal），计算好每一行多长、哪里该换行。
-/// 2. 显示时：通过 Canvas 旋转 90 度，把横排瞬间变成竖排（External）。
-///
-/// 【坐标转换口诀】：
-/// - 代码里的 width（宽） = 屏幕上看到的文字高度（列的长度）
-/// - 代码里的 height（高） = 屏幕上看到的文字行宽（列 of 厚度）
-/// ---------------------------------------------------------------------------
+/// Mongolian text is written vertically (top-to-bottom) and arranged in columns
+/// (left-to-right). This class uses a rotation strategy: text is computed as
+/// horizontal layout internally, then rotated 90 degrees for display.
 class MongolParagraph {
-  /// 由 [MongolParagraphBuilder] 创建，不应直接实例化
   MongolParagraph._(
     this._runs,
     this._text,
@@ -119,14 +96,13 @@ class MongolParagraph {
     this._textAlign,
   );
 
-  // 初始化原始文本和片段的特征哈希，用于检测内容是否变化
-  void _ensureSourceSignatureInitialized() {
+  void _initializeSourceSignatureIfNeeded() {
     if (_sourceTextHash != 0 && _sourceRunsSignatureHash != 0) return;
     _sourceTextHash = _text.hashCode;
-    _sourceRunsSignatureHash = _computeRunsSignature(_runs);
+    _sourceRunsSignatureHash = _computeRunsHash(_runs);
   }
 
-  int _computeRunsSignature(List<_TextRun> runs) {
+  int _computeRunsHash(List<_TextRun> runs) {
     final List<int> parts = <int>[];
     for (final r in runs) {
       parts.add(r.start);
@@ -201,22 +177,15 @@ class MongolParagraph {
 
   /// 执行核心布局计算
   void _layout(double height) {
-    _ensureSourceSignatureInitialized();
-
-    // 1. 看看内容和限制变了没？没变就直接收工。
+    _initializeSourceSignatureIfNeeded();
     final currentSignatureHash =
         Object.hash(height, _sourceTextHash, _sourceRunsSignatureHash);
     if (_lastLayoutSignatureHash != null &&
         _lastLayoutSignatureHash == currentSignatureHash) {
       return;
     }
-
     _resetComputedLayout();
-
-    // 2. 算断点：根据高度限制，决定在哪里把文字切断，换到下一列。
     _calculateLineBreaks(height);
-
-    // 3. 记录高度并计算内在高度限制。
     _height = height;
     _calculateIntrinsicHeight();
 
@@ -274,7 +243,7 @@ class MongolParagraph {
 
       // 检查是否遇到硬换行符 (\n)，强制换列
       lastRunEndsWithNewline = _runEndsWithNewLine(currentRun);
-      if (lastRunEndsWithNewline) {
+      if (lastRunEndsWithNewline && !_didExceedMaxLines) {
         endRunIndex = runIndex + 1;
         _addColumn(startRunIndex, endRunIndex, currentColumnWidth,
             currentColumnHeight);
@@ -307,8 +276,7 @@ class MongolParagraph {
     if (run == null) return false;
     final int end = run.end;
     if (end <= 0 || end > _text.length || run.start >= run.end) return false;
-    final int index = end - 1;
-    return _text[index] == '\n';
+    return _text.codeUnitAt(end - 1) == 0x0A; // '\n'
   }
 
   /// 添加一列文字信息到列表
@@ -319,7 +287,7 @@ class MongolParagraph {
       return;
     }
 
-    final Rect bounds = Rect.fromLTRB(0, 0, columnWidth, columnHeight);
+    final Rect bounds = Rect.fromLTWH(0, 0, columnWidth, columnHeight);
 
     // 计算每个 run 在列内的累积宽度（用于快速定位鼠标点击）
     final List<double> runCumulativeWidths = <double>[];
@@ -334,7 +302,7 @@ class MongolParagraph {
     final _ColumnLayout columnLayout =
         _ColumnLayout(startRunIndex, endRunIndex, bounds, runCumulativeWidths);
     _columns.add(columnLayout);
-    _longestLine = math.max(longestLine, columnLayout.bounds.width);
+    _longestLine = math.max(longestLine, _effectiveColumnWidth(columnLayout));
     _width = width + bounds.height;
 
     // 记录列的累积偏移（水平坐标）
@@ -395,17 +363,12 @@ class MongolParagraph {
   /// 当用户点了一下屏幕，我们需要知道他点在哪个字上。
   /// 因为有旋转，我们需要把屏幕坐标 (dx, dy) 逆向转回内部坐标。
   TextPosition getPositionForOffset(Offset offset) {
-    final encoded = _getPositionForOffset(offset.dx, offset.dy);
-    return TextPosition(
-        offset: encoded[0], affinity: TextAffinity.values[encoded[1]]);
+    return _getPositionForOffset(offset.dx, offset.dy);
   }
 
-  List<int> _getPositionForOffset(double externalX, double externalY) {
-    const int upstream = 0;
-    const int downstream = 1;
-
+  TextPosition _getPositionForOffset(double externalX, double externalY) {
     if (_columns.isEmpty) {
-      return [0, downstream];
+      return const TextPosition(offset: 0);
     }
 
     // 1. 用二分查找法，快速定位点在了第几列（水平坐标）
@@ -467,11 +430,10 @@ class MongolParagraph {
         matchedRun.paragraph.getPositionForOffset(runOffset);
     final int textOffset = matchedRun.start + runPosition.offset;
 
-    final int columnEndOffset = matchedRun.end;
-    final int textAffinity =
-        (textOffset == columnEndOffset) ? upstream : downstream;
-
-    return [textOffset, textAffinity];
+    final TextAffinity affinity = (textOffset == matchedRun.end)
+        ? TextAffinity.upstream
+        : TextAffinity.downstream;
+    return TextPosition(offset: textOffset, affinity: affinity);
   }
 
   /// 【最终绘制】
@@ -499,30 +461,41 @@ class MongolParagraph {
     canvas.restore();
   }
 
+  /// Returns column width excluding the trailing whitespace of the last run.
+  ///
+  /// When text is split into columns by soft-wrapping, non-last columns
+  /// typically end with a space-containing run (e.g. "word "). The trailing
+  /// space is invisible but included in [column.bounds.width]. Using the raw
+  /// width for alignment causes those columns' visible text to end above
+  /// [_height], while the last column (often without trailing space) ends
+  /// exactly at [_height] — making it appear shifted down.
+  double _effectiveColumnWidth(_ColumnLayout column) {
+    if (column.isEmpty) return 0.0;
+    final lastRun = _runs[column.textRunEnd - 1];
+    return column.bounds.width -
+        (lastRun.width - lastRun.paragraph.longestLine);
+  }
+
   void _drawRunsInColumn(Canvas canvas, _ColumnLayout column,
       bool shouldDrawEllipsis, bool isLastColumn) {
     canvas.save();
 
-    // 根据文本对齐方式调整列的位置
+    final effectiveWidth = _effectiveColumnWidth(column);
     var runSpacing = 0.0;
     switch (_textAlign) {
       case MongolTextAlign.top:
-        // 靠顶对齐，无需调整
         break;
       case MongolTextAlign.center:
-        // 居中对齐
-        final offset = (_height! - column.bounds.width) / 2;
+        final offset = (_height! - effectiveWidth) / 2;
         canvas.translate(offset, 0);
         break;
       case MongolTextAlign.bottom:
-        // 靠底对齐
-        final offset = _height! - column.bounds.width;
+        final offset = _height! - effectiveWidth;
         canvas.translate(offset, 0);
         break;
       case MongolTextAlign.justify:
-        // 两端对齐（最后一列除外）
         if (isLastColumn) break;
-        final extraSpace = _height! - column.bounds.width;
+        final extraSpace = _height! - effectiveWidth;
         final runsInColumn = column.textRunEnd - column.textRunStart;
         if (runsInColumn <= 1) break;
         runSpacing = extraSpace / (runsInColumn - 1);
@@ -534,15 +507,11 @@ class MongolParagraph {
     for (var j = startIndex; j <= endIndex; j++) {
       final run = _runs[j];
 
-      // 计算 run 的绘制偏移
+      // 计算 run 的绘制偏移：旋转字符需居中并修正基线
       var alignmentOffset = 0.0;
-      if (run.isRotated) {
-        // 需要旋转的文字在列内垂直居中
-        alignmentOffset = (column.bounds.height - run.width) / 2;
-      }
       var verticalShift = 0.0;
       if (run.isRotated) {
-        // 调整基线以获得更好的视觉效果
+        alignmentOffset = (column.bounds.height - run.width) / 2;
         final descent = run.paragraph.height - run.paragraph.alphabeticBaseline;
         verticalShift = -descent / 2;
       }
@@ -799,8 +768,7 @@ class MongolParagraph {
           final _TextRun textRun = _runs[runIndex];
           final List<LineMetrics> runLineMetrics =
               textRun.paragraph.computeLineMetrics();
-          final LineMetrics? runMetrics =
-              runLineMetrics.isNotEmpty ? runLineMetrics.first : null;
+          final LineMetrics? runMetrics = runLineMetrics.firstOrNull;
 
           if (runIndex == column.textRunEnd - 1) {
             isHardBreak = _runEndsWithNewLine(textRun);
@@ -844,11 +812,15 @@ class MongolParagraph {
         }
       }
 
+      final effectiveWidth = (column.textRunStart >= 0 &&
+              column.textRunEnd > column.textRunStart)
+          ? _effectiveColumnWidth(column)
+          : totalHeight;
       double lineTopOffset = 0;
       if (_textAlign == MongolTextAlign.center) {
-        lineTopOffset = (height - totalHeight) / 2;
+        lineTopOffset = (height - effectiveWidth) / 2;
       } else if (_textAlign == MongolTextAlign.bottom) {
-        lineTopOffset = height - totalHeight;
+        lineTopOffset = height - effectiveWidth;
       }
 
       final MongolLineMetrics lineMetrics = MongolLineMetrics(
@@ -1062,7 +1034,7 @@ class MongolParagraphBuilder {
 
   String _stripNewLineChar(String text) {
     if (!text.endsWith('\n')) return text;
-    return text.replaceAll('\n', '');
+    return text.substring(0, text.length - 1);
   }
 
   _TextRun? _ellipsisRun(ui.TextStyle? style) {

@@ -28,54 +28,28 @@ import 'package:flutter/material.dart'
         WidgetStatePropertyAll,
         kThemeChangeDuration;
 
+import 'button_style_utils.dart';
 import 'mongol_button_style_button.dart';
 
-/// 垂直方向的Material Design "轮廓按钮"；本质上是带有轮廓边框的[MongolTextButton]。
+/// 垂直方向的 Material Design “轮廓按钮”（Outlined Button）。
 ///
-/// 轮廓按钮是中等强调的按钮。它们包含重要的操作，但不是应用程序中的主要操作。
+/// 轮廓按钮是中等强调程度的按钮，适用于重要但非主要的操作。
+/// 它本质上是带有边框轮廓的 [MongolTextButton]。
 ///
-/// 轮廓按钮是在（零海拔）[Material]小部件上显示的标签[child]。标签的[MongolText]和[Icon]
-/// 小部件以[style]的[ButtonStyle.foregroundColor]显示，轮廓的权重和颜色
-/// 由[ButtonStyle.side]定义。按钮通过填充[style]的[ButtonStyle.backgroundColor]来响应触摸。
+/// 轮廓按钮是在海拔高度为 0 的 [Material] 组件上显示的标签 [child]。
+/// 标签的 [MongolText] 和 [Icon] 以 [style] 的 [ButtonStyle.foregroundColor] 显示，
+/// 轮廓的粗细和颜色由 [ButtonStyle.side] 定义。
 ///
-/// 轮廓按钮的默认样式由[defaultStyleOf]定义。
-/// 此轮廓按钮的样式可以通过其[style]参数覆盖。子树中所有文本按钮的样式可以通过[OutlinedButtonTheme]覆盖，
-/// 应用程序中所有轮廓按钮的样式可以通过[Theme]的[ThemeData.outlinedButtonTheme]属性覆盖。
+/// 默认样式由 [defaultStyleOf] 定义。可以通过 [style] 参数覆盖。
 ///
-/// 与[MongolTextButton]或[MongolElevatedButton]不同，轮廓按钮有一个默认的[ButtonStyle.side]，
-/// 它定义了轮廓的外观。因为默认的`side`不为空，所以它无条件地覆盖形状的[OutlinedBorder.side]。
-/// 换句话说，要指定轮廓按钮的形状和轮廓的外观，必须同时指定[ButtonStyle.shape]和[ButtonStyle.side]属性。
-///
-/// {@tool dartpad --template=stateless_widget_scaffold_center}
-///
-/// 以下是基本[MongolOutlinedButton]的示例。
-///
-/// ```dart
-/// Widget build(BuildContext context) {
-///   return MongolOutlinedButton(
-///     onPressed: () {
-///       print('Received click');
-///     },
-///     child: const MongolText('点击我'),
-///   );
-/// }
-/// ```
-/// {@end-tool}
-///
-/// 静态[styleFrom]方法是从简单值创建轮廓按钮[ButtonStyle]的便捷方法。
-///
-/// 另请参见：
-///
-///  * [MongolElevatedButton]，一种填充的垂直按钮，其材质在按下时会升高。
-///  * [FilledButton]，一种填充的垂直按钮，按下时不会升高。
-///  * [FilledButton.tonal]，一种填充的垂直按钮变体，使用次要填充颜色。
-///  * [MongolTextButton]，一种没有轮廓或填充颜色的垂直按钮。
+/// 另请参阅：
+///  * [MongolElevatedButton]：按下时会增加海拔高度的填充按钮。
+///  * [MongolFilledButton]：带有填充背景且海拔高度不变的按钮。
+///  * [MongolTextButton]：无边框和填充色的扁平按钮。
 ///  * <https://material.io/design/components/buttons.html>
 ///  * <https://m3.material.io/components/buttons>
 class MongolOutlinedButton extends MongolButtonStyleButton {
-  /// 创建一个MongolOutlinedButton。
-  ///
-  /// [autofocus]和[clipBehavior]参数不能为空。
+  /// 创建一个 [MongolOutlinedButton]。
   const MongolOutlinedButton({
     super.key,
     required super.onPressed,
@@ -90,11 +64,7 @@ class MongolOutlinedButton extends MongolButtonStyleButton {
     required super.child,
   });
 
-  /// 从一对用作按钮[icon]和[label]的小部件创建文本按钮。
-  ///
-  /// 图标和标签排列在一列中，开头有12个逻辑像素的填充，结尾有16个逻辑像素的填充，中间有8个像素的间隙。
-  ///
-  /// [icon]和[label]参数不能为空。
+  /// 创建一个带有图标和标签的轮廓按钮。
   factory MongolOutlinedButton.icon({
     Key? key,
     required VoidCallback? onPressed,
@@ -108,30 +78,7 @@ class MongolOutlinedButton extends MongolButtonStyleButton {
     required Widget label,
   }) = _MongolOutlinedButtonWithIcon;
 
-  /// 一个静态便捷方法，根据简单的值构造轮廓按钮[ButtonStyle]。
-  ///
-  /// [foregroundColor]和[disabledForegroundColor]颜色用于创建[MaterialStateProperty] [ButtonStyle.foregroundColor]，
-  /// 以及派生的[ButtonStyle.overlayColor]。
-  ///
-  /// [backgroundColor]和[disabledBackgroundColor]颜色用于创建[MaterialStateProperty] [ButtonStyle.backgroundColor]。
-  /// 禁用的文本和图标颜色。
-  ///
-  /// 类似地，[enabledMouseCursor]和[disabledMouseCursor]参数用于构造[ButtonStyle.mouseCursor]。
-  ///
-  /// 所有其他参数要么直接使用，要么用于为所有状态创建具有单个值的[WidgetStateProperty]。
-  ///
-  /// 所有参数默认为null，默认情况下此方法返回一个不覆盖任何内容的[ButtonStyle]。
-  ///
-  /// 例如，要覆盖[MongolOutlinedButton]的默认形状和轮廓，可以编写：
-  ///
-  /// ```dart
-  /// MongolOutlinedButton(
-  ///   style: OutlinedButton.styleFrom(
-  ///      shape: StadiumBorder(),
-  ///      side: BorderSide(width: 2, color: Colors.green),
-  ///   ),
-  /// )
-  /// ```
+  /// 根据简单值构造轮廓按钮 [ButtonStyle] 的静态便捷方法。
   static ButtonStyle styleFrom({
     Color? foregroundColor,
     Color? backgroundColor,
@@ -158,15 +105,15 @@ class MongolOutlinedButton extends MongolButtonStyleButton {
   }) {
     final Color? foreground = foregroundColor;
     final Color? disabledForeground = disabledForegroundColor;
-    final WidgetStateProperty<Color?>? foregroundColorProp =
+    final WidgetStateProperty<Color?>? foregroundColorProperty =
         (foreground == null && disabledForeground == null)
             ? null
             : _OutlinedButtonDefaultColor(foreground, disabledForeground);
-    final WidgetStateProperty<Color?>? backgroundColorProp =
+    final WidgetStateProperty<Color?>? backgroundColorProperty =
         (backgroundColor == null && disabledBackgroundColor == null)
             ? null
             : disabledBackgroundColor == null
-                ? ButtonStyleButton.allOrNull<Color?>(backgroundColor)
+                ? widgetStateAllOrNull<Color?>(backgroundColor)
                 : _OutlinedButtonDefaultColor(
                     backgroundColor, disabledBackgroundColor);
     final WidgetStateProperty<Color?>? overlayColor =
@@ -176,19 +123,19 @@ class MongolOutlinedButton extends MongolButtonStyleButton {
             enabledMouseCursor, disabledMouseCursor);
 
     return ButtonStyle(
-      textStyle: ButtonStyleButton.allOrNull<TextStyle>(textStyle),
-      foregroundColor: foregroundColorProp,
-      backgroundColor: backgroundColorProp,
+      textStyle: widgetStateAllOrNull<TextStyle>(textStyle),
+      foregroundColor: foregroundColorProperty,
+      backgroundColor: backgroundColorProperty,
       overlayColor: overlayColor,
-      shadowColor: ButtonStyleButton.allOrNull<Color>(shadowColor),
-      surfaceTintColor: ButtonStyleButton.allOrNull<Color>(surfaceTintColor),
-      elevation: ButtonStyleButton.allOrNull<double>(elevation),
-      padding: ButtonStyleButton.allOrNull<EdgeInsetsGeometry>(padding),
-      minimumSize: ButtonStyleButton.allOrNull<Size>(minimumSize),
-      maximumSize: ButtonStyleButton.allOrNull<Size>(maximumSize),
-      fixedSize: ButtonStyleButton.allOrNull<Size>(fixedSize),
-      side: ButtonStyleButton.allOrNull<BorderSide>(side),
-      shape: ButtonStyleButton.allOrNull<OutlinedBorder>(shape),
+      shadowColor: widgetStateAllOrNull<Color>(shadowColor),
+      surfaceTintColor: widgetStateAllOrNull<Color>(surfaceTintColor),
+      elevation: widgetStateAllOrNull<double>(elevation),
+      padding: widgetStateAllOrNull<EdgeInsetsGeometry>(padding),
+      minimumSize: widgetStateAllOrNull<Size>(minimumSize),
+      maximumSize: widgetStateAllOrNull<Size>(maximumSize),
+      fixedSize: widgetStateAllOrNull<Size>(fixedSize),
+      side: widgetStateAllOrNull<BorderSide>(side),
+      shape: widgetStateAllOrNull<OutlinedBorder>(shape),
       mouseCursor: mouseCursor,
       visualDensity: visualDensity,
       tapTargetSize: tapTargetSize,
@@ -199,92 +146,7 @@ class MongolOutlinedButton extends MongolButtonStyleButton {
     );
   }
 
-  /// 定义按钮的默认外观。
-  ///
-  /// 除了定义轮廓的[ButtonStyle.side]和[ButtonStyle.padding]外，返回的样式与[MongolTextButton]相同。
-  ///
-  /// 按钮[child]的[MongolText]和[Icon]小部件使用[ButtonStyle]的前景颜色渲染。
-  /// 当按钮获得焦点、悬停或按下时，按钮的[InkWell]会添加样式的覆盖颜色。
-  /// 按钮的背景颜色成为其[Material]颜色，默认情况下是透明的。
-  ///
-  /// 所有ButtonStyle的默认值如下。在这个列表中，"Theme.foo"是`Theme.of(context).foo`的简写。
-  /// 颜色方案值如"onSurface(0.38)"是`onSurface.withValues(alpha: 0.38)`的简写。
-  /// 没有后跟子列表的[WidgetStateProperty]值属性对于所有状态都具有相同的值，
-  /// 否则值如为每个状态指定，"others"表示所有其他状态。
-  ///
-  /// [ButtonStyle.textStyle]的颜色不使用，而是使用[ButtonStyle.foregroundColor]。
-  ///
-  /// ## Material 2 默认值
-  ///
-  /// * `textStyle` - Theme.textTheme.button
-  /// * `backgroundColor` - transparent
-  /// * `foregroundColor`
-  ///   * disabled - Theme.colorScheme.onSurface(0.38)
-  ///   * others - Theme.colorScheme.primary
-  /// * `overlayColor`
-  ///   * hovered - Theme.colorScheme.primary(0.04)
-  ///   * focused or pressed - Theme.colorScheme.primary(0.12)
-  /// * `shadowColor` - Theme.shadowColor
-  /// * `elevation` - 0
-  /// * `padding`
-  ///   * `default font size <= 14` - vertical(16)
-  ///   * `14 < default font size <= 28` - lerp(vertical(16), vertical(8))
-  ///   * `28 < default font size <= 36` - lerp(vertical(8), vertical(4))
-  ///   * `36 < default font size` - vertical(4)
-  /// * `minimumSize` - Size(36, 64)
-  /// * `fixedSize` - null
-  /// * `maximumSize` - Size.infinite
-  /// * `side` - BorderSide(width: 1, color: Theme.colorScheme.onSurface(0.12))
-  /// * `shape` - RoundedRectangleBorder(borderRadius: BorderRadius.circular(4))
-  /// * `mouseCursor`
-  ///   * disabled - SystemMouseCursors.forbidden
-  ///   * others - SystemMouseCursors.click
-  /// * `visualDensity` - theme.visualDensity
-  /// * `tapTargetSize` - theme.materialTapTargetSize
-  /// * `animationDuration` - kThemeChangeDuration
-  /// * `enableFeedback` - true
-  /// * `alignment` - Alignment.center
-  /// * `splashFactory` - InkRipple.splashFactory
-  ///
-  /// ## Material 3 默认值
-  ///
-  /// 如果[ThemeData.useMaterial3]设置为true，将使用以下默认值：
-  ///
-  /// * `textStyle` - Theme.textTheme.labelLarge
-  /// * `backgroundColor` - transparent
-  /// * `foregroundColor`
-  ///   * disabled - Theme.colorScheme.onSurface(0.38)
-  ///   * others - Theme.colorScheme.primary
-  /// * `overlayColor`
-  ///   * hovered - Theme.colorScheme.primary(0.08)
-  ///   * focused or pressed - Theme.colorScheme.primary(0.12)
-  ///   * others - null
-  /// * `shadowColor` - Colors.transparent,
-  /// * `surfaceTintColor` - null
-  /// * `elevation` - 0
-  /// * `padding`
-  ///   * `default font size <= 14` - vertical(24)
-  ///   * `14 < default font size <= 28` - lerp(vertical(24), vertical(12))
-  ///   * `28 < default font size <= 36` - lerp(vertical(12), vertical(6))
-  ///   * `36 < default font size` - vertical(6)
-  /// * `minimumSize` - Size(40, 64)
-  /// * `fixedSize` - null
-  /// * `maximumSize` - Size.infinite
-  /// * `side`
-  ///   * disabled - BorderSide(color: Theme.colorScheme.onSurface(0.12))
-  ///   * others - BorderSide(color: Theme.colorScheme.outline)
-  /// * `shape` - StadiumBorder()
-  /// * `mouseCursor`
-  ///   * disabled - SystemMouseCursors.basic
-  ///   * others - SystemMouseCursors.click
-  /// * `visualDensity` - theme.visualDensity
-  /// * `tapTargetSize` - theme.materialTapTargetSize
-  /// * `animationDuration` - kThemeChangeDuration
-  /// * `enableFeedback` - true
-  /// * `alignment` - Alignment.center
-  /// * `splashFactory` - Theme.splashFactory
-  ///
-  /// 对于[OutlinedButton.icon]工厂，[padding]的开始（通常是顶部）值从24减少到16。
+  /// 定义按钮的默认外观样式。
   @override
   ButtonStyle defaultStyleOf(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -323,100 +185,75 @@ class MongolOutlinedButton extends MongolButtonStyleButton {
           );
   }
 
-  /// 返回最近的[OutlinedButtonTheme]祖先的样式。
+  /// 获取轮廓按钮主题中的样式。
   @override
   ButtonStyle? themeStyleOf(BuildContext context) {
     return OutlinedButtonTheme.of(context).style;
   }
 }
 
-/// 计算按钮的缩放内边距
-///
-/// 根据主题和文本缩放因子计算按钮的垂直内边距。
+/// 计算经过缩放调整后的内边距。
 EdgeInsetsGeometry _scaledPadding(BuildContext context) {
   final ThemeData theme = Theme.of(context);
-  final double padding1x = theme.useMaterial3 ? 24.0 : 16.0; // Material 3使用24，Material 2使用16
-  final double defaultFontSize = theme.textTheme.labelLarge?.fontSize ?? 14.0; // 默认字体大小
+  final double paddingBase = theme.useMaterial3 ? 24.0 : 16.0;
+  final double defaultFontSize = theme.textTheme.labelLarge?.fontSize ?? 14.0;
   final double effectiveTextScale =
-      MediaQuery.textScalerOf(context).scale(defaultFontSize) / 14.0; // 有效的文本缩放因子
+      MediaQuery.textScalerOf(context).scale(defaultFontSize) / 14.0;
   return ButtonStyleButton.scaledPadding(
-    EdgeInsets.symmetric(vertical: padding1x), // 正常内边距
-    EdgeInsets.symmetric(vertical: padding1x / 2), // 中等内边距
-    EdgeInsets.symmetric(vertical: padding1x / 2 / 2), // 小内边距
-    effectiveTextScale, // 文本缩放因子
+    EdgeInsets.symmetric(vertical: paddingBase),
+    EdgeInsets.symmetric(vertical: paddingBase / 2),
+    EdgeInsets.symmetric(vertical: paddingBase / 4),
+    effectiveTextScale,
   );
 }
 
-/// 轮廓按钮的默认颜色属性
-///
-/// 根据按钮状态返回不同的颜色。
 @immutable
 class _OutlinedButtonDefaultColor extends WidgetStateProperty<Color?>
     with Diagnosticable {
-  /// 创建一个轮廓按钮默认颜色属性
-  ///
-  /// [color]：正常状态下的颜色
-  /// [disabled]：禁用状态下的颜色
-  _OutlinedButtonDefaultColor(this.color, this.disabled);
+  _OutlinedButtonDefaultColor(this.activeColor, this.disabledColor);
 
-  final Color? color; // 正常状态下的颜色
-  final Color? disabled; // 禁用状态下的颜色
+  final Color? activeColor;
+  final Color? disabledColor;
 
-  /// 根据状态解析颜色
   @override
   Color? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) {
-      return disabled;
+      return disabledColor;
     }
-    return color;
+    return activeColor;
   }
 }
 
-/// 轮廓按钮的默认覆盖颜色属性
-///
-/// 根据按钮状态返回不同的覆盖颜色，用于悬停、焦点和按下状态。
 @immutable
 class _OutlinedButtonDefaultOverlay extends WidgetStateProperty<Color?>
     with Diagnosticable {
-  /// 创建一个轮廓按钮默认覆盖颜色属性
-  ///
-  /// [foreground]：前景颜色
-  _OutlinedButtonDefaultOverlay(this.foreground);
+  _OutlinedButtonDefaultOverlay(this.baseColor);
 
-  final Color foreground; // 前景颜色
+  final Color baseColor;
 
-  /// 根据状态解析颜色
   @override
   Color? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.pressed)) {
-      return foreground.withValues(alpha: 0.12);
+      return baseColor.withValues(alpha: 0.12);
     }
     if (states.contains(WidgetState.hovered)) {
-      return foreground.withValues(alpha: 0.04);
+      return baseColor.withValues(alpha: 0.04);
     }
     if (states.contains(WidgetState.focused)) {
-      return foreground.withValues(alpha: 0.12);
+      return baseColor.withValues(alpha: 0.12);
     }
     return null;
   }
 }
 
-/// 轮廓按钮的默认鼠标光标属性
-///
-/// 根据按钮状态返回不同的鼠标光标。
 @immutable
 class _OutlinedButtonDefaultMouseCursor
     extends WidgetStateProperty<MouseCursor?> with Diagnosticable {
-  /// 创建一个轮廓按钮默认鼠标光标属性
-  ///
-  /// [enabledCursor]：启用状态下的鼠标光标
-  /// [disabledCursor]：禁用状态下的鼠标光标
   _OutlinedButtonDefaultMouseCursor(this.enabledCursor, this.disabledCursor);
 
-  final MouseCursor? enabledCursor; // 启用状态下的鼠标光标
-  final MouseCursor? disabledCursor; // 禁用状态下的鼠标光标
+  final MouseCursor? enabledCursor;
+  final MouseCursor? disabledCursor;
 
-  /// 根据状态解析鼠标光标
   @override
   MouseCursor? resolve(Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) {
@@ -426,12 +263,7 @@ class _OutlinedButtonDefaultMouseCursor
   }
 }
 
-/// 带有图标的Mongol轮廓按钮
 class _MongolOutlinedButtonWithIcon extends MongolOutlinedButton {
-  /// 创建一个带有图标的Mongol轮廓按钮
-  ///
-  /// [icon]：按钮的图标
-  /// [label]：按钮的标签
   _MongolOutlinedButtonWithIcon({
     super.key,
     required super.onPressed,
@@ -449,7 +281,6 @@ class _MongolOutlinedButtonWithIcon extends MongolOutlinedButton {
           child: _MongolOutlinedButtonWithIconChild(icon: icon, label: label),
         );
 
-  /// 定义带图标的轮廓按钮的默认样式
   @override
   ButtonStyle defaultStyleOf(BuildContext context) {
     final bool useMaterial3 = Theme.of(context).useMaterial3;
@@ -473,28 +304,21 @@ class _MongolOutlinedButtonWithIcon extends MongolOutlinedButton {
   }
 }
 
-/// 带有图标的Mongol轮廓按钮的子部件
 class _MongolOutlinedButtonWithIconChild extends StatelessWidget {
-  /// 创建一个带有图标的Mongol轮廓按钮的子部件
-  ///
-  /// [label]：按钮的标签
-  /// [icon]：按钮的图标
   const _MongolOutlinedButtonWithIconChild({
     required this.label,
     required this.icon,
   });
 
-  final Widget label; // 按钮的标签
-  final Widget icon; // 按钮的图标
+  final Widget label;
+  final Widget icon;
 
-  /// 构建UI
   @override
   Widget build(BuildContext context) {
     final TextScaler textScaler = MediaQuery.textScalerOf(context);
-    // 使用 TextScaler.scale() 替代已弃用的 textScaleFactor
-    final double scale = textScaler.scale(1.0); // 文本缩放因子
+    final double scale = textScaler.scale(1.0);
     final double gap =
-        scale <= 1 ? 8 : lerpDouble(8, 4, math.min(scale - 1, 1))!; // 图标和标签之间的间隙
+        scale <= 1 ? 8 : lerpDouble(8, 4, math.min(scale - 1, 1))!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[icon, SizedBox(height: gap), Flexible(child: label)],
@@ -502,17 +326,8 @@ class _MongolOutlinedButtonWithIconChild extends StatelessWidget {
   }
 }
 
-// BEGIN GENERATED TOKEN PROPERTIES - OutlinedButton
-
-// 请勿手动编辑。"BEGIN GENERATED"和"END GENERATED"注释之间的代码是从Material
-// Design token数据库通过脚本生成的：
-//   dev/tools/gen_defaults/bin/gen_defaults.dart。
-
-/// 轮廓按钮的Material 3默认样式
+/// Material 3 轮廓按钮的默认样式实现。
 class _MongolOutlinedButtonDefaultsM3 extends ButtonStyle {
-  /// 创建轮廓按钮的Material 3默认样式
-  ///
-  /// [context]：构建上下文
   _MongolOutlinedButtonDefaultsM3(this.context)
       : super(
           animationDuration: kThemeChangeDuration,
@@ -520,17 +335,17 @@ class _MongolOutlinedButtonDefaultsM3 extends ButtonStyle {
           alignment: Alignment.center,
         );
 
-  final BuildContext context; // 构建上下文
-  late final ColorScheme _colors = Theme.of(context).colorScheme; // 颜色方案
+  final BuildContext context;
+  late final ColorScheme _colors = Theme.of(context).colorScheme;
 
   @override
   WidgetStateProperty<TextStyle?> get textStyle =>
       WidgetStatePropertyAll<TextStyle?>(
-          Theme.of(context).textTheme.labelLarge); // 文本样式
+          Theme.of(context).textTheme.labelLarge);
 
   @override
   WidgetStateProperty<Color?>? get backgroundColor =>
-      const WidgetStatePropertyAll<Color>(Colors.transparent); // 背景颜色
+      const WidgetStatePropertyAll<Color>(Colors.transparent);
 
   @override
   WidgetStateProperty<Color?>? get foregroundColor =>
@@ -539,7 +354,7 @@ class _MongolOutlinedButtonDefaultsM3 extends ButtonStyle {
           return _colors.onSurface.withValues(alpha: 0.38);
         }
         return _colors.primary;
-      }); // 前景颜色
+      });
 
   @override
   WidgetStateProperty<Color?>? get overlayColor =>
@@ -554,33 +369,31 @@ class _MongolOutlinedButtonDefaultsM3 extends ButtonStyle {
           return _colors.primary.withValues(alpha: 0.12);
         }
         return null;
-      }); // 覆盖颜色
+      });
 
   @override
   WidgetStateProperty<Color>? get shadowColor =>
-      const WidgetStatePropertyAll<Color>(Colors.transparent); // 阴影颜色
+      const WidgetStatePropertyAll<Color>(Colors.transparent);
 
   @override
   WidgetStateProperty<Color>? get surfaceTintColor =>
-      const WidgetStatePropertyAll<Color>(Colors.transparent); // 表面色调
+      const WidgetStatePropertyAll<Color>(Colors.transparent);
 
   @override
   WidgetStateProperty<double>? get elevation =>
-      const WidgetStatePropertyAll<double>(0.0); // 海拔高度
+      const WidgetStatePropertyAll<double>(0.0);
 
   @override
   WidgetStateProperty<EdgeInsetsGeometry>? get padding =>
-      WidgetStatePropertyAll<EdgeInsetsGeometry>(_scaledPadding(context)); // 内边距
+      WidgetStatePropertyAll<EdgeInsetsGeometry>(_scaledPadding(context));
 
   @override
   WidgetStateProperty<Size>? get minimumSize =>
-      const WidgetStatePropertyAll<Size>(Size(40.0, 64.0)); // 最小大小
-
-  // 无默认固定大小
+      const WidgetStatePropertyAll<Size>(Size(40.0, 64.0));
 
   @override
   WidgetStateProperty<Size>? get maximumSize =>
-      const WidgetStatePropertyAll<Size>(Size.infinite); // 最大大小
+      const WidgetStatePropertyAll<Size>(Size.infinite);
 
   @override
   WidgetStateProperty<BorderSide>? get side =>
@@ -592,11 +405,11 @@ class _MongolOutlinedButtonDefaultsM3 extends ButtonStyle {
           return BorderSide(color: _colors.primary);
         }
         return BorderSide(color: _colors.outline);
-      }); // 边框
+      });
 
   @override
   WidgetStateProperty<OutlinedBorder>? get shape =>
-      const WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder()); // 形状
+      const WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder());
 
   @override
   WidgetStateProperty<MouseCursor?>? get mouseCursor =>
@@ -605,18 +418,16 @@ class _MongolOutlinedButtonDefaultsM3 extends ButtonStyle {
           return SystemMouseCursors.basic;
         }
         return SystemMouseCursors.click;
-      }); // 鼠标光标
+      });
 
   @override
-  VisualDensity? get visualDensity => Theme.of(context).visualDensity; // 视觉密度
+  VisualDensity? get visualDensity => Theme.of(context).visualDensity;
 
   @override
   MaterialTapTargetSize? get tapTargetSize =>
-      Theme.of(context).materialTapTargetSize; // 点击目标大小
+      Theme.of(context).materialTapTargetSize;
 
   @override
   InteractiveInkFeatureFactory? get splashFactory =>
-      Theme.of(context).splashFactory; // 水波纹效果工厂
+      Theme.of(context).splashFactory;
 }
-
-// END GENERATED TOKEN PROPERTIES - OutlinedButton

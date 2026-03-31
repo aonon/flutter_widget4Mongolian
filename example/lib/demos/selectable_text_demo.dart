@@ -130,7 +130,7 @@ class _SelectableTextDemoPageState extends State<SelectableTextDemoPage> {
                         child: MongolSelectableText(
                           '长按此文本，选区将以绿色高亮显示。',
                           style: const TextStyle(fontSize: 18),
-                          selectionColor: Colors.green.withOpacity(0.4),
+                          selectionColor: Colors.green.withValues(alpha: 0.4),
                           onSelectionChanged: (selection, cause) {
                             setState(() {
                               _selectedText = '选中内容已改变';

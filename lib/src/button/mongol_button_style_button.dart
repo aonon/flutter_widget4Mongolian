@@ -38,17 +38,18 @@ import 'package:flutter/material.dart'
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// 按钮的基础类，样式由 [ButtonStyle] 对象定义
+/// 蒙古语风格按钮的基类，其外观通过 [ButtonStyle] 进行定义。
 ///
-/// 具体子类必须重写 [defaultStyleOf] 和 [themeStyleOf] 方法
+/// 具体的子类（如 [MongolTextButton]、[MongolElevatedButton] 等）必须实现
+/// [defaultStyleOf] 和 [themeStyleOf] 方法，以提供特定组件的默认样式。
 ///
 /// 另请参阅：
-///  * [MongolTextButton] - 无轮廓和填充色的简单按钮
-///  * [MongolFilledButton] - 填充色按钮，按下时不提升
-///  * [MongolElevatedButton] - 填充色按钮，按下时材质会提升
-///  * [MongolOutlinedButton] - 带轮廓的按钮，无填充色
+///  * [MongolTextButton]：无背景和轮廓的简单文字按钮。
+///  * [MongolFilledButton]：带有填充背景且按下时不会提升的海拔（Elevation）按钮。
+///  * [MongolElevatedButton]：带有背景且按下时海拔会增加的悬浮按钮。
+///  * [MongolOutlinedButton]：带有轮廓但通常没有背景填充的按钮。
 abstract class MongolButtonStyleButton extends StatefulWidget {
-  /// 创建按钮样式按钮
+  /// 创建一个 [MongolButtonStyleButton]。
   const MongolButtonStyleButton({
     super.key,
     required this.onPressed,
@@ -64,47 +65,34 @@ abstract class MongolButtonStyleButton extends StatefulWidget {
     required this.child,
   });
 
-  /// 当按钮被点击或以其他方式激活时调用。
+  /// 当按钮被点击或以其他方式激活时调用的回调。
   ///
   /// 如果此回调和 [onLongPress] 都为 null，则按钮将被禁用。
   ///
   /// 另请参阅：
-  ///
-  ///  * [enabled]，如果按钮已启用，则为 true。
+  ///  * [enabled]：如果按钮已启用，则为 true。
   final VoidCallback? onPressed;
 
-  /// 当按钮被长按时调用。
+  /// 当按钮被长按时调用的回调。
   ///
   /// 如果此回调和 [onPressed] 都为 null，则按钮将被禁用。
   ///
   /// 另请参阅：
-  ///
-  ///  * [enabled]，如果按钮已启用，则为 true。
+  ///  * [enabled]：如果按钮已启用，则为 true。
   final VoidCallback? onLongPress;
 
-  /// 当指针进入或退出按钮响应区域时调用。
-  ///
-  /// 传递给回调的值为 true，如果指针已进入此
-  /// 材质部分，为 false 如果指针已退出此材质部分。
+  /// 当鼠标指针进入或离开按钮响应区域时调用的回调。
   final ValueChanged<bool>? onHover;
 
-  /// 当焦点变化时调用的处理程序。
-  ///
-  /// 如果此小部件的节点获得焦点，则调用 true，如果失去焦点，则调用 false。
+  /// 当按钮焦点状态发生变化时调用的回调。
   final ValueChanged<bool>? onFocusChange;
 
-  /// 自定义此按钮的外观。
+  /// 自定义此按钮样式的配置对象。
   ///
-  /// 此样式的非空属性会覆盖 [themeStyleOf] 和 [defaultStyleOf] 中的相应
-  /// 属性。解析为非空值的 [WidgetStateProperty] 也会类似地覆盖 [themeStyleOf] 和 [defaultStyleOf] 中的相应
-  /// [WidgetStateProperty]。
-  ///
-  /// 默认值为 null。
+  /// 此样式的非空属性会覆盖 [themeStyleOf] 和 [defaultStyleOf] 中的相应属性。
   final ButtonStyle? style;
 
   /// {@macro flutter.material.Material.clipBehavior}
-  ///
-  /// 默认值为 [Clip.none]，且不能为空。
   final Clip clipBehavior;
 
   /// {@macro flutter.widgets.Focus.focusNode}
@@ -118,51 +106,27 @@ abstract class MongolButtonStyleButton extends StatefulWidget {
 
   /// 确定此子树是否表示按钮。
   ///
-  /// 如果为 null，则屏幕阅读器在此
-  /// 获得焦点时不会宣布 "button"。这对于 [MenuItemButton] 和 [SubmenuButton] 在我们
-  /// 遍历菜单系统时很有用。
-  ///
-  /// 默认值为 true。
+  /// 默认为 true。
   final bool? isSemanticButton;
 
-  /// 通常是按钮的标签。
+  /// 按钮的内容，通常是标签。
   final Widget? child;
 
-  /// 返回一个非空的 [ButtonStyle]，主要基于 [Theme] 的
-  /// [ThemeData.textTheme] 和 [ThemeData.colorScheme]。
+  /// 返回此按钮的默认 [ButtonStyle]。
   ///
-  /// 返回的样式可以被 [style] 参数和
-  /// [themeStyleOf] 返回的样式覆盖。例如，[TextButton] 子类的默认
-  /// 样式可以通过其 [TextButton.style] 构造函数参数或使用
-  /// [TextButtonTheme] 来覆盖。
-  ///
-  /// 具体的按钮子类应该返回一个 ButtonStyle，
-  /// 该样式没有 null 属性，并且所有 [WidgetStateProperty]
-  /// 属性都解析为非空值。
-  ///
-  /// 另请参阅：
-  ///
-  ///  * [themeStyleOf]，返回此按钮的组件主题的 ButtonStyle。
+  /// 返回的样式可以被 [style] 参数和 [themeStyleOf] 返回的样式覆盖。
   @protected
   ButtonStyle defaultStyleOf(BuildContext context);
 
-  /// 返回属于按钮组件主题的 ButtonStyle。
+  /// 返回属于按钮组件主题的 [ButtonStyle]。
   ///
   /// 返回的样式可以被 [style] 参数覆盖。
-  ///
-  /// 具体的按钮子类应该返回最近的子类特定继承主题的 ButtonStyle，
-  /// 如果不存在这样的主题，则返回整体 [Theme] 中的相同值。
-  ///
-  /// 另请参阅：
-  ///
-  ///  * [defaultStyleOf]，返回此按钮的默认 [ButtonStyle]。
   @protected
   ButtonStyle? themeStyleOf(BuildContext context);
 
-  /// 按钮是否启用或禁用。
+  /// 按钮当前是否处于启用状态。
   ///
-  /// 按钮默认是禁用的。要启用按钮，请将其 [onPressed]
-  /// 或 [onLongPress] 属性设置为非 null 值。
+  /// 当 [onPressed] 或 [onLongPress] 非空时，按钮被视为启用。
   bool get enabled => onPressed != null || onLongPress != null;
 
   @override
@@ -171,60 +135,49 @@ abstract class MongolButtonStyleButton extends StatefulWidget {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties
-        .add(FlagProperty('enabled', value: enabled, ifFalse: 'disabled'));
-    properties.add(
-        DiagnosticsProperty<ButtonStyle>('style', style, defaultValue: null));
-    properties.add(DiagnosticsProperty<FocusNode>('focusNode', focusNode,
-        defaultValue: null));
+    properties.add(FlagProperty('enabled', value: enabled, ifFalse: 'disabled'));
+    properties.add(DiagnosticsProperty<ButtonStyle>('style', style, defaultValue: null));
+    properties.add(DiagnosticsProperty<FocusNode>('focusNode', focusNode, defaultValue: null));
   }
 }
 
-/// 按钮的基础 [State] 类，其样式由 [ButtonStyle] 对象定义。
-///
-/// 另请参阅：
-///
-///  * [MongolButtonStyleButton]，此类是其 [State] 的 [StatefulWidget] 子类。
-///  * [MongolTextButton]，一个没有阴影的简单按钮。
-///  * [MongolElevatedButton]，一个填充的按钮，按下时其材质会提升。
-///  * [MongolFilledButton]，一个填充的 ButtonStyleButton，按下时不会提升。
-///  * [MongolOutlinedButton]，类似于 [MongolTextButton]，但带有轮廓。
+/// 按钮的基础 [State] 类。
 class _MongolButtonStyleState extends State<MongolButtonStyleButton>
     with TickerProviderStateMixin {
-  AnimationController? _controller; // 动画控制器
-  double? _elevation; // 按钮的海拔高度
-  Color? _backgroundColor; // 按钮的背景颜色
-  WidgetStatesController? internalStatesController; // 内部状态控制器
+  AnimationController? _controller;
+  double? _elevation;
+  Color? _backgroundColor;
+  WidgetStatesController? _internalStatesController;
 
-  /// 处理状态控制器变化
-  void handleStatesControllerChange() {
-    // 强制重建以解析 MaterialStateProperty 属性
+  /// 获取当前有效的状态控制器。
+  WidgetStatesController get statesController =>
+      widget.statesController ?? _internalStatesController!;
+
+  /// 处理状态控制器变化的内部回调。
+  void _handleStatesControllerChange() {
+    // 强制重建以解析基于状态的样式属性。
     setState(() {});
   }
 
-  /// 获取状态控制器
-  WidgetStatesController get statesController =>
-      widget.statesController ?? internalStatesController!;
-
-  /// 初始化状态控制器
-  void initStatesController() {
+  /// 初始化状态控制器及其监听器。
+  void _initStatesController() {
     if (widget.statesController == null) {
-      internalStatesController = WidgetStatesController();
+      _internalStatesController = WidgetStatesController();
     }
     statesController.update(WidgetState.disabled, !widget.enabled);
-    statesController.addListener(handleStatesControllerChange);
+    statesController.addListener(_handleStatesControllerChange);
   }
 
   @override
   void initState() {
     super.initState();
-    initStatesController();
+    _initStatesController();
   }
 
   @override
   void dispose() {
-    statesController.removeListener(handleStatesControllerChange);
-    internalStatesController?.dispose();
+    statesController.removeListener(_handleStatesControllerChange);
+    _internalStatesController?.dispose();
     _controller?.dispose();
     super.dispose();
   }
@@ -233,17 +186,16 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
   void didUpdateWidget(MongolButtonStyleButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.statesController != oldWidget.statesController) {
-      oldWidget.statesController?.removeListener(handleStatesControllerChange);
+      oldWidget.statesController?.removeListener(_handleStatesControllerChange);
       if (widget.statesController != null) {
-        internalStatesController?.dispose();
-        internalStatesController = null;
+        _internalStatesController?.dispose();
+        _internalStatesController = null;
       }
-      initStatesController();
+      _initStatesController();
     }
     if (widget.enabled != oldWidget.enabled) {
       statesController.update(WidgetState.disabled, !widget.enabled);
       if (!widget.enabled) {
-        // The button may have been disabled while a press gesture is currently underway.
         statesController.update(WidgetState.pressed, false);
       }
     }
@@ -255,79 +207,57 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
     final ButtonStyle? themeStyle = widget.themeStyleOf(context);
     final ButtonStyle defaultStyle = widget.defaultStyleOf(context);
 
-    /// 获取有效值，优先级为：widget.style > themeStyle > defaultStyle
-    T? effectiveValue<T>(T? Function(ButtonStyle? style) getProperty) {
+    /// 按优先级（Widget > Theme > Default）获取有效的样式属性。
+    T? getEffectiveValue<T>(T? Function(ButtonStyle? style) getProperty) {
       final T? widgetValue = getProperty(widgetStyle);
       final T? themeValue = getProperty(themeStyle);
       final T? defaultValue = getProperty(defaultStyle);
       return widgetValue ?? themeValue ?? defaultValue;
     }
 
-    /// 解析 WidgetStateProperty 值
-    T? resolve<T>(
+    /// 解析 [WidgetStateProperty] 在当前状态下的值。
+    T? resolveStateProperty<T>(
         WidgetStateProperty<T>? Function(ButtonStyle? style) getProperty) {
-      return effectiveValue(
-        (ButtonStyle? style) =>
-            getProperty(style)?.resolve(statesController.value),
+      return getEffectiveValue(
+        (ButtonStyle? style) => getProperty(style)?.resolve(statesController.value),
       );
     }
 
-    final double? resolvedElevation =
-        resolve<double?>((ButtonStyle? style) => style?.elevation);
-    final TextStyle? resolvedTextStyle =
-        resolve<TextStyle?>((ButtonStyle? style) => style?.textStyle);
-    Color? resolvedBackgroundColor =
-        resolve<Color?>((ButtonStyle? style) => style?.backgroundColor);
-    final Color? resolvedForegroundColor =
-        resolve<Color?>((ButtonStyle? style) => style?.foregroundColor);
-    final Color? resolvedShadowColor =
-        resolve<Color?>((ButtonStyle? style) => style?.shadowColor);
-    final Color? resolvedSurfaceTintColor =
-        resolve<Color?>((ButtonStyle? style) => style?.surfaceTintColor);
-    final EdgeInsetsGeometry? resolvedPadding =
-        resolve<EdgeInsetsGeometry?>((ButtonStyle? style) => style?.padding);
-    final Size? resolvedMinimumSize =
-        resolve<Size?>((ButtonStyle? style) => style?.minimumSize);
-    final Size? resolvedFixedSize =
-        resolve<Size?>((ButtonStyle? style) => style?.fixedSize);
-    final Size? resolvedMaximumSize =
-        resolve<Size?>((ButtonStyle? style) => style?.maximumSize);
-    final Color? resolvedIconColor =
-        resolve<Color?>((ButtonStyle? style) => style?.iconColor);
-    final double? resolvedIconSize =
-        resolve<double?>((ButtonStyle? style) => style?.iconSize);
-    final BorderSide? resolvedSide =
-        resolve<BorderSide?>((ButtonStyle? style) => style?.side);
-    final OutlinedBorder? resolvedShape =
-        resolve<OutlinedBorder?>((ButtonStyle? style) => style?.shape);
+    final double? resolvedElevation = resolveStateProperty<double?>((style) => style?.elevation);
+    final TextStyle? resolvedTextStyle = resolveStateProperty<TextStyle?>((style) => style?.textStyle);
+    Color? resolvedBackgroundColor = resolveStateProperty<Color?>((style) => style?.backgroundColor);
+    final Color? resolvedForegroundColor = resolveStateProperty<Color?>((style) => style?.foregroundColor);
+    final Color? resolvedShadowColor = resolveStateProperty<Color?>((style) => style?.shadowColor);
+    final Color? resolvedSurfaceTintColor = resolveStateProperty<Color?>((style) => style?.surfaceTintColor);
+    final EdgeInsetsGeometry? resolvedPadding = resolveStateProperty<EdgeInsetsGeometry?>((style) => style?.padding);
+    final Size? resolvedMinimumSize = resolveStateProperty<Size?>((style) => style?.minimumSize);
+    final Size? resolvedFixedSize = resolveStateProperty<Size?>((style) => style?.fixedSize);
+    final Size? resolvedMaximumSize = resolveStateProperty<Size?>((style) => style?.maximumSize);
+    final Color? resolvedIconColor = resolveStateProperty<Color?>((style) => style?.iconColor);
+    final double? resolvedIconSize = resolveStateProperty<double?>((style) => style?.iconSize);
+    final BorderSide? resolvedSide = resolveStateProperty<BorderSide?>((style) => style?.side);
+    final OutlinedBorder? resolvedShape = resolveStateProperty<OutlinedBorder?>((style) => style?.shape);
 
     final WidgetStateMouseCursor resolvedMouseCursor = _MouseCursor(
-      (Set<WidgetState> states) => effectiveValue(
+      (Set<WidgetState> states) => getEffectiveValue(
           (ButtonStyle? style) => style?.mouseCursor?.resolve(states)),
     );
 
     final WidgetStateProperty<Color?> overlayColor =
         WidgetStateProperty.resolveWith<Color?>(
-      (Set<WidgetState> states) => effectiveValue(
+      (Set<WidgetState> states) => getEffectiveValue(
           (ButtonStyle? style) => style?.overlayColor?.resolve(states)),
     );
 
-    final VisualDensity? resolvedVisualDensity =
-        effectiveValue((ButtonStyle? style) => style?.visualDensity);
-    final MaterialTapTargetSize? resolvedTapTargetSize =
-        effectiveValue((ButtonStyle? style) => style?.tapTargetSize);
-    final Duration? resolvedAnimationDuration =
-        effectiveValue((ButtonStyle? style) => style?.animationDuration);
-    final bool? resolvedEnableFeedback =
-        effectiveValue((ButtonStyle? style) => style?.enableFeedback);
-    final AlignmentGeometry? resolvedAlignment =
-        effectiveValue((ButtonStyle? style) => style?.alignment);
+    final VisualDensity? resolvedVisualDensity = getEffectiveValue((style) => style?.visualDensity);
+    final MaterialTapTargetSize? resolvedTapTargetSize = getEffectiveValue((style) => style?.tapTargetSize);
+    final Duration? resolvedAnimationDuration = getEffectiveValue((style) => style?.animationDuration);
+    final bool? resolvedEnableFeedback = getEffectiveValue((style) => style?.enableFeedback);
+    final AlignmentGeometry? resolvedAlignment = getEffectiveValue((style) => style?.alignment);
     final Offset densityAdjustment = resolvedVisualDensity!.baseSizeAdjustment;
-    final InteractiveInkFeatureFactory? resolvedSplashFactory =
-        effectiveValue((ButtonStyle? style) => style?.splashFactory);
+    final InteractiveInkFeatureFactory? resolvedSplashFactory = getEffectiveValue((style) => style?.splashFactory);
 
-    BoxConstraints effectiveConstraints =
-        resolvedVisualDensity.effectiveConstraints(
+    BoxConstraints effectiveConstraints = resolvedVisualDensity.effectiveConstraints(
       BoxConstraints(
         minWidth: resolvedMinimumSize!.width,
         minHeight: resolvedMinimumSize.height,
@@ -335,6 +265,7 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
         maxHeight: resolvedMaximumSize.height,
       ),
     );
+
     if (resolvedFixedSize != null) {
       final Size size = effectiveConstraints.constrain(resolvedFixedSize);
       if (size.width.isFinite) {
@@ -351,22 +282,15 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
       }
     }
 
-    // This is the only deviation from [_ButtonStyleState] in the original.
-    //
-    // Per the Material Design team: don't allow the VisualDensity
-    // adjustment to reduce the height of the top/bottom padding. If we
-    // did, VisualDensity.compact, the default for desktop/web, would
-    // reduce the vertical padding to zero.
+    // 蒙古语垂直布局的特殊调整：
+    // 不允许 VisualDensity 减小顶部/底部内边距，这与原始 SDK 逻辑相反。
     final double dy = math.max(0, densityAdjustment.dy);
     final double dx = densityAdjustment.dx;
     final EdgeInsetsGeometry padding = resolvedPadding!
         .add(EdgeInsets.fromLTRB(dx, dy, dx, dy))
         .clamp(EdgeInsets.zero, EdgeInsetsGeometry.infinity);
 
-    // If an opaque button's background is becoming translucent while its
-    // elevation is changing, change the elevation first. Material implicitly
-    // animates its elevation but not its color. SKIA renders non-zero
-    // elevations as a shadow colored fill behind the Material's background.
+    // 动画处理：当背景颜色由不透明变为半透明且海拔高度发生变化时，优先改变海拔。
     if (resolvedAnimationDuration! > Duration.zero &&
         _elevation != null &&
         _backgroundColor != null &&
@@ -384,11 +308,10 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
           vsync: this,
         )..addStatusListener((AnimationStatus status) {
             if (status == AnimationStatus.completed) {
-              setState(() {}); // Rebuild with the final background color.
+              setState(() {});
             }
           });
       }
-      // Defer changing the background color.
       resolvedBackgroundColor = _backgroundColor;
       _controller!.value = 0;
       _controller!.forward();
@@ -443,18 +366,18 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
       ),
     );
 
-    final Size minSize;
+    final Size minInteractiveSize;
     switch (resolvedTapTargetSize!) {
       case MaterialTapTargetSize.padded:
-        minSize = Size(
+        minInteractiveSize = Size(
           kMinInteractiveDimension + densityAdjustment.dx,
           kMinInteractiveDimension + densityAdjustment.dy,
         );
-        assert(minSize.width >= 0.0);
-        assert(minSize.height >= 0.0);
+        assert(minInteractiveSize.width >= 0.0);
+        assert(minInteractiveSize.height >= 0.0);
         break;
       case MaterialTapTargetSize.shrinkWrap:
-        minSize = Size.zero;
+        minInteractiveSize = Size.zero;
         break;
     }
 
@@ -463,14 +386,14 @@ class _MongolButtonStyleState extends State<MongolButtonStyleButton>
       button: true,
       enabled: widget.enabled,
       child: _InputPadding(
-        minSize: minSize,
+        minSize: minInteractiveSize,
         child: result,
       ),
     );
   }
 }
 
-/// 自定义鼠标光标类
+/// 自定义鼠标光标，支持基于状态的解析。
 class _MouseCursor extends WidgetStateMouseCursor {
   const _MouseCursor(this.resolveCallback);
 
@@ -483,11 +406,7 @@ class _MouseCursor extends WidgetStateMouseCursor {
   String get debugDescription => 'ButtonStyleButton_MouseCursor';
 }
 
-/// 一个小部件，用于在 [MaterialButton] 的内部 [Material] 周围填充区域。
-///
-/// 将发生在子项周围填充区域中的点击重定向到子项的中心。
-/// 这增加了按钮的大小和按钮的
-/// "点击目标"，但不增加其材质或墨水飞溅。
+/// 用于扩展按钮点击区域的小部件。
 class _InputPadding extends SingleChildRenderObjectWidget {
   const _InputPadding({
     super.child,
@@ -508,7 +427,7 @@ class _InputPadding extends SingleChildRenderObjectWidget {
   }
 }
 
-/// _InputPadding 的渲染对象
+/// [_InputPadding] 的渲染对象，负责调整布局以满足最小交互尺寸。
 class _RenderInputPadding extends RenderShiftedBox {
   _RenderInputPadding(this._minSize, [RenderBox? child]) : super(child);
 
@@ -552,22 +471,23 @@ class _RenderInputPadding extends RenderShiftedBox {
     return 0.0;
   }
 
-  /// 计算大小
-  Size _computeSize(
-      {required BoxConstraints constraints,
-      required ChildLayouter layoutChild}) {
+  /// 计算满足最小尺寸限制的大小。
+  Size _calculateSize({
+    required BoxConstraints constraints,
+    required ChildLayouter layoutChild,
+  }) {
     if (child != null) {
       final Size childSize = layoutChild(child!, constraints);
-      final double height = math.max(childSize.width, minSize.width);
-      final double width = math.max(childSize.height, minSize.height);
-      return constraints.constrain(Size(height, width));
+      final double width = math.max(childSize.width, minSize.width);
+      final double height = math.max(childSize.height, minSize.height);
+      return constraints.constrain(Size(width, height));
     }
     return Size.zero;
   }
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
-    return _computeSize(
+    return _calculateSize(
       constraints: constraints,
       layoutChild: ChildLayoutHelper.dryLayoutChild,
     );
@@ -575,14 +495,13 @@ class _RenderInputPadding extends RenderShiftedBox {
 
   @override
   void performLayout() {
-    size = _computeSize(
+    size = _calculateSize(
       constraints: constraints,
       layoutChild: ChildLayoutHelper.layoutChild,
     );
     if (child != null) {
       final BoxParentData childParentData = child!.parentData! as BoxParentData;
-      childParentData.offset =
-          Alignment.center.alongOffset(size - child!.size as Offset);
+      childParentData.offset = Alignment.center.alongOffset(size - child!.size as Offset);
     }
   }
 

@@ -36,7 +36,6 @@ import 'mongol_text_align.dart';
 import 'mongol_text_metrics.dart';
 import 'mongol_text_tools.dart';
 
-// 默认字体大小，与 Flutter 引擎和 text_style.dart 保持一致
 const double _kDefaultFontSize = 14.0;
 
 /// 文本高度计算方式枚举
@@ -52,35 +51,10 @@ enum TextHeightBasis {
 }
 
 /// 用于定位蒙古文单词边界的 TextBoundary 实现
-///
-/// 此类实现了 [TextBoundary] 接口，用于在蒙古文文本中找到单词的边界位置。
-/// 实现遵循 Unicode 标准附录 #29 (UAX #29) 中定义的单词分割规则。
-///
-/// 核心功能：
-/// 1. [getTextBoundaryAt]：获取给定位置处单词的绝对边界（开始和结束）
-/// 2. [moveByWordBoundary]：提供的 TextBoundary，用于更好地支持键盘导航
-///
-/// 特殊处理：
-/// - 处理 UTF-16 代理对（补充平面字符，如表情符号）
-/// - 跳过空格和标点符号以提供更自然的单词导航体验
-/// - 支持零宽度字符和双向文本标记
-///
-/// 与标准 TextBoundary 的差异：
-/// - [moveByWordBoundary] 会跳过单词末尾的空格/标点，与大多数平台保持一致
-/// - 这种行为更适合文本编辑中的"单词移动"快捷键
-///
-/// 使用场景：
-/// - 获取双击选择的单词范围
-/// - 文本编辑中的单词级导航
-/// - 实现快捷键（如 Ctrl+右箭头）的单词移动功能
+/// Provides word boundary detection for Mongolian text.
 class MongolWordBoundary extends TextBoundary {
-  /// 使用文本和布局信息创建 [MongolWordBoundary]
-  ///
-  /// 参数说明：
-  /// - [_text]：文本树的根节点，包含所有文本和样式信息
-  /// - [_paragraph]：已布局的段落，用于获取单词边界信息
+  /// Creates a [MongolWordBoundary] from text and layout information.
   MongolWordBoundary._(this._text, this._paragraph);
-
   final InlineSpan _text;
   final MongolParagraph _paragraph;
 
@@ -90,16 +64,16 @@ class MongolWordBoundary extends TextBoundary {
 
   // Runes 类不提供带有代码单元偏移的随机访问
   int? _codePointAt(int index) {
-    final int? codeUnitAtIndex = _text.codeUnitAt(index);
-    if (codeUnitAtIndex == null) {
+    final int? codeUnit = _text.codeUnitAt(index);
+    if (codeUnit == null) {
       return null;
     }
-    return switch (codeUnitAtIndex & 0xFC00) {
+    return switch (codeUnit & 0xFC00) {
       0xD800 =>
-        MongolTextTools.codePointFromSurrogates(codeUnitAtIndex, _text.codeUnitAt(index + 1)!),
+        MongolTextTools.codePointFromSurrogates(codeUnit, _text.codeUnitAt(index + 1)!),
       0xDC00 =>
-        MongolTextTools.codePointFromSurrogates(_text.codeUnitAt(index - 1)!, codeUnitAtIndex),
-      _ => codeUnitAtIndex,
+        MongolTextTools.codePointFromSurrogates(_text.codeUnitAt(index - 1)!, codeUnit),
+      _ => codeUnit,
     };
   }
 
@@ -111,12 +85,10 @@ class MongolWordBoundary extends TextBoundary {
   }
 
   bool _skipSpacesAndPunctuations(int offset, bool forward) {
-    // 使用代码点，因为一些标点符号是补充字符
-    // 这里的 "inner" 指的是搜索方向（`forward`）中断点之前的代码单元
+    // Use code points since some punctuation characters are supplementary characters.
     final int? innerCodePoint = _codePointAt(forward ? offset - 1 : offset);
     final int? outerCodeUnit = _text.codeUnitAt(forward ? offset : offset - 1);
 
-    // 确保 UAX#29 中的硬断点规则优先于我们下面添加的规则
     // 幸运的是，单词断点只有 4 个硬断点规则，基于字典的断点不会引入新的硬断点：
     // https://unicode-org.github.io/icu/userguide/boundaryanalysis/break-rules.html#word-dictionaries
     //
@@ -440,18 +412,12 @@ class _TextPainterLayoutCacheWithOffset {
 /// - null（若输入为 null）
 MongolTextAlign? mapHorizontalToMongolTextAlign(TextAlign? textAlign) {
   if (textAlign == null) return null;
-  switch (textAlign) {
-    case TextAlign.left:
-    case TextAlign.start:
-      return MongolTextAlign.top;
-    case TextAlign.right:
-    case TextAlign.end:
-      return MongolTextAlign.bottom;
-    case TextAlign.center:
-      return MongolTextAlign.center;
-    case TextAlign.justify:
-      return MongolTextAlign.justify;
-  }
+  return switch (textAlign) {
+    TextAlign.left || TextAlign.start => MongolTextAlign.top,
+    TextAlign.right || TextAlign.end => MongolTextAlign.bottom,
+    TextAlign.center => MongolTextAlign.center,
+    TextAlign.justify => MongolTextAlign.justify,
+  };
 }
 
 /// 将蒙古文 [TextSpan] 树绘制到 [Canvas] 上的对象
@@ -1266,20 +1232,14 @@ class MongolTextPainter {
   /// 获取在指定偏移量之后最近的可以放置输入光标的位置
   int? getOffsetAfter(int offset) {
     final int? nextCodeUnit = _text!.codeUnitAt(offset);
-    if (nextCodeUnit == null) {
-      return null;
-    }
-    return MongolTextTools.isHighSurrogate(nextCodeUnit)
-        ? offset + 2
-        : offset + 1;
+    if (nextCodeUnit == null) return null;
+    return MongolTextTools.isHighSurrogate(nextCodeUnit) ? offset + 2 : offset + 1;
   }
 
   /// 获取在指定偏移量之前最近的可以放置输入光标的位置
   int? getOffsetBefore(int offset) {
     final int? prevCodeUnit = _text!.codeUnitAt(offset - 1);
-    if (prevCodeUnit == null) {
-      return null;
-    }
+    if (prevCodeUnit == null) return null;
     return MongolTextTools.isLowSurrogate(prevCodeUnit) ? offset - 2 : offset - 1;
   }
 

@@ -24,9 +24,9 @@ class ExampleWidget extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(),
       ),
-      child: const MongolText.rich(
+      child: MongolText.rich(
         text,
-        textScaleFactor: 2.5,
+        textScaler: TextScaler.linear(2.5),
       ),
     );
   }

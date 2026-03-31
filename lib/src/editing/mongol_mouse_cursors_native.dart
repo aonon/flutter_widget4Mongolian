@@ -4,9 +4,7 @@
 // found in the LICENSE file.
 
 import 'dart:io' show Platform;
-import 'dart:typed_data';
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 /// Returns the appropriate [MouseCursor] for vertical Mongolian text.

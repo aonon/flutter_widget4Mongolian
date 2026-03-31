@@ -7,7 +7,6 @@
 /// TODO: MongolMenuAnchor is not implemented yet.
 library;
 
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     show
@@ -37,13 +36,6 @@ import 'package:mongol/mongol.dart';
 
 import 'mongol_intrinsic_height.dart';
 
-// Examples can assume:
-// enum Commands { heroAndScholar, hurricaneCame }
-// late bool _heroAndScholar;
-// late dynamic _selection;
-// late BuildContext context;
-// void setState(VoidCallback fn) { }
-
 const Duration _kMenuDuration = Duration(milliseconds: 300);
 const double _kMenuCloseIntervalEnd = 2.0 / 3.0;
 const double _kMenuHorizontalPadding = 8.0;
@@ -52,6 +44,18 @@ const double _kMenuMaxHeight = 5.0 * _kMenuHeightStep;
 const double _kMenuMinHeight = 2.0 * _kMenuHeightStep;
 const double _kMenuHeightStep = 56.0;
 const double _kMenuScreenPadding = 8.0;
+
+PopupMenuThemeData _menuDefaults(BuildContext context, ThemeData theme) {
+  return theme.useMaterial3
+      ? _PopupMenuDefaultsM3(context)
+      : _PopupMenuDefaultsM2(context);
+}
+
+EdgeInsets _menuVerticalPadding(bool useMaterial3) {
+  return useMaterial3
+      ? _PopupMenuDefaultsM3.menuVerticalPadding
+      : _PopupMenuDefaultsM2.menuVerticalPadding;
+}
 
 /// 材料设计弹出菜单中条目的基类。
 ///
@@ -129,9 +133,7 @@ class _MongolPopupMenuDividerState extends State<MongolPopupMenuDivider> {
   Widget build(BuildContext context) => VerticalDivider(width: widget.width);
 }
 
-// 此小部件仅存在于启用 _PopupMenuRoute 保存每个菜单项的大小。
-// 这些大小由 _PopupMenuRouteLayout 用于计算菜单原点的 x 坐标，
-// 以便所选菜单项的中心与其 MongolPopupMenuButton 的中心对齐。
+// Stores each menu item's laid out size for route positioning.
 class _MenuItem extends SingleChildRenderObjectWidget {
   const _MenuItem({
     required this.onLayout,
@@ -153,13 +155,10 @@ class _MenuItem extends SingleChildRenderObjectWidget {
 }
 
 class _RenderMenuItem extends RenderShiftedBox {
-  /// 创建一个渲染菜单项的对象，用于在布局时保存菜单项的大小。
   _RenderMenuItem(this.onLayout, [RenderBox? child]) : super(child);
 
-  /// 布局完成时调用的回调，用于保存菜单项的大小。
   ValueChanged<Size> onLayout;
 
-  /// 执行干布局计算，返回此渲染对象的大小，而不实际布局子级。
   @override
   Size computeDryLayout(BoxConstraints constraints) {
     if (child == null) {
@@ -168,8 +167,6 @@ class _RenderMenuItem extends RenderShiftedBox {
     return child!.getDryLayout(constraints);
   }
 
-  /// 执行实际布局，设置此渲染对象的大小，并布局其子级。
-  /// 布局完成后，调用 onLayout 回调保存菜单项的大小。
   @override
   void performLayout() {
     if (child == null) {
@@ -342,7 +339,6 @@ class MongolPopupMenuItemState<T, W extends MongolPopupMenuItem<T>>
   /// 默认情况下，使用 [Navigator.pop] 从菜单路由返回 [MongolPopupMenuItem.value]。
   @protected
   void handleTap() {
-    // Need to pop the navigator first in case onTap may push new route onto navigator.
     Navigator.pop<T>(context, widget.value);
 
     widget.onTap?.call();
@@ -352,16 +348,14 @@ class MongolPopupMenuItemState<T, W extends MongolPopupMenuItem<T>>
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
-    final PopupMenuThemeData defaults = theme.useMaterial3
-        ? _PopupMenuDefaultsM3(context)
-        : _PopupMenuDefaultsM2(context);
+    final PopupMenuThemeData defaults = _menuDefaults(context, theme);
     final Set<WidgetState> states = <WidgetState>{
       if (!widget.enabled) WidgetState.disabled,
     };
 
     TextStyle style = theme.useMaterial3
         ? (widget.labelTextStyle?.resolve(states) ??
-            popupMenuTheme.labelTextStyle?.resolve(states)! ??
+            popupMenuTheme.labelTextStyle?.resolve(states) ??
             defaults.labelTextStyle!.resolve(states)!)
         : (widget.textStyle ?? popupMenuTheme.textStyle ?? defaults.textStyle!);
 
@@ -375,10 +369,7 @@ class MongolPopupMenuItemState<T, W extends MongolPopupMenuItem<T>>
       child: Container(
         alignment: Alignment.topCenter,
         constraints: BoxConstraints(minWidth: widget.width),
-        padding: widget.padding ??
-            (theme.useMaterial3
-                ? _PopupMenuDefaultsM3.menuVerticalPadding
-                : _PopupMenuDefaultsM2.menuVerticalPadding),
+        padding: widget.padding ?? _menuVerticalPadding(theme.useMaterial3),
         child: buildChild(),
       ),
     );
@@ -513,8 +504,10 @@ class _MongolCheckedPopupMenuItemState<T>
     with SingleTickerProviderStateMixin {
   /// 复选标记淡入淡出动画的持续时间。
   static const Duration _fadeDuration = Duration(milliseconds: 150);
+
   /// 控制复选标记淡入淡出动画的控制器。
   late AnimationController _controller;
+
   /// 动画的不透明度值。
   Animation<double> get _opacity => _controller.view;
 
@@ -551,9 +544,7 @@ class _MongolCheckedPopupMenuItemState<T>
   Widget buildChild() {
     final ThemeData theme = Theme.of(context);
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
-    final PopupMenuThemeData defaults = theme.useMaterial3
-        ? _PopupMenuDefaultsM3(context)
-        : _PopupMenuDefaultsM2(context);
+    final PopupMenuThemeData defaults = _menuDefaults(context, theme);
     final Set<WidgetState> states = <WidgetState>{
       if (widget.checked) WidgetState.selected,
     };
@@ -596,35 +587,34 @@ class _PopupMenu<T> extends StatelessWidget {
 
   /// 弹出菜单的路由，包含菜单项和其他配置。
   final _PopupMenuRoute<T> route;
+
   /// 用于辅助功能的语义标签。
   final String? semanticLabel;
+
   /// 菜单的大小约束。
   final BoxConstraints? constraints;
+
   /// 菜单的裁剪行为。
   final Clip clipBehavior;
 
   @override
   Widget build(BuildContext context) {
-    // 1.0 for the height and 0.5 for the last item's fade.
-    final double unit = 1.0 / (route.items.length + 1.5);
+    final double animationUnit = 1.0 / (route.items.length + 1.5);
     final List<Widget> children = <Widget>[];
     final ThemeData theme = Theme.of(context);
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
-    final PopupMenuThemeData defaults = theme.useMaterial3
-        ? _PopupMenuDefaultsM3(context)
-        : _PopupMenuDefaultsM2(context);
+    final PopupMenuThemeData defaults = _menuDefaults(context, theme);
 
     for (int i = 0; i < route.items.length; i += 1) {
-      final double start = (i + 1) * unit;
-      final double end = (start + 1.5 * unit).clamp(0.0, 1.0);
+      final double start = (i + 1) * animationUnit;
+      final double end = (start + 1.5 * animationUnit).clamp(0.0, 1.0);
       final CurvedAnimation opacity = CurvedAnimation(
         parent: route.animation!,
         curve: Interval(start, end),
       );
       Widget item = route.items[i];
       if (route.initialValue != null &&
-          (route.items[i] as MongolPopupMenuItem)
-              .represents(route.initialValue)) {
+          route.items[i].represents(route.initialValue)) {
         item = Container(
           color: Theme.of(context).highlightColor,
           child: item,
@@ -645,9 +635,9 @@ class _PopupMenu<T> extends StatelessWidget {
 
     final CurveTween opacity =
         CurveTween(curve: const Interval(0.0, 1.0 / 3.0));
-    final CurveTween height = CurveTween(curve: Interval(0.0, unit));
+    final CurveTween height = CurveTween(curve: Interval(0.0, animationUnit));
     final CurveTween width =
-        CurveTween(curve: Interval(0.0, unit * route.items.length));
+        CurveTween(curve: Interval(0.0, animationUnit * route.items.length));
 
     final Widget child = ConstrainedBox(
       constraints: const BoxConstraints(
@@ -666,9 +656,6 @@ class _PopupMenu<T> extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
               horizontal: _kMenuHorizontalPadding,
             ),
-            // In flutter, there is using ListBody here. But we use Column instead.
-            // I try to use ListBody, but it doesn't work well. the height of menu is too big.
-            // I don't know why. So I use Column instead.
             child: Row(
               children: children,
             ),
@@ -710,7 +697,6 @@ class _PopupMenu<T> extends StatelessWidget {
   }
 }
 
-// Positioning of the menu on the screen.
 class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
   _PopupMenuRouteLayout(
     this.position,
@@ -720,31 +706,14 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
     this.avoidBounds,
   );
 
-  // Rectangle of underlying button, relative to the overlay's dimensions.
   final RelativeRect position;
-
-  // The sizes of each item are computed when the menu is laid out, and before
-  // the route is laid out.
   List<Size?> itemSizes;
-
-  // The index of the selected item, or null if MongolPopupMenuButton.initialValue
-  // was not specified.
   final int? selectedItemIndex;
-
-  // The padding of unsafe area.
   EdgeInsets padding;
-
-  // List of rectangles that we should avoid overlapping. Unusable screen area.
   final Set<Rect> avoidBounds;
-
-  // We put the child wherever position specifies, so long as it will fit within
-  // the specified parent size padded (inset) by 8. If necessary, we adjust the
-  // child's position so that it fits.
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
-    // The menu can be at most the size of the overlay minus 8.0 pixels in each
-    // direction.
     return BoxConstraints.loose(constraints.biggest).deflate(
       const EdgeInsets.all(_kMenuScreenPadding) + padding,
     );
@@ -752,39 +721,31 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // size: The size of the overlay.
-    // childSize: The size of the menu, when fully open, as determined by
-    // getConstraintsForChild.
-
     final double buttonWidth = size.width - position.left - position.right;
-    // Find the ideal horizontal position.
-    double x = position.left;
+    double menuX = position.left;
     if (selectedItemIndex != null) {
-      double selectedItemOffset = _kMenuHorizontalPadding;
+      double selectedCenterOffset = _kMenuHorizontalPadding;
       for (int index = 0; index < selectedItemIndex!; index += 1) {
-        selectedItemOffset += itemSizes[index]!.width;
+        selectedCenterOffset += itemSizes[index]!.width;
       }
-      selectedItemOffset += itemSizes[selectedItemIndex!]!.width / 2;
-      x = x + buttonWidth / 2.0 - selectedItemOffset;
+      selectedCenterOffset += itemSizes[selectedItemIndex!]!.width / 2;
+      menuX = menuX + buttonWidth / 2.0 - selectedCenterOffset;
     }
 
-    // Find the ideal vertical position.
-    double y;
+    double menuY;
     if (position.top > position.bottom) {
-      // Menu button is closer to the top edge, so grow to the bottom, aligned to the bottom edge.
-      y = size.height - position.bottom - childSize.height;
+      menuY = size.height - position.bottom - childSize.height;
     } else {
-      // Menu button is closer to the top edge or is equidistant from both edges, so grow down.
-      y = position.top;
+      menuY = position.top;
     }
 
-    final Offset wantedPosition = Offset(x, y);
+    final Offset desiredPosition = Offset(menuX, menuY);
     final Offset originCenter = position.toRect(Offset.zero & size).center;
     final Iterable<Rect> subScreens =
         DisplayFeatureSubScreen.subScreensInBounds(
             Offset.zero & size, avoidBounds);
     final Rect subScreen = _closestScreen(subScreens, originCenter);
-    return _fitInsideScreen(subScreen, childSize, wantedPosition);
+    return _fitInsideScreen(subScreen, childSize, desiredPosition);
   }
 
   Rect _closestScreen(Iterable<Rect> screens, Offset point) {
@@ -798,35 +759,31 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
     return closest;
   }
 
-  Offset _fitInsideScreen(Rect screen, Size childSize, Offset wantedPosition) {
-    double x = wantedPosition.dx;
-    double y = wantedPosition.dy;
-    // Avoid going outside an area defined as the rectangle 8.0 pixels from the
-    // edge of the screen in every direction.
-    if (y < screen.top + _kMenuScreenPadding + padding.top) {
-      y = _kMenuScreenPadding + padding.top;
-    } else if (y + childSize.height >
+  Offset _fitInsideScreen(Rect screen, Size childSize, Offset desiredPosition) {
+    double menuX = desiredPosition.dx;
+    double menuY = desiredPosition.dy;
+    if (menuY < screen.top + _kMenuScreenPadding + padding.top) {
+      menuY = _kMenuScreenPadding + padding.top;
+    } else if (menuY + childSize.height >
         screen.bottom - _kMenuScreenPadding - padding.bottom) {
-      y = screen.bottom -
+      menuY = screen.bottom -
           childSize.height -
           _kMenuScreenPadding -
           padding.bottom;
     }
-    if (x < screen.left + _kMenuScreenPadding + padding.left) {
-      x = screen.left + _kMenuScreenPadding + padding.left;
-    } else if (x + childSize.width >
+    if (menuX < screen.left + _kMenuScreenPadding + padding.left) {
+      menuX = screen.left + _kMenuScreenPadding + padding.left;
+    } else if (menuX + childSize.width >
         screen.right - _kMenuScreenPadding - padding.right) {
-      x = screen.right - childSize.width - _kMenuScreenPadding - padding.right;
+      menuX =
+          screen.right - childSize.width - _kMenuScreenPadding - padding.right;
     }
 
-    return Offset(x, y);
+    return Offset(menuX, menuY);
   }
 
   @override
   bool shouldRelayout(_PopupMenuRouteLayout oldDelegate) {
-    // If called when the old and new itemSizes have been initialized then
-    // we expect them to have the same length because there's no practical
-    // way to change length of the items list once the menu has been shown.
     assert(itemSizes.length == oldDelegate.itemSizes.length);
 
     return position != oldDelegate.position ||
@@ -855,8 +812,6 @@ class _PopupMenuRoute<T> extends PopupRoute<T> {
     super.settings,
     this.popUpAnimationStyle,
   })  : itemSizes = List<Size?>.filled(items.length, null),
-        // Menus always cycle focus through their items irrespective of the
-        // focus traversal edge behavior set in the Navigator.
         super(traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop);
 
   final RelativeRect position;
@@ -1039,23 +994,13 @@ Future<T?> showMongolMenu<T>({
   ));
 }
 
-/// Signature for the callback invoked when a menu item is selected. The
-/// argument is the value of the [MongolPopupMenuItem] that caused its menu to be
-/// dismissed.
-///
-/// Used by [MongolPopupMenuButton.onSelected].
+/// 菜单项被选中时的回调签名。
 typedef MongolPopupMenuItemSelected<T> = void Function(T value);
 
-/// Signature for the callback invoked when a [MongolPopupMenuButton] is dismissed
-/// without selecting an item.
-///
-/// Used by [MongolPopupMenuButton.onCanceled].
+/// 菜单关闭但未选中任何项时的回调签名。
 typedef MongolPopupMenuCanceled = void Function();
 
-/// Signature used by [MongolPopupMenuButton] to lazily construct the items shown when
-/// the button is pressed.
-///
-/// Used by [MongolPopupMenuButton.itemBuilder].
+/// 按钮点击后动态构建菜单项列表的回调签名。
 typedef MongolPopupMenuItemBuilder<T> = List<MongolPopupMenuEntry<T>> Function(
     BuildContext context);
 
@@ -1320,7 +1265,7 @@ class MongolPopupMenuButtonState<T> extends State<MongolPopupMenuButton<T>> {
     final RenderBox button = context.findRenderObject()! as RenderBox;
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
-    final RelativeRect position = RelativeRect.fromRect(
+    final RelativeRect menuPosition = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(widget.offset, ancestor: overlay),
         button.localToGlobal(
@@ -1330,7 +1275,6 @@ class MongolPopupMenuButtonState<T> extends State<MongolPopupMenuButton<T>> {
       Offset.zero & overlay.size,
     );
     final List<MongolPopupMenuEntry<T>> items = widget.itemBuilder(context);
-    // Only show the menu if there is something to show
     if (items.isNotEmpty) {
       widget.onOpened?.call();
       showMongolMenu<T?>(
@@ -1341,7 +1285,7 @@ class MongolPopupMenuButtonState<T> extends State<MongolPopupMenuButton<T>> {
             widget.surfaceTintColor ?? popupMenuTheme.surfaceTintColor,
         items: items,
         initialValue: widget.initialValue,
-        position: position,
+        position: menuPosition,
         shape: widget.shape ?? popupMenuTheme.shape,
         color: widget.color ?? popupMenuTheme.color,
         constraints: widget.constraints,
@@ -1374,9 +1318,8 @@ class MongolPopupMenuButtonState<T> extends State<MongolPopupMenuButton<T>> {
   Widget build(BuildContext context) {
     final IconThemeData iconTheme = IconTheme.of(context);
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
-    final bool enableFeedback = widget.enableFeedback ??
-        PopupMenuTheme.of(context).enableFeedback ??
-        true;
+    final bool enableFeedback =
+        widget.enableFeedback ?? popupMenuTheme.enableFeedback ?? true;
     assert(debugCheckHasMaterialLocalizations(context));
 
     if (widget.child != null) {
@@ -1407,9 +1350,7 @@ class MongolPopupMenuButtonState<T> extends State<MongolPopupMenuButton<T>> {
   }
 }
 
-// This MaterialStateProperty is passed along to the menu item's InkWell which
-// resolves the property against MaterialState.disabled, MaterialState.hovered,
-// MaterialState.focused.
+// Resolves mouse cursor from widget override -> theme -> fallback.
 class _EffectiveMouseCursor extends WidgetStateMouseCursor {
   const _EffectiveMouseCursor(this.widgetCursor, this.themeCursor);
 

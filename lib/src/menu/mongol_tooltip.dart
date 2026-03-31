@@ -4,10 +4,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Copyright 2014 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -25,15 +21,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mongol/src/text/mongol_text.dart';
 
-/// 蒙古文 Material Design 提示工具（Tooltip）
+/// 蒙古文方向的 Tooltip 组件。
 ///
-/// 提示工具提供文本标签，帮助解释按钮或其他用户界面操作的功能。
-/// 将按钮包装在 [MongolTooltip] 小部件中，并提供一个消息，当长按该小部件时会显示该消息。
-///
-/// 许多小部件，如 [IconButton]、[FloatingActionButton] 和 [MongolPopupMenuButton] 都有一个
-/// `tooltip` 属性，当该属性不为 null 时，会导致小部件在其构建中包含一个 [Tooltip]。
-///
-/// 提示工具通过提供小部件的文本表示来提高视觉小部件的可访问性，例如，屏幕阅读器可以朗读这些文本。
+/// 在桌面端支持悬停显示，在移动端支持长按显示。
+/// 常用于图标按钮、菜单按钮等操作入口的辅助说明。
 ///
 /// {@youtube 560 315 https://www.youtube.com/watch?v=EeEfD5fI-5Q}
 ///
@@ -118,40 +109,28 @@ class MongolTooltip extends StatefulWidget {
   /// 要在提示工具中显示的文本。
   final String message;
 
-  /// 提示工具的 [child] 的宽度。
-  ///
-  /// 如果 [child] 为 null，则这是提示工具的固有宽度。
+  /// Tooltip 内容的最小宽度。
   final double? width;
 
-  /// 提示工具的 [child] 的内边距。
-  ///
-  /// 默认为每个方向 16.0 逻辑像素。
+  /// Tooltip 内容内边距。
   final EdgeInsetsGeometry? padding;
 
-  /// 围绕提示工具的空白空间。
+  /// Tooltip 外边距。
   ///
-  /// 定义提示工具的外部 [Container.margin]。默认情况下，长提示工具将跨越其窗口的高度。
-  /// 如果足够高，提示工具也可能跨越窗口的宽度。此属性允许定义提示工具必须从其显示窗口边缘插入的空间量。
-  ///
-  /// 如果此属性为 null，则使用 [TooltipThemeData.margin]。
-  /// 如果 [TooltipThemeData.margin] 也为 null，则默认边距为所有边 0.0 逻辑像素。
+  /// 用于控制 Tooltip 与可视区域边界的最小距离。
   final EdgeInsetsGeometry? margin;
 
-  /// 小部件和显示的提示工具之间的水平间隙。
-  ///
-  /// 当 [preferRight] 设置为 true 且提示工具有足够的空间显示自己时，此属性定义提示工具将在其对应小部件右侧定位的水平空间量。
-  /// 否则，提示工具将以给定的偏移量定位在其对应小部件的左侧。
+  /// 目标组件与 Tooltip 之间的水平间距。
   final double? horizontalOffset;
 
-  /// 提示工具是否默认显示在小部件的右侧。
+  /// 是否优先显示在目标右侧。
   ///
-  /// 默认为 true。如果在首选方向显示提示工具的空间不足，提示工具将在相反方向显示。
+  /// 空间不足时会自动切换到另一侧。
   final bool? preferRight;
 
-  /// 提示工具的 [message] 是否应从语义树中排除。
+  /// 是否把 [message] 从语义树中排除。
   ///
-  /// 默认为 false。提示工具将添加一个 [Semantics] 标签，该标签设置为 [MongolTooltip.message]。
-  /// 如果应用程序将提供自己的自定义语义标签，请将此属性设置为 true。
+  /// 当你已经提供自定义语义描述时可设置为 true。
   final bool? excludeFromSemantics;
 
   /// 此小部件下方树中的小部件。
@@ -159,29 +138,18 @@ class MongolTooltip extends StatefulWidget {
   /// {@macro flutter.widgets.ProxyWidget.child}
   final Widget? child;
 
-  /// 指定提示工具的形状和背景颜色。
-  ///
-  /// 提示工具形状默认为边框半径为 4.0 的圆角矩形。如果 [ThemeData.brightness] 为 [Brightness.dark]，
-  /// 提示工具还将默认为 90% 的不透明度和 [Colors.grey[700]] 颜色；如果为 [Brightness.light]，则为 [Colors.white]。
+  /// Tooltip 背景与形状装饰。
   final Decoration? decoration;
 
-  /// 用于提示工具消息的样式。
+  /// Tooltip 文本样式。
   ///
-  /// 如果为 null，消息的 [TextStyle] 将基于 [ThemeData] 确定。
-  /// 如果 [ThemeData.brightness] 设置为 [Brightness.dark]，则将使用 [ThemeData.textTheme] 的 [TextTheme.bodyText2] 和 [Colors.white]。
-  /// 否则，如果 [ThemeData.brightness] 设置为 [Brightness.light]，则将使用 [ThemeData.textTheme] 的 [TextTheme.bodyText2] 和 [Colors.black]。
+  /// 未提供时按主题亮暗模式使用默认样式。
   final TextStyle? textStyle;
 
-  /// 指针必须悬停在提示工具的小部件上才能显示提示工具的时间长度。
-  ///
-  /// 一旦指针离开小部件，提示工具将立即消失。
-  ///
-  /// 默认为 0 毫秒（悬停时立即显示提示工具）。
+  /// 悬停触发时的延迟显示时长。
   final Duration? waitDuration;
 
-  /// 长按释放后提示工具将显示的时间长度。
-  ///
-  /// 默认为 1.5 秒。
+  /// 长按触发后保持显示的时长。
   final Duration? showDuration;
 
   @override
@@ -219,77 +187,38 @@ class MongolTooltip extends StatefulWidget {
 /// MongolTooltip 的状态类
 class _MongolTooltipState extends State<MongolTooltip>
     with SingleTickerProviderStateMixin {
-  // 默认的水平偏移量
   static const double _defaultHorizontalOffset = 24.0;
-  // 默认是否优先显示在右侧
   static const bool _defaultPreferRight = true;
-  // 默认边距
   static const EdgeInsetsGeometry _defaultMargin = EdgeInsets.zero;
-  // 淡入动画持续时间
   static const Duration _fadeInDuration = Duration(milliseconds: 150);
-  // 淡出动画持续时间
   static const Duration _fadeOutDuration = Duration(milliseconds: 75);
-  // 默认显示持续时间
   static const Duration _defaultShowDuration = Duration(milliseconds: 1500);
-  // 默认等待持续时间
   static const Duration _defaultWaitDuration = Duration.zero;
-  // 默认是否从语义树中排除
   static const bool _defaultExcludeFromSemantics = false;
 
-  // 提示工具宽度
-  late double width;
-  // 内边距
-  late EdgeInsetsGeometry padding;
-  // 外边距
-  late EdgeInsetsGeometry margin;
-  // 装饰
-  late Decoration decoration;
-  // 文本样式
-  late TextStyle textStyle;
-  // 水平偏移量
-  late double horizontalOffset;
-  // 是否优先显示在右侧
-  late bool preferRight;
-  // 是否从语义树中排除
-  late bool excludeFromSemantics;
-  // 动画控制器
+  late _TooltipConfig _config;
   late AnimationController _controller;
-  // 覆盖条目
   OverlayEntry? _entry;
-  // 隐藏计时器
   Timer? _hideTimer;
-  // 显示计时器
   Timer? _showTimer;
-  // 显示持续时间
-  late Duration showDuration;
-  // 等待持续时间
-  late Duration waitDuration;
-  // 鼠标是否连接
   late bool _mouseIsConnected;
-  // 是否通过长按激活
   bool _longPressActivated = false;
 
   @override
   void initState() {
     super.initState();
-    // 检查鼠标是否连接
     _mouseIsConnected = RendererBinding.instance.mouseTracker.mouseIsConnected;
-    // 初始化动画控制器
     _controller = AnimationController(
       duration: _fadeInDuration,
       reverseDuration: _fadeOutDuration,
       vsync: this,
     )..addStatusListener(_handleStatusChanged);
-    // 监听鼠标连接状态变化
     RendererBinding.instance.mouseTracker
         .addListener(_handleMouseTrackerChange);
-    // 监听全局指针事件，以便在点击其他控件时立即隐藏提示工具
     GestureBinding.instance.pointerRouter.addGlobalRoute(_handlePointerEvent);
   }
 
-  // 根据 Material 设计规范获取默认提示工具宽度
-  // https://material.io/components/tooltips#specs
-  double _getDefaultTooltipWidth() {
+  double _defaultTooltipWidthForPlatform() {
     final ThemeData theme = Theme.of(context);
     switch (theme.platform) {
       case TargetPlatform.macOS:
@@ -301,8 +230,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     }
   }
 
-  // 获取默认内边距
-  EdgeInsets _getDefaultPadding() {
+  EdgeInsets _defaultPaddingForPlatform() {
     final ThemeData theme = Theme.of(context);
     switch (theme.platform) {
       case TargetPlatform.macOS:
@@ -314,8 +242,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     }
   }
 
-  // 获取默认字体大小
-  double _getDefaultFontSize() {
+  double _defaultFontSizeForPlatform() {
     final ThemeData theme = Theme.of(context);
     switch (theme.platform) {
       case TargetPlatform.macOS:
@@ -332,22 +259,21 @@ class _MongolTooltipState extends State<MongolTooltip>
     if (!mounted) {
       return;
     }
-    final bool mouseIsConnected = RendererBinding.instance.mouseTracker.mouseIsConnected;
-    if (mouseIsConnected != _mouseIsConnected) {
+    final bool hasConnectedMouse =
+        RendererBinding.instance.mouseTracker.mouseIsConnected;
+    if (hasConnectedMouse != _mouseIsConnected) {
       setState(() {
-        _mouseIsConnected = mouseIsConnected;
+        _mouseIsConnected = hasConnectedMouse;
       });
     }
   }
 
-  // 处理动画状态变化
   void _handleStatusChanged(AnimationStatus status) {
     if (status == AnimationStatus.dismissed) {
       _hideTooltip(immediately: true);
     }
   }
 
-  // 隐藏提示工具
   void _hideTooltip({bool immediately = false}) {
     _showTimer?.cancel();
     _showTimer = null;
@@ -356,16 +282,13 @@ class _MongolTooltipState extends State<MongolTooltip>
       return;
     }
     if (_longPressActivated) {
-      // 通过长按激活的提示工具应在 showDuration 时间内保持显示
-      _hideTimer ??= Timer(showDuration, _controller.reverse);
+      _hideTimer ??= Timer(_config.showDuration, _controller.reverse);
     } else {
-      // 通过悬停激活的提示工具应在鼠标离开控件时立即消失
       _controller.reverse();
     }
     _longPressActivated = false;
   }
 
-  // 显示提示工具
   void _showTooltip({bool immediately = false}) {
     _hideTimer?.cancel();
     _hideTimer = null;
@@ -373,7 +296,7 @@ class _MongolTooltipState extends State<MongolTooltip>
       ensureTooltipVisible();
       return;
     }
-    _showTimer ??= Timer(waitDuration, ensureTooltipVisible);
+    _showTimer ??= Timer(_config.waitDuration, ensureTooltipVisible);
   }
 
   /// 如果提示工具尚未可见，则显示它。
@@ -383,18 +306,16 @@ class _MongolTooltipState extends State<MongolTooltip>
     _showTimer?.cancel();
     _showTimer = null;
     if (_entry != null) {
-      // 如果我们正在尝试隐藏，则停止
       _hideTimer?.cancel();
       _hideTimer = null;
       _controller.forward();
-      return false; // 已经可见
+      return false;
     }
     _createNewEntry();
     _controller.forward();
     return true;
   }
 
-  // 创建新的覆盖条目
   void _createNewEntry() {
     final OverlayState overlayState = Overlay.of(
       context,
@@ -407,23 +328,22 @@ class _MongolTooltipState extends State<MongolTooltip>
       ancestor: overlayState.context.findRenderObject(),
     );
 
-    // 我们在覆盖条目构建器外部创建此小部件，以防止更新的值在覆盖重建时泄漏到覆盖中
     final Widget overlay = Directionality(
       textDirection: TextDirection.ltr,
       child: _MongolTooltipOverlay(
         message: widget.message,
-        width: width,
-        padding: padding,
-        margin: margin,
-        decoration: decoration,
-        textStyle: textStyle,
+        width: _config.width,
+        padding: _config.padding,
+        margin: _config.margin,
+        decoration: _config.decoration,
+        textStyle: _config.textStyle,
         animation: CurvedAnimation(
           parent: _controller,
           curve: Curves.fastOutSlowIn,
         ),
         target: target,
-        horizontalOffset: horizontalOffset,
-        preferRight: preferRight,
+        horizontalOffset: _config.horizontalOffset,
+        preferRight: _config.preferRight,
       ),
     );
     _entry = OverlayEntry(builder: (BuildContext context) => overlay);
@@ -431,7 +351,6 @@ class _MongolTooltipState extends State<MongolTooltip>
     SemanticsService.tooltip(widget.message);
   }
 
-  // 移除覆盖条目
   void _removeEntry() {
     _hideTimer?.cancel();
     _hideTimer = null;
@@ -441,7 +360,6 @@ class _MongolTooltipState extends State<MongolTooltip>
     _entry = null;
   }
 
-  // 处理指针事件
   void _handlePointerEvent(PointerEvent event) {
     if (_entry == null) {
       return;
@@ -475,7 +393,6 @@ class _MongolTooltipState extends State<MongolTooltip>
     super.dispose();
   }
 
-  // 处理长按事件
   void _handleLongPress() {
     _longPressActivated = true;
     final bool tooltipCreated = ensureTooltipVisible();
@@ -486,6 +403,80 @@ class _MongolTooltipState extends State<MongolTooltip>
 
   @override
   Widget build(BuildContext context) {
+    _config = _TooltipConfig.resolve(
+      context: context,
+      widget: widget,
+      defaultTooltipWidth: _defaultTooltipWidthForPlatform(),
+      defaultPadding: _defaultPaddingForPlatform(),
+      defaultFontSize: _defaultFontSizeForPlatform(),
+      defaultHorizontalOffset: _defaultHorizontalOffset,
+      defaultPreferRight: _defaultPreferRight,
+      defaultMargin: _defaultMargin,
+      defaultExcludeFromSemantics: _defaultExcludeFromSemantics,
+      defaultWaitDuration: _defaultWaitDuration,
+      defaultShowDuration: _defaultShowDuration,
+    );
+
+    Widget content = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: _handleLongPress,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: _config.excludeFromSemantics ? null : widget.message,
+        child: widget.child,
+      ),
+    );
+
+    if (_mouseIsConnected) {
+      content = MouseRegion(
+        onEnter: (PointerEnterEvent event) => _showTooltip(),
+        onExit: (PointerExitEvent event) => _hideTooltip(),
+        child: content,
+      );
+    }
+
+    return content;
+  }
+}
+
+class _TooltipConfig {
+  const _TooltipConfig({
+    required this.width,
+    required this.padding,
+    required this.margin,
+    required this.decoration,
+    required this.textStyle,
+    required this.horizontalOffset,
+    required this.preferRight,
+    required this.excludeFromSemantics,
+    required this.waitDuration,
+    required this.showDuration,
+  });
+
+  final double width;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+  final Decoration decoration;
+  final TextStyle textStyle;
+  final double horizontalOffset;
+  final bool preferRight;
+  final bool excludeFromSemantics;
+  final Duration waitDuration;
+  final Duration showDuration;
+
+  static _TooltipConfig resolve({
+    required BuildContext context,
+    required MongolTooltip widget,
+    required double defaultTooltipWidth,
+    required EdgeInsets defaultPadding,
+    required double defaultFontSize,
+    required double defaultHorizontalOffset,
+    required bool defaultPreferRight,
+    required EdgeInsetsGeometry defaultMargin,
+    required bool defaultExcludeFromSemantics,
+    required Duration defaultWaitDuration,
+    required Duration defaultShowDuration,
+  }) {
     final ThemeData theme = Theme.of(context);
     final TooltipThemeData tooltipTheme = TooltipTheme.of(context);
     final TextStyle defaultTextStyle;
@@ -493,7 +484,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     if (theme.brightness == Brightness.dark) {
       defaultTextStyle = theme.textTheme.bodyMedium!.copyWith(
         color: Colors.black,
-        fontSize: _getDefaultFontSize(),
+        fontSize: defaultFontSize,
       );
       defaultDecoration = BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
@@ -502,7 +493,7 @@ class _MongolTooltipState extends State<MongolTooltip>
     } else {
       defaultTextStyle = theme.textTheme.bodyMedium!.copyWith(
         color: Colors.white,
-        fontSize: _getDefaultFontSize(),
+        fontSize: defaultFontSize,
       );
       defaultDecoration = BoxDecoration(
         color: Colors.grey[700]!.withValues(alpha: 0.9),
@@ -510,49 +501,30 @@ class _MongolTooltipState extends State<MongolTooltip>
       );
     }
 
-    // 设置各种属性的值，优先使用 widget 提供的值，然后是主题提供的值，最后是默认值
-    width = widget.width ?? tooltipTheme.constraints?.minHeight ?? _getDefaultTooltipWidth();
-    padding = widget.padding ?? tooltipTheme.padding ?? _getDefaultPadding();
-    margin = widget.margin ?? tooltipTheme.margin ?? _defaultMargin;
-    horizontalOffset = widget.horizontalOffset ??
-        tooltipTheme.verticalOffset ??
-        _defaultHorizontalOffset;
-    preferRight =
-        widget.preferRight ?? tooltipTheme.preferBelow ?? _defaultPreferRight;
-    excludeFromSemantics = widget.excludeFromSemantics ??
-        tooltipTheme.excludeFromSemantics ??
-        _defaultExcludeFromSemantics;
-    decoration =
-        widget.decoration ?? tooltipTheme.decoration ?? defaultDecoration;
-    textStyle = widget.textStyle ?? tooltipTheme.textStyle ?? defaultTextStyle;
-    waitDuration = widget.waitDuration ??
-        tooltipTheme.waitDuration ??
-        _defaultWaitDuration;
-    showDuration = widget.showDuration ??
-        tooltipTheme.showDuration ??
-        _defaultShowDuration;
-
-    // 创建一个 GestureDetector 来处理长按事件
-    Widget result = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onLongPress: _handleLongPress,
-      excludeFromSemantics: true,
-      child: Semantics(
-        label: excludeFromSemantics ? null : widget.message,
-        child: widget.child,
-      ),
+    return _TooltipConfig(
+      width: widget.width ??
+          tooltipTheme.constraints?.minHeight ??
+          defaultTooltipWidth,
+      padding: widget.padding ?? tooltipTheme.padding ?? defaultPadding,
+      margin: widget.margin ?? tooltipTheme.margin ?? defaultMargin,
+      decoration:
+          widget.decoration ?? tooltipTheme.decoration ?? defaultDecoration,
+      textStyle: widget.textStyle ?? tooltipTheme.textStyle ?? defaultTextStyle,
+      horizontalOffset: widget.horizontalOffset ??
+          tooltipTheme.verticalOffset ??
+          defaultHorizontalOffset,
+      preferRight:
+          widget.preferRight ?? tooltipTheme.preferBelow ?? defaultPreferRight,
+      excludeFromSemantics: widget.excludeFromSemantics ??
+          tooltipTheme.excludeFromSemantics ??
+          defaultExcludeFromSemantics,
+      waitDuration: widget.waitDuration ??
+          tooltipTheme.waitDuration ??
+          defaultWaitDuration,
+      showDuration: widget.showDuration ??
+          tooltipTheme.showDuration ??
+          defaultShowDuration,
     );
-
-    // 只有在鼠标连接时才检查悬停
-    if (_mouseIsConnected) {
-      result = MouseRegion(
-        onEnter: (PointerEnterEvent event) => _showTooltip(),
-        onExit: (PointerExitEvent event) => _hideTooltip(),
-        child: result,
-      );
-    }
-
-    return result;
   }
 }
 
@@ -616,25 +588,15 @@ class _MongolTooltipOverlay extends StatelessWidget {
     required this.preferRight,
   });
 
-  /// 提示消息
   final String message;
-  /// 提示工具宽度
   final double width;
-  /// 内边距
   final EdgeInsetsGeometry? padding;
-  /// 外边距
   final EdgeInsetsGeometry? margin;
-  /// 装饰
   final Decoration? decoration;
-  /// 文本样式
   final TextStyle? textStyle;
-  /// 动画
   final Animation<double> animation;
-  /// 目标偏移量
   final Offset target;
-  /// 水平偏移量
   final double horizontalOffset;
-  /// 是否优先显示在右侧
   final bool preferRight;
 
   @override
@@ -704,7 +666,6 @@ Offset positionMongolDependentBox({
   double horizontalOffset = 0.0,
   double margin = 10.0,
 }) {
-  // 水平方向
   final bool fitsRight =
       target.dx + horizontalOffset + childSize.width <= size.width - margin;
   final bool fitsLeft =
@@ -717,7 +678,6 @@ Offset positionMongolDependentBox({
   } else {
     x = math.max(target.dx - horizontalOffset - childSize.width, margin);
   }
-  // 垂直方向
   double y;
   if (size.height - margin * 2.0 < childSize.height) {
     y = (size.height - childSize.height) / 2.0;

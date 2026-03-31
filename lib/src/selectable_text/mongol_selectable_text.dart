@@ -12,6 +12,7 @@ import '../base/mongol_text_align.dart';
 import '../editing/mongol_editable_text.dart'
     show MongolEditableTextContextMenuBuilder, MongolEditableTextState;
 import '../editing/mongol_mouse_cursors.dart';
+import '../editing/mongol_toolbar_options.dart';
 import '../editing/mongol_text_field.dart';
 
 /// 垂直可选择的蒙古文文本组件
@@ -365,7 +366,7 @@ class _MongolSelectableTextState extends State<MongolSelectableText>
         showCursor: false,
         enableInteractiveSelection: true,
         mouseCursor: mongolVerticalTextCursor,
-        toolbarOptions: const ToolbarOptions(
+        toolbarOptions: const MongolToolbarOptions(
           copy: true,
           cut: false,
           paste: false,

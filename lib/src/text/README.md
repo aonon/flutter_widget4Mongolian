@@ -202,3 +202,10 @@ MongolRichText(
 
 - `test/mongol_text_widget_test.dart` — MongolText 组件测试
 - `test/mongol_rich_text_widget_test.dart` — MongolRichText 组件测试（文本内容、尺寸、换行行为）
+
+## 相关组件
+
+- **[MongolText](../text/README.md)**：具有纵向布局的文本渲染
+- **[MongolTextFormField](../editing/README.md)**：用于对话框表单的文本输入
+- **[MongolList](../list/README.md)**：用于创建对话框列表
+- **[MongolButton](../button/README.md)**：对话框操作的标准按钮

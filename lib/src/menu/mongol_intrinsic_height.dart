@@ -7,24 +7,12 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// 一个将其子级大小调整为子级最大内在高度的小部件。
+/// 根据子级最大内在高度进行布局的组件。
 ///
-/// 此类很有用，例如，当有无限高度可用时，
-/// 您希望一个否则会尝试无限扩展的子级
-/// 而是将自己调整到更合理的高度。
+/// 适用于父级给出宽松或无限高度时，希望子级不要无限扩展的场景。
+/// 若设置 [stepHeight]/[stepWidth]，会把结果向上取整到对应步长倍数。
 ///
-/// 此小部件传递给其子级的约束将遵循父级的约束，
-/// 因此如果约束不足以满足子级的最大内在高度，
-/// 则子级将获得比正常情况下更少的高度。同样，
-/// 如果最小高度约束大于子级的最大内在高度，
-/// 子级将获得比正常情况下更多的宽度。
-///
-/// 如果 [stepHeight] 不为 null，则子级的高度将被调整为 [stepHeight] 的倍数。
-/// 同样，如果 [stepWidth] 不为 null，则子级的宽度将被调整为 [stepWidth] 的倍数。
-///
-/// 此类相对昂贵，因为它在最终布局阶段之前添加了一个推测性布局过程。
-/// 尽可能避免使用它。在最坏的情况下，此小部件可能导致布局的复杂度为 O(N²)，
-/// 其中 N 是树的深度。
+/// 该组件会增加一次额外的推测布局，性能成本较高，应按需使用。
 ///
 /// 另请参阅：
 ///
@@ -43,27 +31,20 @@ class MongolIntrinsicHeight extends SingleChildRenderObjectWidget {
       : assert(stepHeight == null || stepHeight >= 0.0),
         assert(stepWidth == null || stepWidth >= 0.0);
 
-  /// 如果不为 null，强制子级的高度为该值的倍数。
+  /// 子级高度步长。
   ///
-  /// 如果为 null 或 0.0，则子级的高度将与其最大内在高度相同。
-  ///
-  /// 此值不能为负数。
-  ///
-  /// 另请参阅：
-  ///
-  ///  * [RenderBox.getMaxIntrinsicHeight]，它定义了小部件的最大内在高度。
+  /// 为 null 或 0.0 时，按子级最大内在高度布局。
+  /// 该值不能为负数。
   final double? stepHeight;
 
-  /// 如果不为 null，强制子级的宽度为该值的倍数。
+  /// 子级宽度步长。
   ///
-  /// 如果为 null 或 0.0，则子级的宽度将不受约束。
-  ///
-  /// 此值不能为负数。
+  /// 为 null 或 0.0 时，不额外做步长取整。
+  /// 该值不能为负数。
   final double? stepWidth;
 
-  /// 获取处理后的 stepHeight 值（将 0.0 转换为 null）。
   double? get _stepHeight => stepHeight == 0.0 ? null : stepHeight;
-  /// 获取处理后的 stepWidth 值（将 0.0 转换为 null）。
+
   double? get _stepWidth => stepWidth == 0.0 ? null : stepWidth;
 
   /// 创建此小部件的渲染对象。
@@ -83,24 +64,9 @@ class MongolIntrinsicHeight extends SingleChildRenderObjectWidget {
   }
 }
 
-/// 将其子级大小调整为子级最大内在高度的渲染对象。
+/// [MongolIntrinsicHeight] 对应的渲染对象实现。
 ///
-/// 此类很有用，例如，当有无限高度可用时，
-/// 您希望一个否则会尝试无限扩展的子级
-/// 而是将自己调整到更合理的高度。
-///
-/// 此小部件传递给其子级的约束将遵循父级的约束，
-/// 因此如果约束不足以满足子级的最大内在高度，
-/// 则子级将获得比正常情况下更少的高度。同样，
-/// 如果最小高度约束大于子级的最大内在高度，
-/// 子级将获得比正常情况下更多的宽度。
-///
-/// 如果 [stepHeight] 不为 null，则子级的高度将被调整为 [stepHeight] 的倍数。
-/// 同样，如果 [stepWidth] 不为 null，则子级的宽度将被调整为 [stepWidth] 的倍数。
-///
-/// 此类相对昂贵，因为它在最终布局阶段之前添加了一个推测性布局过程。
-/// 尽可能避免使用它。在最坏的情况下，此小部件可能导致布局的复杂度为 O(N²)，
-/// 其中 N 是树的深度。
+/// 负责在布局前基于子级内在尺寸推导约束，并应用步长取整规则。
 ///
 /// 另请参阅：
 ///
@@ -183,9 +149,8 @@ class MongolRenderIntrinsicHeight extends RenderProxyBox {
   @override
   double computeMinIntrinsicWidth(double height) {
     if (child == null) return 0.0;
-    if (!height.isFinite) height = computeMaxIntrinsicHeight(double.infinity);
-    assert(height.isFinite);
-    final double width = child!.getMinIntrinsicWidth(height);
+    final double resolvedHeight = _effectiveHeightForIntrinsicWidth(height);
+    final double width = child!.getMinIntrinsicWidth(resolvedHeight);
     return _applyStep(width, _stepWidth);
   }
 
@@ -197,10 +162,18 @@ class MongolRenderIntrinsicHeight extends RenderProxyBox {
   @override
   double computeMaxIntrinsicWidth(double height) {
     if (child == null) return 0.0;
-    if (!height.isFinite) height = computeMaxIntrinsicHeight(double.infinity);
-    assert(height.isFinite);
-    final double width = child!.getMaxIntrinsicWidth(height);
+    final double resolvedHeight = _effectiveHeightForIntrinsicWidth(height);
+    final double width = child!.getMaxIntrinsicWidth(resolvedHeight);
     return _applyStep(width, _stepWidth);
+  }
+
+  double _effectiveHeightForIntrinsicWidth(double height) {
+    if (height.isFinite) {
+      return height;
+    }
+    final double intrinsicHeight = computeMaxIntrinsicHeight(double.infinity);
+    assert(intrinsicHeight.isFinite);
+    return intrinsicHeight;
   }
 
   /// 计算此渲染对象的大小。
@@ -214,10 +187,10 @@ class MongolRenderIntrinsicHeight extends RenderProxyBox {
       required BoxConstraints constraints}) {
     if (child != null) {
       if (!constraints.hasTightHeight) {
-        final double height = 
+        final double height =
             child!.getMaxIntrinsicHeight(constraints.maxWidth);
         assert(height.isFinite);
-        constraints = 
+        constraints =
             constraints.tighten(height: _applyStep(height, _stepHeight));
       }
       if (_stepWidth != null) {

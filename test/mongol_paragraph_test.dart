@@ -431,6 +431,85 @@ void main() {
 // });
   });
 
+  group('alignment metrics -', () {
+    test('computeLineMetrics top reflects per-column alignment offset', () {
+      const paragraphHeight = 120.0;
+
+      // top: all lines start at 0
+      final topParagraph = getParagraph('AAAA\nAA', paragraphHeight,
+          textAlign: MongolTextAlign.top);
+      for (final m in topParagraph.computeLineMetrics()) {
+        expect(m.top, 0.0);
+      }
+
+      // bottom: top = paragraphHeight - lineHeight
+      final bottomParagraph = getParagraph('AAAA\nAA', paragraphHeight,
+          textAlign: MongolTextAlign.bottom);
+      for (final m in bottomParagraph.computeLineMetrics()) {
+        expect(m.top, closeTo(paragraphHeight - m.height, 0.001));
+      }
+
+      // center: top = (paragraphHeight - lineHeight) / 2
+      final centerParagraph = getParagraph('AAAA\nAA', paragraphHeight,
+          textAlign: MongolTextAlign.center);
+      for (final m in centerParagraph.computeLineMetrics()) {
+        expect(m.top, closeTo((paragraphHeight - m.height) / 2, 0.001));
+      }
+    });
+
+    test('bottom alignment consistent across columns with trailing spaces', () {
+      // "AAAA BBBB CCCC DDDD" splits into runs via BreakSegments:
+      //   "AAAA " (5×14=70), "BBBB " (5×14=70), "CCCC " (5×14=70), "DDDD" (4×14=56)
+      // With height 150: column 0 = ["AAAA ","BBBB "] (140), column 1 = ["CCCC ","DDDD"] (126)
+      // Column 0's last run "BBBB " has a trailing space (14px).
+      // Without the fix, column 0's visible text ends at _height - 14, while column 1
+      // ends at _height — making column 1 appear 14px lower.
+      const text = 'AAAA BBBB CCCC DDDD';
+      const paragraphHeight = 150.0;
+
+      final paragraph = getParagraph(text, paragraphHeight,
+          textAlign: MongolTextAlign.bottom);
+      final metrics = paragraph.computeLineMetrics();
+
+      expect(metrics.length, 2);
+
+      // Both columns should have the same lineTopOffset because
+      // _effectiveColumnWidth strips trailing space, making both 126.
+      // lineTopOffset = paragraphHeight - effectiveWidth = 150 - 126 = 24
+      expect(metrics[0].top, metrics[1].top);
+    });
+
+    test('center alignment consistent across columns with trailing spaces', () {
+      const text = 'AAAA BBBB CCCC DDDD';
+      const paragraphHeight = 150.0;
+
+      final paragraph = getParagraph(text, paragraphHeight,
+          textAlign: MongolTextAlign.center);
+      final metrics = paragraph.computeLineMetrics();
+
+      expect(metrics.length, 2);
+
+      // Both columns should have the same centered lineTopOffset.
+      expect(metrics[0].top, metrics[1].top);
+    });
+
+    test('longestLine excludes trailing whitespace', () {
+      // "AAAA BBBB" as a single column: runs = ["AAAA ", "BBBB"]
+      // bounds.width = width("AAAA ") + width("BBBB") = 70 + 56 = 126
+      // But longestLine should strip the trailing space of the last run "BBBB"
+      // which has no trailing space, so longestLine = 126.
+      //
+      // "AAAA BBBB " as a single column: runs = ["AAAA ", "BBBB "]
+      // bounds.width = 70 + 70 = 140
+      // longestLine should strip the trailing space of "BBBB ": 140 - 14 = 126
+      final p1 = getParagraph('AAAA BBBB', 1000);
+      final p2 = getParagraph('AAAA BBBB ', 1000);
+
+      // Both should have the same longestLine (trailing space stripped)
+      expect(p1.longestLine, p2.longestLine);
+    });
+  });
+
   group('maxlines -', () {
     test('Paragraph handles maxlines', () {
       const text = 'this is some long text that should break over 3 lines';
