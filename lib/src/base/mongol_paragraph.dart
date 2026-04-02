@@ -103,15 +103,18 @@ class MongolParagraph {
   }
 
   int _computeRunsHash(List<_TextRun> runs) {
-    final List<int> parts = <int>[];
+    var hash = 0;
     for (final r in runs) {
-      parts.add(r.start);
-      parts.add(r.end);
-      parts.add(r.isRotated ? 1 : 0);
-      parts.add(r.textStyle?.hashCode ?? 0);
-      parts.add(r.paragraphStyle?.hashCode ?? 0);
+      hash = Object.hash(
+        hash,
+        r.start,
+        r.end,
+        r.isRotated,
+        r.textStyle,
+        r.paragraphStyle,
+      );
     }
-    return Object.hashAll(parts);
+    return hash;
   }
 
   final String _text;
@@ -177,6 +180,7 @@ class MongolParagraph {
 
   /// 执行核心布局计算
   void _layout(double height) {
+    assert(!height.isNaN);
     _initializeSourceSignatureIfNeeded();
     final currentSignatureHash =
         Object.hash(height, _sourceTextHash, _sourceRunsSignatureHash);
@@ -200,6 +204,15 @@ class MongolParagraph {
     _longestLine = 0.0;
     _minIntrinsicHeight = 0.0;
     _maxIntrinsicHeight = 0.0;
+  }
+
+  bool get _debugAssertLayoutIsValid {
+    assert(!_disposed);
+    if (_lastLayoutSignatureHash == null) {
+      throw StateError(
+          'MongolParagraph has not been laid out yet. Call layout() before using geometry APIs.');
+    }
+    return true;
   }
 
   // 内部坐标系中的"列"信息列表（每一列对应屏幕上竖排中的一竖列文字）
@@ -363,7 +376,55 @@ class MongolParagraph {
   /// 当用户点了一下屏幕，我们需要知道他点在哪个字上。
   /// 因为有旋转，我们需要把屏幕坐标 (dx, dy) 逆向转回内部坐标。
   TextPosition getPositionForOffset(Offset offset) {
+    assert(_debugAssertLayoutIsValid);
     return _getPositionForOffset(offset.dx, offset.dy);
+  }
+
+  int _findColumnIndexForExternalX(double externalX) {
+    if (_columnOffsets.isEmpty) {
+      return _columns.length - 1;
+    }
+    int low = 0;
+    int high = _columnOffsets.length - 1;
+    while (low <= high) {
+      final int mid = (low + high) >> 1;
+      if (externalX <= _columnOffsets[mid]) {
+        high = mid - 1;
+      } else {
+        low = mid + 1;
+      }
+    }
+    return math.min(low, _columns.length - 1);
+  }
+
+  int _findRunIndexInColumnForExternalY(
+      _ColumnLayout column, double externalY) {
+    if (column.runCumWidths.isEmpty) {
+      return column.textRunEnd - 1;
+    }
+    int low = 0;
+    int high = column.runCumWidths.length - 1;
+    while (low <= high) {
+      final int mid = (low + high) >> 1;
+      if (externalY <= column.runCumWidths[mid]) {
+        high = mid - 1;
+      } else {
+        low = mid + 1;
+      }
+    }
+    final int runIndexInColumn = math.min(low, column.runCumWidths.length - 1);
+    return column.textRunStart + runIndexInColumn;
+  }
+
+  double _runStartOffsetInColumn(_ColumnLayout column, int runIndex) {
+    if (column.runCumWidths.isEmpty) {
+      return 0.0;
+    }
+    final int runIndexInColumn = runIndex - column.textRunStart;
+    if (runIndexInColumn <= 0) {
+      return 0.0;
+    }
+    return column.runCumWidths[runIndexInColumn - 1];
   }
 
   TextPosition _getPositionForOffset(double externalX, double externalY) {
@@ -371,56 +432,19 @@ class MongolParagraph {
       return const TextPosition(offset: 0);
     }
 
-    // 1. 用二分查找法，快速定位点在了第几列（水平坐标）
-    _ColumnLayout matchedColumn;
-    if (_columnOffsets.isEmpty) {
-      matchedColumn = _columns.last;
-    } else {
-      int low = 0;
-      int high = _columnOffsets.length - 1;
-      while (low <= high) {
-        final int mid = (low + high) >> 1;
-        if (externalX <= _columnOffsets[mid]) {
-          high = mid - 1;
-        } else {
-          low = mid + 1;
-        }
-      }
-      final int columnIndex = math.min(low, _columns.length - 1);
-      matchedColumn = _columns[columnIndex];
-    }
+    final int columnIndex = _findColumnIndexForExternalX(externalX);
+    final _ColumnLayout matchedColumn = _columns[columnIndex];
 
     // 2. 在该列内，用二分查找定位点在哪个 run 上（垂直坐标）
-    _TextRun matchedRun;
-    double runStartOffset = 0.0;
     final double columnTopOffset = matchedColumn.bounds.top;
-
-    if (matchedColumn.runCumWidths.isEmpty) {
-      final int runIndex = matchedColumn.textRunEnd - 1;
-      if (runIndex.isNegative) {
-        matchedRun = _runs.last;
-      } else {
-        matchedRun = _runs[runIndex];
-      }
-    } else {
-      int low = 0;
-      int high = matchedColumn.runCumWidths.length - 1;
-      while (low <= high) {
-        final int mid = (low + high) >> 1;
-        if (externalY <= matchedColumn.runCumWidths[mid]) {
-          high = mid - 1;
-        } else {
-          low = mid + 1;
-        }
-      }
-      final int runIndexInColumn =
-          math.min(low, matchedColumn.runCumWidths.length - 1);
-      final int runIndex = matchedColumn.textRunStart + runIndexInColumn;
-      matchedRun = _runs[math.min(runIndex, _runs.length - 1)];
-      runStartOffset = runIndexInColumn == 0
-          ? 0.0
-          : matchedColumn.runCumWidths[runIndexInColumn - 1];
-    }
+    final int rawRunIndex =
+        _findRunIndexInColumnForExternalY(matchedColumn, externalY);
+    final int safeRunIndex = rawRunIndex.isNegative
+        ? _runs.length - 1
+        : math.min(rawRunIndex, _runs.length - 1);
+    final _TextRun matchedRun = _runs[safeRunIndex];
+    final double runStartOffset =
+        _runStartOffsetInColumn(matchedColumn, safeRunIndex);
 
     // 3. 计算在 run 内的相对位置
     final double runLocalX = externalY - runStartOffset;
@@ -439,6 +463,7 @@ class MongolParagraph {
   /// 【最终绘制】
   /// 把文字真正画到屏幕上。
   void draw(Canvas canvas, Offset offset) {
+    assert(_debugAssertLayoutIsValid);
     final shouldDrawEllipsis = _didExceedMaxLines && _ellipsis != null;
 
     canvas.save();
@@ -536,9 +561,10 @@ class MongolParagraph {
 
   /// 获取给定文本范围的包围矩形列表（用于文本选中或光标显示）
   List<Rect> getBoxesForRange(int start, int end) {
+    assert(_debugAssertLayoutIsValid);
     final boxes = <Rect>[];
     final textLength = _text.length;
-    if (start < 0 || start > _text.length) {
+    if (start < 0 || start > _text.length || start >= end) {
       return boxes;
     }
 
@@ -643,6 +669,7 @@ class MongolParagraph {
 
   /// 获取给定文本位置处的单词边界
   TextRange getWordBoundary(TextPosition position) {
+    assert(_debugAssertLayoutIsValid);
     final offset = position.offset;
     if (offset >= _text.length) {
       return TextRange(start: _text.length, end: offset);
@@ -690,6 +717,7 @@ class MongolParagraph {
 
   /// 获取给定文本位置所在列的起始和结束位置
   TextRange getLineBoundary(TextPosition position) {
+    assert(_debugAssertLayoutIsValid);
     final offset = position.offset;
     if (offset > _text.length) {
       return TextRange.empty;
@@ -697,55 +725,59 @@ class MongolParagraph {
     if (_columns.isEmpty) {
       return const TextRange(start: 0, end: 0);
     }
-    var min = 0;
-    var max = _columns.length - 1;
-    while (min <= max) {
-      final guess = (max + min) ~/ 2;
-      final column = _columns[guess];
-      if (column.isEmpty) {
-        if (offset == _text.length) {
-          return TextRange(start: _text.length, end: _text.length);
-        }
-        max = guess - 1;
-        continue;
-      }
-      final int start = _runs[column.textRunStart].start;
-      int end = _runs[column.textRunEnd - 1].end;
-      if (offset >= end) {
-        min = guess + 1;
-        continue;
-      } else if (offset < start) {
-        max = guess - 1;
-        continue;
-      } else {
-        if (end > start && _text[end - 1] == '\n') {
-          end--; // 排除硬换行符
-        }
-        return TextRange(start: start, end: end);
-      }
-    }
     if (offset == _text.length) {
-      if (_columns.last.isEmpty) {
+      if (_text.endsWith('\n') || _columns.last.isEmpty) {
         return TextRange(start: _text.length, end: _text.length);
       }
-      for (int i = _columns.length - 1; i >= 0; i--) {
-        final _ColumnLayout column = _columns[i];
-        if (column.isEmpty) {
-          continue;
-        }
-        final int start = _runs[column.textRunStart].start;
-        int end = _runs[column.textRunEnd - 1].end;
-        if (end > start && _text[end - 1] == '\n') {
-          end--;
-        }
-        return TextRange(start: start, end: end);
+      return _lastNonEmptyLineBoundary();
+    }
+
+    int min = 0;
+    int max = _columns.length - 1;
+    while (min <= max) {
+      final int guess = (max + min) ~/ 2;
+      final _ColumnLayout column = _columns[guess];
+      if (column.isEmpty) {
+        max = guess - 1;
+        continue;
+      }
+      final TextRange columnRange =
+          _columnTextRange(column, includeTrailingNewline: true);
+      if (offset >= columnRange.end) {
+        min = guess + 1;
+      } else if (offset < columnRange.start) {
+        max = guess - 1;
+      } else {
+        return _columnTextRange(column, includeTrailingNewline: false);
       }
     }
     return TextRange.empty;
   }
 
+  TextRange _columnTextRange(_ColumnLayout column,
+      {required bool includeTrailingNewline}) {
+    final int start = _runs[column.textRunStart].start;
+    int end = _runs[column.textRunEnd - 1].end;
+    if (!includeTrailingNewline && end > start && _text[end - 1] == '\n') {
+      end--;
+    }
+    return TextRange(start: start, end: end);
+  }
+
+  TextRange _lastNonEmptyLineBoundary() {
+    for (int i = _columns.length - 1; i >= 0; i--) {
+      final _ColumnLayout column = _columns[i];
+      if (column.isEmpty) {
+        continue;
+      }
+      return _columnTextRange(column, includeTrailingNewline: false);
+    }
+    return TextRange(start: _text.length, end: _text.length);
+  }
+
   /// 获取所有列的详细度量信息列表
   List<MongolLineMetrics> computeLineMetrics() {
+    assert(_debugAssertLayoutIsValid);
     final List<MongolLineMetrics> lineMetricsList = <MongolLineMetrics>[];
 
     for (int columnIndex = 0; columnIndex < _columns.length; columnIndex++) {
@@ -812,10 +844,10 @@ class MongolParagraph {
         }
       }
 
-      final effectiveWidth = (column.textRunStart >= 0 &&
-              column.textRunEnd > column.textRunStart)
-          ? _effectiveColumnWidth(column)
-          : totalHeight;
+      final effectiveWidth =
+          (column.textRunStart >= 0 && column.textRunEnd > column.textRunStart)
+              ? _effectiveColumnWidth(column)
+              : totalHeight;
       double lineTopOffset = 0;
       if (_textAlign == MongolTextAlign.center) {
         lineTopOffset = (height - effectiveWidth) / 2;
@@ -852,6 +884,15 @@ class MongolParagraph {
       } catch (_) {}
     }
     _runs.clear();
+    _columns.clear();
+    _columnOffsets.clear();
+    _lastLayoutSignatureHash = null;
+    _width = null;
+    _height = null;
+    _longestLine = null;
+    _minIntrinsicHeight = null;
+    _maxIntrinsicHeight = null;
+    _didExceedMaxLines = false;
   }
 
   bool _disposed = false;

@@ -37,6 +37,12 @@ import 'mongol_text_metrics.dart';
 import 'mongol_text_tools.dart';
 
 const double _kDefaultFontSize = 14.0;
+const String _kTextScaleFactorDeprecatedMessage = 'Use textScaler instead. '
+    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
+    'This feature was deprecated after v3.12.0-2.0.pre.';
+const String _kUseTextScalerAssertionMessage = 'Use textScaler instead.';
+final RegExp _spaceOrPunctuationRegex =
+    RegExp(r'[\p{Space_Separator}\p{Punctuation}]', unicode: true);
 
 /// 文本高度计算方式枚举
 /// 用于确定多行或单行文本的高度测量方式
@@ -68,13 +74,25 @@ class MongolWordBoundary extends TextBoundary {
     if (codeUnit == null) {
       return null;
     }
-    return switch (codeUnit & 0xFC00) {
-      0xD800 =>
-        MongolTextTools.codePointFromSurrogates(codeUnit, _text.codeUnitAt(index + 1)!),
-      0xDC00 =>
-        MongolTextTools.codePointFromSurrogates(_text.codeUnitAt(index - 1)!, codeUnit),
-      _ => codeUnit,
-    };
+    final int surrogateBits = codeUnit & 0xFC00;
+    if (surrogateBits == 0xD800) {
+      final int? nextCodeUnit = _text.codeUnitAt(index + 1);
+      if (nextCodeUnit == null ||
+          !MongolTextTools.isLowSurrogate(nextCodeUnit)) {
+        return codeUnit;
+      }
+      return MongolTextTools.codePointFromSurrogates(codeUnit, nextCodeUnit);
+    }
+    if (surrogateBits == 0xDC00) {
+      final int? previousCodeUnit = _text.codeUnitAt(index - 1);
+      if (previousCodeUnit == null ||
+          !MongolTextTools.isHighSurrogate(previousCodeUnit)) {
+        return codeUnit;
+      }
+      return MongolTextTools.codePointFromSurrogates(
+          previousCodeUnit, codeUnit);
+    }
+    return codeUnit;
   }
 
   static bool _isNewline(int codePoint) {
@@ -100,8 +118,7 @@ class MongolWordBoundary extends TextBoundary {
         _isNewline(innerCodePoint) ||
         _isNewline(outerCodeUnit);
     return hardBreakRulesApply ||
-        !RegExp(r'[\p{Space_Separator}\p{Punctuation}]', unicode: true)
-            .hasMatch(String.fromCharCode(innerCodePoint));
+        !_spaceOrPunctuationRegex.hasMatch(String.fromCharCode(innerCodePoint));
   }
 
   /// 返回一个适合处理逐字更改当前选择的键盘导航命令的 [TextBoundary]
@@ -158,18 +175,34 @@ class _UntilTextBoundary extends TextBoundary {
     if (position < 0) {
       return null;
     }
-    final int? offset = _textBoundary.getLeadingTextBoundaryAt(position);
-    return offset == null || _predicate(offset, false)
-        ? offset
-        : getLeadingTextBoundaryAt(offset - 1);
+    int searchPosition = position;
+    while (true) {
+      final int? offset =
+          _textBoundary.getLeadingTextBoundaryAt(searchPosition);
+      if (offset == null || _predicate(offset, false)) {
+        return offset;
+      }
+      searchPosition = offset - 1;
+      if (searchPosition < 0) {
+        return null;
+      }
+    }
   }
 
   @override
   int? getTrailingTextBoundaryAt(int position) {
-    final int? offset = _textBoundary.getTrailingTextBoundaryAt(max(position, 0));
-    return offset == null || _predicate(offset, true)
-        ? offset
-        : getTrailingTextBoundaryAt(offset);
+    int searchPosition = max(position, 0);
+    while (true) {
+      final int? offset =
+          _textBoundary.getTrailingTextBoundaryAt(searchPosition);
+      if (offset == null || _predicate(offset, true)) {
+        return offset;
+      }
+      if (offset == searchPosition) {
+        return offset;
+      }
+      searchPosition = offset;
+    }
   }
 }
 
@@ -440,6 +473,45 @@ MongolTextAlign? mapHorizontalToMongolTextAlign(TextAlign? textAlign) {
 ///
 /// 默认文本样式是白色。要更改文本颜色，请在 `text` 中的 [TextSpan] 中传递 [TextStyle] 对象
 class MongolTextPainter {
+  static TextScaler _resolveTextScaler(
+      TextScaler textScaler, double textScaleFactor) {
+    return identical(textScaler, TextScaler.noScaling)
+        ? TextScaler.linear(textScaleFactor)
+        : textScaler;
+  }
+
+  static double _computeWithTemporaryPainter({
+    required TextSpan text,
+    required MongolTextAlign textAlign,
+    required double textScaleFactor,
+    required TextScaler textScaler,
+    required int? maxLines,
+    required String? ellipsis,
+    required TextHeightBasis textHeightBasis,
+    required double minHeight,
+    required double maxHeight,
+    required double Function(MongolTextPainter painter) readMetric,
+  }) {
+    assert(
+      textScaleFactor == 1.0 || identical(textScaler, TextScaler.noScaling),
+      _kUseTextScalerAssertionMessage,
+    );
+    final MongolTextPainter painter = MongolTextPainter(
+      text: text,
+      textAlign: textAlign,
+      textScaler: _resolveTextScaler(textScaler, textScaleFactor),
+      maxLines: maxLines,
+      ellipsis: ellipsis,
+      textHeightBasis: textHeightBasis,
+    )..layout(minHeight: minHeight, maxHeight: maxHeight);
+
+    try {
+      return readMetric(painter);
+    } finally {
+      painter.dispose();
+    }
+  }
+
   /// 创建一个绘制给定文本的文本绘制器
   ///
   /// `text` 参数是可选的，但在调用 [layout] 之前 [text] 必须非空
@@ -455,11 +527,7 @@ class MongolTextPainter {
   MongolTextPainter({
     TextSpan? text,
     MongolTextAlign textAlign = MongolTextAlign.top,
-    @Deprecated(
-      'Use textScaler instead. '
-      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
-      'This feature was deprecated after v3.12.0-2.0.pre.',
-    )
+    @Deprecated(_kTextScaleFactorDeprecatedMessage)
     double textScaleFactor = 1.0,
     TextScaler textScaler = TextScaler.noScaling,
     int? maxLines,
@@ -471,12 +539,10 @@ class MongolTextPainter {
         assert(
             textScaleFactor == 1.0 ||
                 identical(textScaler, TextScaler.noScaling),
-            'Use textScaler instead.'),
+            _kUseTextScalerAssertionMessage),
         _text = text,
         _textAlign = textAlign,
-        _textScaler = textScaler == TextScaler.noScaling
-            ? TextScaler.linear(textScaleFactor)
-            : textScaler,
+        _textScaler = _resolveTextScaler(textScaler, textScaleFactor),
         _maxLines = maxLines,
         _ellipsis = ellipsis,
         _textHeightBasis = textHeightBasis,
@@ -513,11 +579,7 @@ class MongolTextPainter {
   static double computeHeight({
     required TextSpan text,
     MongolTextAlign textAlign = MongolTextAlign.top,
-    @Deprecated(
-      'Use textScaler instead. '
-      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
-      'This feature was deprecated after v3.12.0-2.0.pre.',
-    )
+    @Deprecated(_kTextScaleFactorDeprecatedMessage)
     double textScaleFactor = 1.0,
     TextScaler textScaler = TextScaler.noScaling,
     int? maxLines,
@@ -526,26 +588,18 @@ class MongolTextPainter {
     double minHeight = 0.0,
     double maxHeight = double.infinity,
   }) {
-    assert(
-      textScaleFactor == 1.0 || identical(textScaler, TextScaler.noScaling),
-      'Use textScaler instead.',
-    );
-    final MongolTextPainter painter = MongolTextPainter(
+    return _computeWithTemporaryPainter(
       text: text,
       textAlign: textAlign,
-      textScaler: textScaler == TextScaler.noScaling
-          ? TextScaler.linear(textScaleFactor)
-          : textScaler,
+      textScaleFactor: textScaleFactor,
+      textScaler: textScaler,
       maxLines: maxLines,
       ellipsis: ellipsis,
       textHeightBasis: textHeightBasis,
-    )..layout(minHeight: minHeight, maxHeight: maxHeight);
-
-    try {
-      return painter.height;
-    } finally {
-      painter.dispose();
-    }
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+      readMetric: (MongolTextPainter painter) => painter.height,
+    );
   }
 
   /// 计算指定配置下文本绘制器的最大内在高度
@@ -577,11 +631,7 @@ class MongolTextPainter {
   static double computeMaxIntrinsicHeight({
     required TextSpan text,
     MongolTextAlign textAlign = MongolTextAlign.top,
-    @Deprecated(
-      'Use textScaler instead. '
-      'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
-      'This feature was deprecated after v3.12.0-2.0.pre.',
-    )
+    @Deprecated(_kTextScaleFactorDeprecatedMessage)
     double textScaleFactor = 1.0,
     TextScaler textScaler = TextScaler.noScaling,
     int? maxLines,
@@ -590,26 +640,18 @@ class MongolTextPainter {
     double minHeight = 0.0,
     double maxHeight = double.infinity,
   }) {
-    assert(
-      textScaleFactor == 1.0 || identical(textScaler, TextScaler.noScaling),
-      'Use textScaler instead.',
-    );
-    final MongolTextPainter painter = MongolTextPainter(
+    return _computeWithTemporaryPainter(
       text: text,
       textAlign: textAlign,
-      textScaler: textScaler == TextScaler.noScaling
-          ? TextScaler.linear(textScaleFactor)
-          : textScaler,
+      textScaleFactor: textScaleFactor,
+      textScaler: textScaler,
       maxLines: maxLines,
       ellipsis: ellipsis,
       textHeightBasis: textHeightBasis,
-    )..layout(minHeight: minHeight, maxHeight: maxHeight);
-
-    try {
-      return painter.maxIntrinsicHeight;
-    } finally {
-      painter.dispose();
-    }
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+      readMetric: (MongolTextPainter painter) => painter.maxIntrinsicHeight,
+    );
   }
 
   // 在最近的 `layout` 调用中是否遇到文本高度基准（heightBasis）的变化
@@ -630,6 +672,11 @@ class MongolTextPainter {
   ///
   /// 缓存为 null 表示未进行过布局或缓存已被清空
   _TextPainterLayoutCacheWithOffset? _layoutCache;
+
+  _TextPainterLayoutCacheWithOffset _requireLayoutCache() {
+    assert(_debugAssertTextLayoutIsValid);
+    return _layoutCache!;
+  }
 
   /// 是否需要重建段落以应用仅绘制级别的变化
   ///
@@ -700,6 +747,7 @@ class MongolTextPainter {
     }());
     _layoutCache?.paragraph.dispose();
     _layoutCache = null;
+    _inputHeight = double.nan;
   }
 
   /// 要绘制的文本内容，可以是带样式的文本树
@@ -725,11 +773,11 @@ class MongolTextPainter {
   TextSpan? _text;
   set text(TextSpan? value) {
     assert(value == null || value.debugAssertIsValid()); // 确保文本树结构有效
-    
+
     if (_text == value) {
       return; // 文本未变化，无需操作
     }
-    
+
     // 检查样式是否变化，变化则重置布局模板
     if (_text?.style != value?.style) {
       _layoutTemplate?.dispose();
@@ -772,7 +820,8 @@ class MongolTextPainter {
   /// - 需要将富文本转换为纯文本进行处理时
   /// - 需要在调试时查看实际文本内容时
   String get plainText {
-    _cachedPlainText ??= _text?.toPlainText(includeSemanticsLabels: false); // 懒加载并缓存结果
+    _cachedPlainText ??=
+        _text?.toPlainText(includeSemanticsLabels: false); // 懒加载并缓存结果
     return _cachedPlainText ?? ''; // 确保始终返回非空字符串
   }
 
@@ -805,17 +854,9 @@ class MongolTextPainter {
   /// 例如，如果文本缩放因子为 1.5，文本将比指定的字体大小大 50%
   ///
   /// 设置后，在下次调用 [paint] 之前必须调用 [layout]
-  @Deprecated(
-    'Use textScaler instead. '
-    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
-    'This feature was deprecated after v3.12.0-2.0.pre.',
-  )
+  @Deprecated(_kTextScaleFactorDeprecatedMessage)
   double get textScaleFactor => textScaler.textScaleFactor;
-  @Deprecated(
-    'Use textScaler instead. '
-    'Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. '
-    'This feature was deprecated after v3.12.0-2.0.pre.',
-  )
+  @Deprecated(_kTextScaleFactorDeprecatedMessage)
   set textScaleFactor(double value) {
     textScaler = TextScaler.linear(value);
   }
@@ -978,7 +1019,7 @@ class MongolTextPainter {
   ///
   /// 用于计算 [preferredLineWidth]（代表文本的典型行宽）。
   /// 包含一个空格字符，使用当前文本样式，能够快速获取字体度量。
-  /// 
+  ///
   /// 在以下情况会被清除（需要重新创建）：
   /// - 文本样式改变（text.style 变化）
   /// - 文本缩放策略改变（textScaler 变化）
@@ -1148,7 +1189,7 @@ class MongolTextPainter {
     }
 
     final double paintOffsetAlignment = _computePaintOffsetFraction(textAlign);
-    
+
     // 优化策略：避免在非顶部对齐且 maxHeight=infinity 时进行布局
     // 因为会导致无穷大的 paintOffset.dy，丧失绘制意义
     final bool adjustMaxHeight =
@@ -1163,7 +1204,7 @@ class MongolTextPainter {
     // - 如果布局缓存存在，复用其段落对象（仅需重新布局）
     final paragraph = (cachedLayout?.paragraph ?? _createParagraph(text))
       ..layout(MongolParagraphConstraints(height: _inputHeight));
-    
+
     final newLayoutCache = _TextPainterLayoutCacheWithOffset(
       _MongolTextLayout._(paragraph),
       paintOffsetAlignment,
@@ -1171,7 +1212,7 @@ class MongolTextPainter {
       maxHeight,
       textHeightBasis,
     );
-    
+
     // 异常处理：如果使用调整后的 maxHeight 导致布局仍为无穷大，
     // 则需要使用精确的高度约束重新布局以获得可行的 paintOffset
     if (adjustedMaxHeight == null && minHeight.isFinite) {
@@ -1214,14 +1255,14 @@ class MongolTextPainter {
       assert(!_inputHeight.isNaN);
       layoutCache.layout._paragraph = _createParagraph(text!)
         ..layout(MongolParagraphConstraints(height: _inputHeight));
-      
+
       // 验证重建后高度不变：由于只改变了颜色，布局应该完全相同
       assert(paragraph.height == layoutCache.layout._paragraph.height);
       paragraph.dispose(); // 释放旧段落资源
       assert(debugSize == size); // 验证尺寸未变
     }
     assert(!_rebuildParagraphForPaint); // 重建标志应已清除
-    
+
     // 最终绘制：将段落绘制到画布
     // offset 是用户指定的基点，layoutCache.paintOffset 是对齐产生的偏移
     layoutCache.paragraph.draw(canvas, offset + layoutCache.paintOffset);
@@ -1233,14 +1274,30 @@ class MongolTextPainter {
   int? getOffsetAfter(int offset) {
     final int? nextCodeUnit = _text!.codeUnitAt(offset);
     if (nextCodeUnit == null) return null;
-    return MongolTextTools.isHighSurrogate(nextCodeUnit) ? offset + 2 : offset + 1;
+    if (!MongolTextTools.isHighSurrogate(nextCodeUnit)) {
+      return offset + 1;
+    }
+    final int? trailingCodeUnit = _text!.codeUnitAt(offset + 1);
+    if (trailingCodeUnit != null &&
+        MongolTextTools.isLowSurrogate(trailingCodeUnit)) {
+      return offset + 2;
+    }
+    return offset + 1;
   }
 
   /// 获取在指定偏移量之前最近的可以放置输入光标的位置
   int? getOffsetBefore(int offset) {
     final int? prevCodeUnit = _text!.codeUnitAt(offset - 1);
     if (prevCodeUnit == null) return null;
-    return MongolTextTools.isLowSurrogate(prevCodeUnit) ? offset - 2 : offset - 1;
+    if (!MongolTextTools.isLowSurrogate(prevCodeUnit)) {
+      return offset - 1;
+    }
+    final int? leadingCodeUnit = _text!.codeUnitAt(offset - 2);
+    if (leadingCodeUnit != null &&
+        MongolTextTools.isHighSurrogate(leadingCodeUnit)) {
+      return offset - 2;
+    }
+    return offset - 1;
   }
 
   /// 将文本对齐方式转换为绘制偏移的标准化因子
@@ -1256,15 +1313,15 @@ class MongolTextPainter {
   /// 计算给定光标位置的绘制偏移量
   Offset getOffsetForCaret(TextPosition position, Rect caretPrototype) {
     final CaretMetrics caretMetrics;
-    final _TextPainterLayoutCacheWithOffset layoutCache = _layoutCache!;
-    
+    final _TextPainterLayoutCacheWithOffset layoutCache = _requireLayoutCache();
+
     if (position.offset < 0) {
       // 无效位置，返回空行光标（0 高度光标）
       caretMetrics = const EmptyLineCaretMetrics(lineHorizontalOffset: 0);
     } else {
       // 有效位置，计算光标度量
-      caretMetrics = layoutCache.caretCalculator.compute(
-        position, plainText, layoutCache.paragraph, _text!);
+      caretMetrics = layoutCache.caretCalculator
+          .compute(position, plainText, layoutCache.paragraph, _text!);
     }
 
     final Offset rawOffset;
@@ -1280,12 +1337,12 @@ class MongolTextPainter {
             ? 0
             : paintOffsetAlignment * layoutCache.contentHeight;
         return Offset(lineHorizontalOffset, dy);
-        
+
       case LineCaretMetrics(:final Offset offset):
         // 非空行情况：光标关联到字形的边缘
         rawOffset = offset;
     }
-    
+
     // 坐标转换：段落内部坐标 -> 对齐后坐标
     final double adjustedDy = clampDouble(
         rawOffset.dy + layoutCache.paintOffset.dy,
@@ -1299,9 +1356,9 @@ class MongolTextPainter {
     if (position.offset < 0) {
       return null;
     }
-    final _TextPainterLayoutCacheWithOffset layoutCache = _layoutCache!;
-    return switch (layoutCache.caretCalculator.compute(
-        position, plainText, layoutCache.paragraph, _text!)) {
+    final _TextPainterLayoutCacheWithOffset layoutCache = _requireLayoutCache();
+    return switch (layoutCache.caretCalculator
+        .compute(position, plainText, layoutCache.paragraph, _text!)) {
       LineCaretMetrics(:final double fullWidth) => fullWidth,
       EmptyLineCaretMetrics() => null,
     };
@@ -1339,18 +1396,16 @@ class MongolTextPainter {
 
   /// 返回给定文本位置处单词的边界范围
   TextRange getWordBoundary(TextPosition position) {
-    assert(_debugAssertTextLayoutIsValid);
-    return _layoutCache!.paragraph.getWordBoundary(position);
+    return _requireLayoutCache().paragraph.getWordBoundary(position);
   }
 
   /// 返回一个 TextBoundary 对象，用于对当前文本进行单词边界分析
   MongolWordBoundary get wordBoundaries =>
-      MongolWordBoundary._(text!, _layoutCache!.paragraph);
+      MongolWordBoundary._(text!, _requireLayoutCache().paragraph);
 
   /// 返回给定文本位置处所在行的边界范围
   TextRange getLineBoundary(TextPosition position) {
-    assert(_debugAssertTextLayoutIsValid);
-    return _layoutCache!.paragraph.getLineBoundary(position);
+    return _requireLayoutCache().paragraph.getLineBoundary(position);
   }
 
   /// 计算并返回所有行的详细度量信息列表
@@ -1396,5 +1451,8 @@ class MongolTextPainter {
     _layoutCache?.paragraph.dispose();
     _layoutCache = null;
     _text = null;
+    _cachedPlainText = null;
+    _inputHeight = double.nan;
+    _rebuildParagraphForPaint = false;
   }
 }

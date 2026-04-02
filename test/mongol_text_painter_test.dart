@@ -263,6 +263,54 @@ void main() {
     expect(caretOffset.dy, painter.height);
   });
 
+  test('getOffsetAfter handles malformed surrogate pairs safely', () {
+    final painter = MongolTextPainter();
+    final String text = String.fromCharCodes(<int>[
+      0x0041, // A
+      0xD800, // isolated high surrogate
+      0x0042, // B
+      0xD83D, // valid emoji high surrogate
+      0xDE00, // valid emoji low surrogate
+      0x0043, // C
+    ]);
+    painter.text = TextSpan(text: text);
+
+    expect(painter.getOffsetAfter(0), 1);
+    expect(
+      painter.getOffsetAfter(1),
+      2,
+      reason: 'isolated high surrogate should advance by 1 code unit',
+    );
+    expect(painter.getOffsetAfter(3), 5,
+        reason: 'valid surrogate pair should advance by 2 code units');
+    expect(painter.getOffsetAfter(5), 6);
+    expect(painter.getOffsetAfter(6), isNull);
+  });
+
+  test('getOffsetBefore handles malformed surrogate pairs safely', () {
+    final painter = MongolTextPainter();
+    final String text = String.fromCharCodes(<int>[
+      0x0041, // A
+      0xDC00, // isolated low surrogate
+      0x0042, // B
+      0xD83D, // valid emoji high surrogate
+      0xDE00, // valid emoji low surrogate
+      0x0043, // C
+    ]);
+    painter.text = TextSpan(text: text);
+
+    expect(painter.getOffsetBefore(6), 5);
+    expect(painter.getOffsetBefore(5), 3,
+        reason: 'valid surrogate pair should move back by 2 code units');
+    expect(
+      painter.getOffsetBefore(2),
+      1,
+      reason: 'isolated low surrogate should move back by 1 code unit',
+    );
+    expect(painter.getOffsetBefore(1), 0);
+    expect(painter.getOffsetBefore(0), isNull);
+  });
+
   test('MongolTextPainter multiple characters single word', () {
     final painter = MongolTextPainter();
 

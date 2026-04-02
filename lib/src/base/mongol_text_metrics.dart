@@ -7,8 +7,7 @@
 import 'dart:math' show max, min;
 import 'package:flutter/foundation.dart' show immutable;
 import 'package:flutter/services.dart' show TextAffinity, TextPosition;
-import 'package:flutter/widgets.dart'
-    show InlineSpan, Offset, Rect;
+import 'package:flutter/widgets.dart' show InlineSpan, Offset, Rect;
 import 'mongol_paragraph.dart';
 import 'mongol_text_tools.dart';
 
@@ -40,11 +39,42 @@ final class EmptyLineCaretMetrics implements CaretMetrics {
 /// Calculates caret metrics for text positions.
 class CaretMetricsCalculator {
   static const int _zeroWidthJoinerCodeUnit = 0x200d;
+  static const int _newlineCodeUnit = 0x0A;
+  static const EmptyLineCaretMetrics _emptyCaretMetrics =
+      EmptyLineCaretMetrics(lineHorizontalOffset: 0);
 
-  CaretMetrics _cachedCaretMetrics =
-      const EmptyLineCaretMetrics(lineHorizontalOffset: 0);
+  CaretMetrics _cachedCaretMetrics = _emptyCaretMetrics;
 
   TextPosition? _lastQueriedCaretPosition;
+  String? _lastQueriedPlainText;
+  MongolParagraph? _lastQueriedParagraph;
+  InlineSpan? _lastQueriedText;
+
+  bool _canUseCached(
+    TextPosition position,
+    String plainText,
+    MongolParagraph paragraph,
+    InlineSpan text,
+  ) {
+    return position == _lastQueriedCaretPosition &&
+        identical(plainText, _lastQueriedPlainText) &&
+        identical(paragraph, _lastQueriedParagraph) &&
+        identical(text, _lastQueriedText);
+  }
+
+  CaretMetrics _cacheAndReturn(
+    TextPosition position,
+    String plainText,
+    MongolParagraph paragraph,
+    InlineSpan text,
+    CaretMetrics metrics,
+  ) {
+    _lastQueriedCaretPosition = position;
+    _lastQueriedPlainText = plainText;
+    _lastQueriedParagraph = paragraph;
+    _lastQueriedText = text;
+    return _cachedCaretMetrics = metrics;
+  }
 
   CaretMetrics compute(
     TextPosition position,
@@ -52,11 +82,17 @@ class CaretMetricsCalculator {
     MongolParagraph paragraph,
     InlineSpan text,
   ) {
-    if (position == _lastQueriedCaretPosition) {
+    if (_canUseCached(position, plainText, paragraph, text)) {
       return _cachedCaretMetrics;
     }
 
     final int offset = position.offset;
+    final int plainTextLength = plainText.length;
+    if (offset < 0 || offset > plainTextLength || plainTextLength == 0) {
+      return _cacheAndReturn(
+          position, plainText, paragraph, text, _emptyCaretMetrics);
+    }
+
     final CaretMetrics? metrics = switch (position.affinity) {
       TextAffinity.upstream =>
         _getMetricsFromUpstream(offset, plainText, paragraph, text) ??
@@ -66,9 +102,13 @@ class CaretMetricsCalculator {
             _getMetricsFromUpstream(offset, plainText, paragraph, text),
     };
 
-    _lastQueriedCaretPosition = position;
-    return _cachedCaretMetrics =
-        metrics ?? EmptyLineCaretMetrics(lineHorizontalOffset: 0);
+    return _cacheAndReturn(
+      position,
+      plainText,
+      paragraph,
+      text,
+      metrics ?? _emptyCaretMetrics,
+    );
   }
 
   /// 根据前一个字符获取光标度量
@@ -80,35 +120,28 @@ class CaretMetricsCalculator {
     InlineSpan text,
   ) {
     final int plainTextLength = plainText.length;
-    if (plainTextLength == 0 || offset > plainTextLength) return null;
-
-    final int prevCodeUnit = plainText.codeUnitAt(max(0, offset - 1));
-    const int newlineCharCode = 0x0A;
-
-    final bool needsSearch = _needsGraphemeExtendedSearch(
-      prevCodeUnit,
-      text.codeUnitAt(offset),
-    );
-    int graphemeLength = needsSearch ? 2 : 1;
-    List<Rect> boxes = <Rect>[];
-
-    while (boxes.isEmpty) {
-      final int searchOffset = offset - graphemeLength;
-      boxes = paragraph.getBoxesForRange(
-        max(0, searchOffset),
-        offset,
-      );
-
-      if (boxes.isEmpty) {
-        if (!needsSearch && prevCodeUnit == newlineCharCode) break;
-        if (searchOffset < -plainTextLength) break;
-        graphemeLength *= 2;
-      }
+    if (plainTextLength == 0 || offset < 0 || offset > plainTextLength) {
+      return null;
     }
 
+    final int safeOffset = offset.clamp(0, plainTextLength);
+    final int prevCodeUnit = plainText.codeUnitAt(max(0, safeOffset - 1));
+    final int? nextCodeUnit = text.codeUnitAt(safeOffset);
+
+    final bool needsSearch =
+        _needsGraphemeExtendedSearch(prevCodeUnit, nextCodeUnit);
+
+    final List<Rect> boxes = _findBoxesUpstream(
+      paragraph,
+      safeOffset,
+      plainTextLength,
+      needsSearch,
+      stopAtNewline: prevCodeUnit == _newlineCodeUnit,
+    );
     if (boxes.isEmpty) return null;
+
     final box = boxes.last;
-    return prevCodeUnit == newlineCharCode
+    return prevCodeUnit == _newlineCodeUnit
         ? EmptyLineCaretMetrics(lineHorizontalOffset: box.right)
         : LineCaretMetrics(
             offset: Offset(box.left, box.bottom),
@@ -123,25 +156,17 @@ class CaretMetricsCalculator {
     InlineSpan text,
   ) {
     final int plainTextLength = plainText.length;
-    if (plainTextLength == 0) return null;
+    if (plainTextLength == 0 || offset < 0 || offset > plainTextLength) {
+      return null;
+    }
 
+    final int safeOffset = offset.clamp(0, plainTextLength);
     final int nextCodeUnit =
-        plainText.codeUnitAt(min(offset, plainTextLength - 1));
+        plainText.codeUnitAt(min(safeOffset, plainTextLength - 1));
 
     final bool needsSearch = _needsGraphemeExtendedSearch(nextCodeUnit, null);
-    int graphemeLength = needsSearch ? 2 : 1;
-    List<Rect> boxes = <Rect>[];
-
-    while (boxes.isEmpty) {
-      final int searchOffset = offset + graphemeLength;
-      boxes = paragraph.getBoxesForRange(offset, searchOffset);
-
-      if (boxes.isEmpty) {
-        if (!needsSearch) break;
-        if (searchOffset >= plainTextLength << 1) break;
-        graphemeLength *= 2;
-      }
-    }
+    final List<Rect> boxes = _findBoxesDownstream(
+        paragraph, safeOffset, plainTextLength, needsSearch);
 
     if (boxes.isEmpty) return null;
     final box = boxes.first;
@@ -149,6 +174,62 @@ class CaretMetricsCalculator {
       offset: Offset(box.left, box.top),
       fullWidth: box.right - box.left,
     );
+  }
+
+  List<Rect> _findBoxesUpstream(
+    MongolParagraph paragraph,
+    int offset,
+    int plainTextLength,
+    bool needsSearch, {
+    required bool stopAtNewline,
+  }) {
+    int graphemeLength = needsSearch ? 2 : 1;
+
+    while (true) {
+      final int rangeStart = max(0, offset - graphemeLength);
+      final List<Rect> boxes = paragraph.getBoxesForRange(rangeStart, offset);
+      if (boxes.isNotEmpty) {
+        return boxes;
+      }
+
+      if (!needsSearch || stopAtNewline || rangeStart == 0) {
+        return const <Rect>[];
+      }
+
+      final int nextLength = min(plainTextLength, graphemeLength * 2);
+      if (nextLength == graphemeLength) {
+        return const <Rect>[];
+      }
+      graphemeLength = nextLength;
+    }
+  }
+
+  List<Rect> _findBoxesDownstream(
+    MongolParagraph paragraph,
+    int offset,
+    int plainTextLength,
+    bool needsSearch,
+  ) {
+    int graphemeLength = needsSearch ? 2 : 1;
+    final int maxSearchEnd = plainTextLength << 1;
+
+    while (true) {
+      final int rangeEnd = offset + graphemeLength;
+      final List<Rect> boxes = paragraph.getBoxesForRange(offset, rangeEnd);
+      if (boxes.isNotEmpty) {
+        return boxes;
+      }
+
+      if (!needsSearch || rangeEnd >= maxSearchEnd) {
+        return const <Rect>[];
+      }
+
+      final int nextLength = graphemeLength * 2;
+      if (nextLength == graphemeLength) {
+        return const <Rect>[];
+      }
+      graphemeLength = nextLength;
+    }
   }
 
   bool _needsGraphemeExtendedSearch(int codeUnit, int? codeUnitAfter) {
