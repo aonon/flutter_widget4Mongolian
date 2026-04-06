@@ -43,6 +43,7 @@ class _EmojiCjkDemoState extends State<EmojiCjkDemo> {
 }
 
 const text = TextSpan(
+  //ᠨᠢᠭᠡ 十一二三四五六七八九 ᠬᠣᠶᠠᠷ 🇭🇺 ᠭᠣᠷᠪᠠ 👨‍👩‍👧 ᠳᠥᠷᠪᠡ one two 👋🏿 three four ᠲᠠᠪᠤ ᠵᠢᠷᠭᠤᠭ᠎ᠠ ᠳᠣᠯᠣᠭ᠎ᠠ ᠨᠠᠢᠮᠠ ᠶᠢᠰᠦ ᠠᠷᠪᠠ \uD83D\uDE42 ᠬᠣᠷᠢᠨ ᠨᠢᠭᠡ ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ \uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾
   children: [
     TextSpan(
         text:
