@@ -47,6 +47,7 @@ import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import mongol.compose.core.MongolTextAlign
 import mongol.compose.core.MongolTextPainter
+import mongol.compose.core.MongolTextTools
 import mongol.compose.core.RunMetrics
 import mongol.compose.core.TextRun
 import mongol.compose.core.TextRunMeasurer
@@ -92,6 +94,7 @@ fun MongolEditableText(
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
+    val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val textMeasurer = rememberTextMeasurer()
     val caretAlpha by rememberInfiniteTransition(label = "mongolCaretBlink").animateFloat(
@@ -109,9 +112,15 @@ fun MongolEditableText(
                 val result = textMeasurer.measure(text = text, style = style)
                 val runHeight = result.size.height.toFloat().coerceAtLeast(1f)
                 val runWidth = result.size.width.toFloat().coerceAtLeast(1f)
-                val rawAdvances = text.map { ch ->
-                    textMeasurer.measure(text = ch.toString(), style = style)
-                        .size.width.toFloat().coerceAtLeast(1f)
+                val rawAdvances = mutableListOf<Float>()
+                MongolTextTools.forEachGraphemeCluster(text) { clusterStart, clusterEnd ->
+                    rawAdvances += textMeasurer.measure(
+                        text = text.substring(clusterStart, clusterEnd),
+                        style = style,
+                    ).size.width.toFloat().coerceAtLeast(1f)
+                }
+                if (rawAdvances.isEmpty()) {
+                    rawAdvances += runWidth
                 }
                 val scale = if (rawAdvances.sum() > 0f) runWidth / rawAdvances.sum() else 1f
                 return RunMetrics(
@@ -147,6 +156,7 @@ fun MongolEditableText(
     }
 
     // Declare mutable state BEFORE it is referenced in LaunchedEffect keys.
+    var widthPx by remember { mutableIntStateOf(1) }
     var heightPx by remember { mutableIntStateOf(1) }
     var dragAnchor by remember { mutableIntStateOf(-1) }
     var activeHandleType by remember { mutableStateOf<MongolSelectionHandleType?>(null) }
@@ -157,6 +167,7 @@ fun MongolEditableText(
     var lastTapTimestamp by remember { mutableLongStateOf(0L) }
     val multiTapWindowMs = 320L
     val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val bringIntoViewBottomMarginPx = with(density) { 24.dp.toPx() }
 
     fun resolveCaretPositionForOffset(tapOffset: Offset): mongol.compose.core.TextPosition {
         if (state.text.isEmpty()) {
@@ -207,16 +218,21 @@ fun MongolEditableText(
     LaunchedEffect(state.text, state.selection, state.composingRange, imeBridgeView) {
         imeBridgeView?.syncSelection()
     }
-    LaunchedEffect(hasFocus, imeBottomPadding) {
-        if (hasFocus && imeBottomPadding > 0.dp) {
-            bringIntoViewRequester.bringIntoView()
+    LaunchedEffect(hasFocus, imeBottomPadding, widthPx, heightPx) {
+        if (hasFocus && widthPx > 0 && heightPx > 0) {
+            val fieldRect = androidx.compose.ui.geometry.Rect(
+                left = 0f,
+                top = 0f,
+                right = widthPx.toFloat(),
+                bottom = heightPx.toFloat() + bringIntoViewBottomMarginPx,
+            )
+            bringIntoViewRequester.bringIntoView(fieldRect)
         }
     }
 
     MongolTextMeasuredLayout(
         painter = painter,
         modifier = Modifier
-            .imePadding()
             .bringIntoViewRequester(bringIntoViewRequester)
             .then(modifier)
             .focusRequester(focusRequester)
@@ -413,6 +429,7 @@ fun MongolEditableText(
                 }
             }
             .onSizeChanged { size ->
+                widthPx = size.width.coerceAtLeast(1)
                 heightPx = size.height.coerceAtLeast(1)
                 painter.layout(maxHeight = heightPx.toFloat())
             }
@@ -574,60 +591,62 @@ fun MongolEditableText(
                         }
 
                         if (run.isRotated) {
-                            var codeUnitIndex = run.start
-                            while (codeUnitIndex < run.end) {
-                                val codePoint = Character.codePointAt(state.text, codeUnitIndex)
-                                val nextIndex = codeUnitIndex + Character.charCount(codePoint)
-                                if (codePoint == '\n'.code) {
-                                    codeUnitIndex = nextIndex
-                                    continue
+                            MongolTextTools.forEachGraphemeCluster(
+                                state.text,
+                                run.start,
+                                run.end,
+                            ) { clusterStart, clusterEnd ->
+                                val clusterText = state.text.substring(clusterStart, clusterEnd)
+                                if (clusterText == "\n") {
+                                    return@forEachGraphemeCluster
                                 }
 
-                                val box =
-                                    painter.getBoxesForRange(codeUnitIndex, nextIndex).firstOrNull()
-                                if (box == null) {
-                                    codeUnitIndex = nextIndex
-                                    continue
-                                }
+                                val box = painter.getBoxesForRange(clusterStart, clusterEnd)
+                                    .firstOrNull() ?: return@forEachGraphemeCluster
 
-                                val glyph = String(Character.toChars(codePoint))
                                 val glyphStyle = if (state.spans.isEmpty()) {
                                     style
                                 } else {
-                                    style.merge(styleMap[codeUnitIndex])
+                                    style.merge(styleMap[clusterStart])
                                 }
                                 val glyphLayout = textMeasurer.measure(
-                                    text = glyph,
+                                    text = clusterText,
                                     style = glyphStyle,
                                 )
+                                val codePoint = Character.codePointAt(state.text, clusterStart)
                                 with(VerticalGlyphPlacementPolicy) {
                                     drawGlyphInVerticalBox(
                                         codePoint = codePoint,
                                         previousCodePoint = previousVisibleCodePoint(
                                             state.text,
-                                            codeUnitIndex
+                                            clusterStart,
                                         ),
                                         box = box,
                                         glyphLayout = glyphLayout,
                                     )
                                 }
-
-                                codeUnitIndex = nextIndex
                             }
                         } else {
-                            for (index in run.start until run.end) {
-                                val char = state.text[index]
-                                if (char == '\n') continue
+                            MongolTextTools.forEachGraphemeCluster(
+                                state.text,
+                                run.start,
+                                run.end,
+                            ) { clusterStart, clusterEnd ->
+                                val clusterText = state.text.substring(clusterStart, clusterEnd)
+                                if (clusterText == "\n") return@forEachGraphemeCluster
 
-                                val box = painter.getBoxesForRange(index, index + 1).firstOrNull()
-                                    ?: continue
-                                val charStyle =
-                                    if (state.spans.isEmpty()) style else style.merge(styleMap[index])
+                                val box = painter.getBoxesForRange(clusterStart, clusterEnd)
+                                    .firstOrNull() ?: return@forEachGraphemeCluster
+                                val clusterStyle = if (state.spans.isEmpty()) {
+                                    style
+                                } else {
+                                    style.merge(styleMap[clusterStart])
+                                }
                                 drawText(
                                     textMeasurer = textMeasurer,
-                                    text = char.toString(),
+                                    text = clusterText,
                                     topLeft = Offset(box.left, box.top),
-                                    style = charStyle,
+                                    style = clusterStyle,
                                 )
                             }
                         }

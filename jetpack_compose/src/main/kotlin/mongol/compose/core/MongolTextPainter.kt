@@ -131,10 +131,15 @@ class MongolTextPainter(
     private fun buildAutoRuns(text: String): List<TextRun> {
         if (text.isEmpty()) return emptyList()
 
+        // isSolo: this segment must NOT be merged with its neighbors.
+        // Used for ideographic (CJK/emoji) characters when rotateCjk=false —
+        // they are not cursive so they can wrap at every character boundary,
+        // unlike Mongolian which is cursive and must stay in one run per word.
         data class Segment(
             val start: Int,
             val end: Int,
             val isRotatable: Boolean,
+            val isSolo: Boolean = false,
         ) {
             val textRangeLength: Int get() = end - start
         }
@@ -143,6 +148,19 @@ class MongolTextPainter(
             if (start >= end || end - start > 1) return false
             val ch = text[start]
             return ch == ' ' || ch == '\n'
+        }
+
+        // True if ANY code point in this cluster is inherently ideographic/emoji,
+        // regardless of the rotateCjk flag.
+        fun isIdeographicCluster(start: Int, end: Int): Boolean {
+            if (start >= end) return false
+            var cursor = start
+            while (cursor < end) {
+                val codePoint = Character.codePointAt(text, cursor)
+                if (isEmojiCodePoint(codePoint) || isRotatableCodePoint(codePoint)) return true
+                cursor += Character.charCount(codePoint)
+            }
+            return false
         }
 
         fun isRotatableCluster(start: Int, end: Int): Boolean {
@@ -176,6 +194,8 @@ class MongolTextPainter(
                 start = clusterStart,
                 end = clusterEnd,
                 isRotatable = isRotatableCluster(clusterStart, clusterEnd),
+                isSolo = !isRotatableCluster(clusterStart, clusterEnd) &&
+                    isIdeographicCluster(clusterStart, clusterEnd),
             )
         }
 
@@ -184,7 +204,7 @@ class MongolTextPainter(
             val cluster = clusters[clusterIndex]
 
             if (isBreakCluster(cluster.start, cluster.end)) {
-                rawSegments += cluster.copy(isRotatable = false)
+                rawSegments += cluster.copy(isRotatable = false, isSolo = false)
                 clusterIndex += 1
                 continue
             }
@@ -195,12 +215,24 @@ class MongolTextPainter(
                 continue
             }
 
+            // CJK/emoji with rotateCjk=false: keep each character as its own segment
+            // so it can wrap independently (they are not cursive/connected script).
+            if (cluster.isSolo) {
+                rawSegments += cluster
+                clusterIndex += 1
+                continue
+            }
+
+            // Cursive scripts (Mongolian) and Latin words: merge consecutive
+            // non-rotatable, non-solo, non-break clusters into one word run.
             val segmentStart = cluster.start
             var segmentEnd = cluster.end
             clusterIndex += 1
             while (clusterIndex < clusters.size) {
                 val nextCluster = clusters[clusterIndex]
-                if (isBreakCluster(nextCluster.start, nextCluster.end) || nextCluster.isRotatable) {
+                if (isBreakCluster(nextCluster.start, nextCluster.end) ||
+                    nextCluster.isRotatable ||
+                    nextCluster.isSolo) {
                     break
                 }
                 segmentEnd = nextCluster.end
@@ -240,6 +272,19 @@ class MongolTextPainter(
                 continue
             }
 
+            // Solo ideographic (CJK/emoji when rotateCjk=false): flush any
+            // pending cursive run and emit this character as its own run.
+            if (segment.isSolo) {
+                flushPending()
+                mergedRuns += TextRun(
+                    start = segment.start,
+                    end = segment.end,
+                    isRotated = false,
+                    runId = mergedRuns.size,
+                )
+                continue
+            }
+
             if (pendingStart == null) {
                 pendingStart = segment.start
             }
@@ -249,6 +294,7 @@ class MongolTextPainter(
             val keepMerging = !endsWithBreak(segment) &&
                 nextSegment != null &&
                 !nextSegment.isRotatable &&
+                !nextSegment.isSolo &&
                 !startsWithBreak(nextSegment)
 
             if (!keepMerging) {

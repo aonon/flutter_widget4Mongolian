@@ -43,12 +43,11 @@ class DefaultMongolInputSession(
         insertedLength: Int,
         newCursorPosition: Int,
     ): Int {
-        val cursor = if (newCursorPosition > 0) {
-            replacementStart + insertedLength + newCursorPosition - 1
+        return if (newCursorPosition > 0) {
+            (replacementStart + insertedLength + newCursorPosition - 1).coerceIn(0, state.text.length)
         } else {
-            replacementStart + newCursorPosition
+            (replacementStart + newCursorPosition).coerceIn(0, state.text.length)
         }
-        return cursor.coerceIn(0, state.text.length)
     }
 
     override fun snapshot(): MongolInputSnapshot {
@@ -78,35 +77,30 @@ class DefaultMongolInputSession(
     }
 
     override fun commitText(text: String, newCursorPosition: Int) {
-        val composing = state.composingRange?.normalized()
-        val selection = state.selection.normalized()
+        val composing = state.composingRange
+        val selection = state.selection
         val active = composing ?: selection
-        val replacementStart = if (active.isCollapsed) state.caret.offset else active.start
-        if (active.isCollapsed) {
-            state.insertText(text)
-        } else {
-            state.replaceRange(active.start, active.end, text)
-        }
-        state.clearComposingRange()
-        state.placeCaret(
-            mongol.compose.core.TextPosition(
-                resolveCursorPosition(replacementStart, text.length, newCursorPosition),
-            ),
-        )
+        
+        val replacementStart = active.start
+        state.replaceRange(active.start, active.end, text, clearComposing = true)
+        
+        val cursor = resolveCursorPosition(replacementStart, text.length, newCursorPosition)
+        state.setSelection(cursor, cursor, clearComposing = true)
         notifyTextChanged()
     }
 
     override fun setComposingText(text: String, newCursorPosition: Int) {
-        val composing = state.composingRange?.normalized()
-        val selection = state.selection.normalized()
+        val composing = state.composingRange
+        val selection = state.selection
         val active = composing ?: selection
-        val start = if (active.isCollapsed) state.caret.offset else active.start
-        val end = if (active.isCollapsed) state.caret.offset else active.end
-        state.replaceRange(start, end, text)
-        state.setComposingRange(start, start + text.length)
-        val cursor = resolveCursorPosition(start, text.length, newCursorPosition)
+        
+        val replacementStart = active.start
+        state.replaceRange(active.start, active.end, text, clearComposing = false)
+        state.setComposingRange(replacementStart, replacementStart + text.length)
+        
+        val cursor = resolveCursorPosition(replacementStart, text.length, newCursorPosition)
         state.setSelection(cursor, cursor, clearComposing = false)
-        onTextChange(state.text)
+        notifyTextChanged()
     }
 
     override fun setComposingRegion(start: Int, end: Int) {
@@ -119,26 +113,17 @@ class DefaultMongolInputSession(
     }
 
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int) {
-        val composing = state.composingRange?.normalized()
-        if (composing != null && !composing.isCollapsed) {
-            state.replaceRange(composing.start, composing.end, "")
-            state.clearComposingRange()
-            notifyTextChanged()
-            return
-        }
+        if (beforeLength < 0 || afterLength < 0) return
 
-        val selection = state.selection.normalized()
-        if (!selection.isCollapsed) {
-            state.replaceRange(selection.start, selection.end, "")
-            notifyTextChanged()
-            return
-        }
+        val selection = state.selection
+        val start = (selection.start - beforeLength).coerceAtLeast(0)
+        val end = (selection.end + afterLength).coerceAtMost(state.text.length)
 
-        val caret = state.caret.offset
-        val start = (caret - beforeLength.coerceAtLeast(0)).coerceAtLeast(0)
-        val end = (caret + afterLength.coerceAtLeast(0)).coerceAtMost(state.text.length)
-        if (start < end) {
-            state.replaceRange(start, end, "")
+        if (start != selection.start || end != selection.end) {
+            state.replaceRange(start, selection.start, "", clearComposing = false)
+            // Adjust end because text length changed
+            val newEnd = (end - (selection.start - start)).coerceAtMost(state.text.length)
+            state.replaceRange(selection.start, newEnd, "", clearComposing = false)
             notifyTextChanged()
         }
     }

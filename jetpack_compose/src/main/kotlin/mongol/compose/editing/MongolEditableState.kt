@@ -111,10 +111,9 @@ class MongolEditableState(initialText: String) {
     fun setSelection(start: Int, end: Int, clearComposing: Boolean = true) {
         val normalizedStart = start.coerceIn(0, text.length)
         val normalizedEnd = end.coerceIn(0, text.length)
-        val normalized = MongolSelection(normalizedStart, normalizedEnd).normalized()
-        selection = normalized
-        caret = TextPosition(normalized.end)
-        selectionAnchor = if (normalized.isCollapsed) null else normalized.start
+        selection = MongolSelection(normalizedStart, normalizedEnd)
+        caret = TextPosition(normalizedEnd)
+        selectionAnchor = if (selection.isCollapsed) null else normalizedStart
         if (clearComposing) {
             composingRange = null
         }
@@ -150,7 +149,7 @@ class MongolEditableState(initialText: String) {
         composingRange = null
     }
 
-    fun replaceRange(start: Int, end: Int, replacement: String) {
+    fun replaceRange(start: Int, end: Int, replacement: String, clearComposing: Boolean = true) {
         val rangeStart = start.coerceIn(0, text.length)
         val rangeEnd = end.coerceIn(0, text.length)
         val normalized = MongolSelection(rangeStart, rangeEnd).normalized()
@@ -168,7 +167,9 @@ class MongolEditableState(initialText: String) {
         caret = TextPosition(next)
         selection = MongolSelection(next, next)
         selectionAnchor = null
-        composingRange = null
+        if (clearComposing) {
+            composingRange = null
+        }
     }
 
     // ------------------------------------------------------------------ //

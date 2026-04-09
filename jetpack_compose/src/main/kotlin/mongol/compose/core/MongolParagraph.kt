@@ -40,7 +40,6 @@ class MongolParagraph(
 
     private val columns: MutableList<LayoutColumn> = mutableListOf()
     private val glyphBoxesByIndex: MutableMap<Int, Rect> = mutableMapOf()
-    private val caretBoxesByIndex: MutableMap<Int, Rect> = mutableMapOf()
     private val glyphMetricsByIndex: MutableMap<Int, GlyphMetrics> = mutableMapOf()
 
     // Deterministic fallback metrics before Compose TextMeasurer integration.
@@ -88,7 +87,6 @@ class MongolParagraph(
     private fun resetComputedLayout() {
         columns.clear()
         glyphBoxesByIndex.clear()
-        caretBoxesByIndex.clear()
         glyphMetricsByIndex.clear()
         width = 0f
         height = 0f
@@ -165,15 +163,6 @@ class MongolParagraph(
                     idx in text.indices && isEdgeWhitespace(text[idx])
                 }
                 if (isLeadingWhitespaceCluster) {
-                    val hiddenCaretRect = Rect(
-                        left = currentColumn.left,
-                        top = 0f,
-                        right = currentColumn.left + metrics.crossAxis,
-                        bottom = 0f,
-                    )
-                    for (index in startIndex until endIndex) {
-                        caretBoxesByIndex[index] = hiddenCaretRect
-                    }
                     return
                 }
             }
@@ -193,7 +182,6 @@ class MongolParagraph(
 
             for (index in startIndex until endIndex) {
                 glyphBoxesByIndex[index] = rect
-                caretBoxesByIndex[index] = rect
                 glyphMetricsByIndex[index] = GlyphMetrics(
                     advance = metrics.advance,
                     crossAxis = metrics.crossAxis,
@@ -242,15 +230,6 @@ class MongolParagraph(
                         idx in text.indices && isEdgeWhitespace(text[idx])
                     }
                     if (!isLeadingWhitespaceCluster) break
-                    val hiddenCaretRect = Rect(
-                        left = left,
-                        top = top,
-                        right = left + metrics.crossAxis,
-                        bottom = top,
-                    )
-                    for (textIndex in range.start until range.end) {
-                        caretBoxesByIndex[textIndex] = hiddenCaretRect
-                    }
                     firstRenderableClusterIndex += 1
                 }
             }
@@ -283,7 +262,6 @@ class MongolParagraph(
                 )
                 for (textIndex in clusterRange.start until clusterRange.end) {
                     glyphBoxesByIndex[textIndex] = rect
-                    caretBoxesByIndex[textIndex] = rect
                     glyphMetricsByIndex[textIndex] = GlyphMetrics(
                         advance = height,
                         crossAxis = metrics.crossAxis,
@@ -690,12 +668,12 @@ class MongolParagraph(
             else -> 0
         }
 
-        val exact = caretBoxesByIndex[normalized]
+        val exact = glyphBoxesByIndex[normalized]
         if (exact != null) {
             return Offset(exact.left, exact.top)
         }
 
-        val prev = caretBoxesByIndex[(normalized - 1).coerceAtLeast(0)]
+        val prev = glyphBoxesByIndex[(normalized - 1).coerceAtLeast(0)]
         return if (prev != null) {
             Offset(prev.left, prev.bottom)
         } else {
