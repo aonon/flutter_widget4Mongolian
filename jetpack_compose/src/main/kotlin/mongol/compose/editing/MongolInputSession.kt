@@ -115,15 +115,18 @@ class DefaultMongolInputSession(
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int) {
         if (beforeLength < 0 || afterLength < 0) return
 
-        val selection = state.selection
-        val start = (selection.start - beforeLength).coerceAtLeast(0)
-        val end = (selection.end + afterLength).coerceAtMost(state.text.length)
+        val selection = state.selection.normalized()
+        if (!selection.isCollapsed) {
+            state.replaceRange(selection.start, selection.end, "", clearComposing = false)
+            notifyTextChanged()
+            return
+        }
 
-        if (start != selection.start || end != selection.end) {
-            state.replaceRange(start, selection.start, "", clearComposing = false)
-            // Adjust end because text length changed
-            val newEnd = (end - (selection.start - start)).coerceAtMost(state.text.length)
-            state.replaceRange(selection.start, newEnd, "", clearComposing = false)
+        val cursor = selection.end
+        val start = (cursor - beforeLength).coerceAtLeast(0)
+        val end = (cursor + afterLength).coerceAtMost(state.text.length)
+        if (start < end) {
+            state.replaceRange(start, end, "", clearComposing = false)
             notifyTextChanged()
         }
     }

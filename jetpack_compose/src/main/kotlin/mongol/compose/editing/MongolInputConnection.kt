@@ -6,10 +6,7 @@ import android.view.inputmethod.InputConnection
 import android.os.Bundle
 import android.view.inputmethod.*
 
-/**
- * 更好的方案：直接实现 InputConnection 接口。
- * 这样可以完全控制输入逻辑，避免 BaseInputConnection 内部 Editable 导致的同步问题。
- */
+
 class MongolInputConnection(
     private val view: android.view.View,
     private val session: MongolInputSession,
