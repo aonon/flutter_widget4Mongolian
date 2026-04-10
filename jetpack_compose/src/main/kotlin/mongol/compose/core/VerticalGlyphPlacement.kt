@@ -42,6 +42,9 @@ object VerticalGlyphPlacementPolicy {
     private const val CJK_COMPATIBILITY_IDEOGRAPHS_START = 0xF900
     private const val CJK_COMPATIBILITY_IDEOGRAPHS_END = 0xFAFF
     private const val UNICODE_EMOJI_START = 0x1F000
+    private const val UNICODE_EMOJI_END = 0x1FAFF
+    private const val BMP_EMOJI_AND_DINGBAT_START = 0x2600
+    private const val BMP_EMOJI_AND_DINGBAT_END = 0x27BF
     private const val ASCII_PRINTABLE_START = 0x21
     private const val ASCII_PRINTABLE_END = 0x7E
     private const val VERTICAL_PUNCT_SHIFT_DIVISOR = 5f
@@ -65,7 +68,14 @@ object VerticalGlyphPlacementPolicy {
     }
 
     private fun isEmoji(codePoint: Int): Boolean {
-        return codePoint > UNICODE_EMOJI_START
+        if (codePoint in UNICODE_EMOJI_START..UNICODE_EMOJI_END) return true
+        if (codePoint in BMP_EMOJI_AND_DINGBAT_START..BMP_EMOJI_AND_DINGBAT_END) return true
+        if (codePoint == 0x00A9 || codePoint == 0x00AE) return true
+        if (codePoint == 0x203C || codePoint == 0x2049) return true
+        if (codePoint == 0x2122 || codePoint == 0x2139) return true
+        if (codePoint == 0x3030 || codePoint == 0x303D) return true
+        if (codePoint == 0x3297 || codePoint == 0x3299) return true
+        return false
     }
 
     private fun isVerticalPresentationForm(codePoint: Int): Boolean {
@@ -77,7 +87,7 @@ object VerticalGlyphPlacementPolicy {
     }
 
     private fun isVerticalQuestionExclamationForm(codePoint: Int): Boolean {
-        return codePoint == 0xFE15 || codePoint == 0xFE16
+        return codePoint in VerticalGlyphCodePointLists.verticalQuestionExclamationForms
     }
 
     private fun isCjkPunctuation(codePoint: Int): Boolean {
@@ -171,21 +181,23 @@ object VerticalGlyphPlacementPolicy {
         val circledNumber = isCircledNumber(codePoint)
         val quarterTurn = shouldQuarterTurnInVertical(codePoint)
         val contextPunctuationVertical = shouldVerticalizePunctuation(codePoint, previousCodePoint)
-        val verticalized = quarterTurn || contextPunctuationVertical || circledNumber
+        val questionExclamationForm = isVerticalQuestionExclamationForm(codePoint)
+        val verticalized = quarterTurn || contextPunctuationVertical || circledNumber || questionExclamationForm
         if (!verticalized) {
             // Keep English-context punctuation and other glyphs in original orientation/placement.
             return VerticalGlyphPlacement(dx = 0f, dy = 0f, rotationDegrees = 0f)
         }
 
         val needsRotation = (contextPunctuationVertical &&
-                !isCjkPunctuation(codePoint))
+                !isCjkPunctuation(codePoint) &&
+                !questionExclamationForm)
 
         // Center by unrotated bounds first. When rotation is applied around the box center,
         // this keeps the glyph center locked to the same pivot and avoids right/down drift.
         var dx = centerOffset(boxWidth, glyphWidth)
         var dy = centerOffset(boxHeight, glyphHeight)
 
-        if (isVerticalQuestionExclamationForm(codePoint)) {
+        if (questionExclamationForm) {
             dx -= boxWidth / VERTICAL_PUNCT_SHIFT_DIVISOR
             dy += boxHeight / VERTICAL_PUNCT_SHIFT_DIVISOR
         }

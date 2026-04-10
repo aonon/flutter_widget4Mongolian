@@ -1,5 +1,7 @@
 package mongol.compose.editing
 
+import mongol.compose.core.MongolTextTools
+
 /**
  * Minimal text-input session bridge for future platform IME integration.
  */
@@ -123,8 +125,16 @@ class DefaultMongolInputSession(
         }
 
         val cursor = selection.end
-        val start = (cursor - beforeLength).coerceAtLeast(0)
-        val end = (cursor + afterLength).coerceAtMost(state.text.length)
+        var start = cursor
+        repeat(beforeLength) {
+            start = MongolTextTools.getOffsetBefore(start, state.text) ?: 0
+        }
+
+        var end = cursor
+        repeat(afterLength) {
+            end = MongolTextTools.getOffsetAfter(end, state.text) ?: state.text.length
+        }
+
         if (start < end) {
             state.replaceRange(start, end, "", clearComposing = false)
             notifyTextChanged()

@@ -336,7 +336,15 @@ class MongolTextPainter(
     }
 
     private fun isEmojiCodePoint(codePoint: Int): Boolean {
-        return codePoint > 0x1F000
+        // Cover supplementary-plane emoji plus legacy BMP emoji/dingbat symbols.
+        if (codePoint in 0x1F000..0x1FAFF) return true
+        if (codePoint in 0x2600..0x27BF) return true
+        if (codePoint == 0x00A9 || codePoint == 0x00AE) return true
+        if (codePoint == 0x203C || codePoint == 0x2049) return true
+        if (codePoint == 0x2122 || codePoint == 0x2139) return true
+        if (codePoint == 0x3030 || codePoint == 0x303D) return true
+        if (codePoint == 0x3297 || codePoint == 0x3299) return true
+        return false
     }
 
     private fun buildParagraph(): MongolParagraph {

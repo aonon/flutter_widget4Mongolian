@@ -75,7 +75,7 @@ import mongol.compose.layout.MongolTextMeasuredLayout
  * Keyboard input wiring is the next step.
  */
 @Composable
-fun MongolEditableText(
+fun MongolBasicTextField(
     state: MongolEditableState,
     modifier: Modifier = Modifier,
     style: TextStyle = TextStyle.Default,
@@ -89,6 +89,7 @@ fun MongolEditableText(
     onTextChange: (String) -> Unit = {},
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
     val focusRequester = remember { FocusRequester() }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
@@ -217,6 +218,9 @@ fun MongolEditableText(
     }
     LaunchedEffect(state.text, state.selection, state.composingRange, imeBridgeView) {
         imeBridgeView?.syncSelection()
+    }
+    LaunchedEffect(hasFocus, imeBridgeHasFocus, onFocusChanged) {
+        onFocusChanged(hasFocus || imeBridgeHasFocus)
     }
     LaunchedEffect(hasFocus, imeBottomPadding, widthPx, heightPx) {
         if (hasFocus && widthPx > 0 && heightPx > 0) {
@@ -681,8 +685,7 @@ fun MongolEditableText(
                     val capHalfHeight = 4f
                     val clampedCaretY = caretY.coerceAtLeast(capHalfHeight + caretStroke / 2f)
                     val visibleCaretColor = caretColor.copy(alpha = caretAlpha)
-                    val shouldShowCaret =
-                        enabled && (hasFocus || imeBridgeHasFocus || imeBottomPadding > 0.dp)
+                    val shouldShowCaret = enabled && (hasFocus || imeBridgeHasFocus)
                     if (shouldShowCaret) {
                         drawLine(
                             color = visibleCaretColor,
@@ -708,3 +711,50 @@ fun MongolEditableText(
         }
     }
 }
+
+/**
+ * Value-based overload to align with Compose text field usage style.
+ */
+@Composable
+fun MongolBasicTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = TextStyle.Default,
+    textAlign: MongolTextAlign = MongolTextAlign.TOP,
+    textRuns: List<TextRun>? = null,
+    rotateCjk: Boolean = true,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    caretColor: Color = Color(0xFF1B5E20),
+    selectionColor: Color = Color(0x552196F3),
+    onInputSessionReady: (MongolInputSession) -> Unit = {},
+    onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {},
+) {
+    val state = rememberMongolEditableState(initialText = value)
+
+    LaunchedEffect(value) {
+        if (state.text != value) {
+            state.replaceText(value)
+        }
+    }
+
+    MongolBasicTextField(
+        state = state,
+        modifier = modifier,
+        style = textStyle,
+        textAlign = textAlign,
+        textRuns = textRuns,
+        rotateCjk = rotateCjk,
+        enabled = enabled,
+        readOnly = readOnly,
+        caretColor = caretColor,
+        selectionColor = selectionColor,
+        onTextChange = onValueChange,
+        onInputSessionReady = onInputSessionReady,
+        onSelectionHandlesChanged = onSelectionHandlesChanged,
+        onFocusChanged = onFocusChanged,
+    )
+}
+

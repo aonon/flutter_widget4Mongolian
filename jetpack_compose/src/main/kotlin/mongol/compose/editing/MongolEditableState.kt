@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.SpanStyle
+import mongol.compose.core.MongolTextTools
 import mongol.compose.core.TextPosition
 import mongol.compose.core.TextRange
 
@@ -309,11 +310,13 @@ class MongolEditableState(initialText: String) {
         }
         if (caret.offset <= 0) return
         pushUndoSnapshot()
-        val start = caret.offset - 1
+        val start = MongolTextTools.getOffsetBefore(caret.offset, text) ?: return
         spans = spans.adjustForDelete(start, caret.offset)
         text = text.removeRange(start, caret.offset)
         caret = TextPosition(start)
         selection = MongolSelection(start, start)
+        selectionAnchor = null
+        composingRange = null
     }
 
     fun deleteForward() {
@@ -325,8 +328,9 @@ class MongolEditableState(initialText: String) {
         }
         if (caret.offset >= text.length) return
         pushUndoSnapshot()
-        spans = spans.adjustForDelete(caret.offset, caret.offset + 1)
-        text = text.removeRange(caret.offset, caret.offset + 1)
+        val end = MongolTextTools.getOffsetAfter(caret.offset, text) ?: return
+        spans = spans.adjustForDelete(caret.offset, end)
+        text = text.removeRange(caret.offset, end)
         selection = MongolSelection(caret.offset, caret.offset)
         selectionAnchor = null
         composingRange = null

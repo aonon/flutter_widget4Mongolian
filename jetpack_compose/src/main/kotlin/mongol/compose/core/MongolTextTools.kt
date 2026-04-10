@@ -11,6 +11,9 @@ import java.util.Locale
  */
 object MongolTextTools {
 
+    private const val REGIONAL_INDICATOR_START = 0x1F1E6
+    private const val REGIONAL_INDICATOR_END = 0x1F1FF
+
     private fun createCharacterBreakIterator(text: String): BreakIterator {
         return BreakIterator.getCharacterInstance(Locale.ROOT).apply {
             setText(text)
@@ -106,7 +109,18 @@ object MongolTextTools {
         if (offset < 0 || offset >= text.length) return null
         val iterator = createCharacterBreakIterator(text)
         val next = iterator.following(offset)
-        return if (next == BreakIterator.DONE) null else next
+        if (next == BreakIterator.DONE) return null
+
+        // Treat flag emoji (RI pairs) as one unit: advance by exactly one flag.
+        val cp = Character.codePointAt(text, offset)
+        if (isRegionalIndicator(cp)) {
+            val runEnd = findRegionalIndicatorRunEnd(text, offset)
+            val runCount = codePointDistance(text, offset, runEnd)
+            val advance = if (runCount >= 2) 2 else 1
+            return text.offsetByCodePoints(offset, advance).coerceAtMost(text.length)
+        }
+
+        return next
     }
 
     /**
@@ -116,7 +130,49 @@ object MongolTextTools {
         if (offset <= 0 || offset > text.length) return null
         val iterator = createCharacterBreakIterator(text)
         val prev = iterator.preceding(offset)
-        return if (prev == BreakIterator.DONE) null else prev
+        if (prev == BreakIterator.DONE) return null
+
+        // Treat flag emoji (RI pairs) as one unit: retreat by exactly one flag.
+        val cpStart = text.offsetByCodePoints(offset, -1)
+        val cp = Character.codePointAt(text, cpStart)
+        if (isRegionalIndicator(cp)) {
+            val runStart = findRegionalIndicatorRunStart(text, cpStart)
+            val runCount = codePointDistance(text, runStart, offset)
+            val retreat = if (runCount >= 2) 2 else 1
+            return text.offsetByCodePoints(offset, -retreat).coerceAtLeast(0)
+        }
+
+        return prev
+    }
+
+    private fun isRegionalIndicator(codePoint: Int): Boolean {
+        return codePoint in REGIONAL_INDICATOR_START..REGIONAL_INDICATOR_END
+    }
+
+    private fun findRegionalIndicatorRunStart(text: String, index: Int): Int {
+        var cursor = index
+        while (cursor > 0) {
+            val prev = text.offsetByCodePoints(cursor, -1)
+            val cp = Character.codePointAt(text, prev)
+            if (!isRegionalIndicator(cp)) break
+            cursor = prev
+        }
+        return cursor
+    }
+
+    private fun findRegionalIndicatorRunEnd(text: String, index: Int): Int {
+        var cursor = index
+        while (cursor < text.length) {
+            val cp = Character.codePointAt(text, cursor)
+            if (!isRegionalIndicator(cp)) break
+            cursor += Character.charCount(cp)
+        }
+        return cursor
+    }
+
+    private fun codePointDistance(text: String, start: Int, end: Int): Int {
+        if (start >= end) return 0
+        return Character.codePointCount(text, start, end)
     }
 
     fun codePointFromSurrogates(highSurrogate: Int, lowSurrogate: Int): Int {

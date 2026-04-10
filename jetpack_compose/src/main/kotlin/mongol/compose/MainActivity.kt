@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import mongol.compose.core.MongolTextAlign
+import mongol.compose.editing.MongolBasicTextField
 import mongol.compose.editing.MongolTextField
 import mongol.compose.text.MongolText
 import mongol.compose.ui.theme.Test_composeTheme
@@ -60,7 +61,7 @@ class MainActivity : ComponentActivity() {
 
                     ) {
                         val t =
-                            "ᠨᠢᠭᠡ ᠬᠣᠶᠠᠷ 中 ᠭᠣᠷᠪᠠ \u2460\u24fe ᠳᠥᠷᠪᠡ 四 ᠲᠠᠪᠤ ᠵᠢᠷᠭᠤᠭ᠎ᠠ ᠳᠣᠯᠣᠭ᠎ᠠ ᠨᠠᠢᠮᠠ ᠶᠢᠰᠦ ᠠᠷᠪᠠ \uD83D\uDE42 ᠬᠣᠷᠢᠨ ᠨᠢᠭᠡ ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾"
+                            "ᠨᠢᠭᠡ ᠬᠣᠶᠠᠷ ! ᠭᠣᠷᠪᠠ? \u2460\u24fe ᠳᠥᠷᠪᠡ 四 ᠲᠠᠪᠤ ᠵᠢᠷᠭᠤᠭ᠎ᠠ ᠳᠣᠯᠣᠭ᠎ᠠ ᠨᠠᠢᠮᠠ ᠶᠢᠰᠦ ᠠᠷᠪᠠ ♥\uD83D\uDE42 ᠬᠣᠷᠢᠨ ᠨᠢᠭᠡ ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾"
 
                         var textAlign by remember { mutableStateOf(MongolTextAlign.TOP) }
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -84,24 +85,47 @@ class MainActivity : ComponentActivity() {
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
                         )
-                        MongolText(
-                            text = t,
-                            rotateCjk = false,
-                            style = TextStyle(fontFamily = font),
+                        MongolBasicTextField(
+                                value = t,
+                                onValueChange = {},
+                                textStyle = TextStyle(fontFamily = font),
                             textAlign = textAlign,
+                                readOnly = true,
                             modifier = Modifier
                                 .padding(10.dp)
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
                         )
 
-                        var text by remember { mutableStateOf(t) }
+                        var text by remember { mutableStateOf("") }
 
                         Text("Use Compose MongolTextField:")
                         MongolTextField(
                             value = text,
                             onValueChange = { text = it },
                             style = TextStyle(fontFamily = font),
+                            label = "Mongol Input",
+                            placeholder = "请输入蒙古文或混排文本",
+                            supportingText = "Supports multi-line, selection, and IME candidate commit",
+                            maxLength = 280,
+                            prefixContent = {
+                                MongolText(
+                                    text = "ᠡᠮᠦᠨ᠎ᠡ ᠪᠢᠴᠢᠯᠭᠡ᠄",
+                                    style = TextStyle(
+                                        fontFamily = font,
+                                        color = Color(0xFF2E7D32)
+                                    ),
+                                )
+                            },
+                            suffixContent = {
+                                MongolText(
+                                    text = "ᠠᠷᠤ ᠳᠠᠭᠠᠯᠳᠠ",
+                                    style = TextStyle(
+                                        fontFamily = font,
+                                        color = Color(0xFF2E7D32)
+                                    )
+                                )
+                            },
                             modifier = Modifier
                                 .padding(10.dp)
                                 .height(200.dp)
