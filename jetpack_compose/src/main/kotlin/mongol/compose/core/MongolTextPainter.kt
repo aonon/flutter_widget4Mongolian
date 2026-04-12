@@ -157,7 +157,7 @@ class MongolTextPainter(
             var cursor = start
             while (cursor < end) {
                 val codePoint = Character.codePointAt(text, cursor)
-                if (isEmojiCodePoint(codePoint) || isRotatableCodePoint(codePoint)) return true
+                if (CodePointLists.isRotatedRunCodePoint(codePoint)) return true
                 cursor += Character.charCount(codePoint)
             }
             return false
@@ -168,10 +168,10 @@ class MongolTextPainter(
             var cursor = start
             while (cursor < end) {
                 val codePoint = Character.codePointAt(text, cursor)
-                if (isEmojiCodePoint(codePoint)) {
+                if (CodePointLists.isEmoji(codePoint)) {
                     return true
                 }
-                if (rotateCjk && isRotatableCodePoint(codePoint)) {
+                if (rotateCjk && CodePointLists.isRotatedRunCodePoint(codePoint)) {
                     return true
                 }
                 cursor += Character.charCount(codePoint)
@@ -304,47 +304,6 @@ class MongolTextPainter(
 
         flushPending()
         return mergedRuns
-    }
-
-    private fun isRotatableCodePoint(codePoint: Int): Boolean {
-        if (codePoint in 0x1800 until 0x18B0) {
-            return false
-        }
-
-        if (codePoint < 0x1100) return false
-        if (codePoint in 0x2460..0x24FF) return true
-        if (codePoint in 0xFE10..0xFE1F) return true
-        if (codePoint in 0xFE30..0xFE4F) return true
-        if (codePoint in 0x1100..0x11FF) return true
-        if (codePoint in 0xFF01..0xFF0F) return true
-        if (codePoint in 0xFF1A..0xFF20) return true
-        if (codePoint in 0xFF3B..0xFF40) return true
-        if (codePoint in 0xFF5B..0xFF65) return true
-
-        if (codePoint in 0x2E80..0x9FFF) {
-            if (codePoint in 0x3000..0x301C) return false
-            if (codePoint in 0x3251..0x325F) return true
-            if (codePoint in 0x32B1..0x32BF) return true
-            return true
-        }
-
-        if (codePoint in 0xAC00..0xD7FF) return true
-        if (codePoint in 0xF900..0xFAFF) return true
-        if (isEmojiCodePoint(codePoint)) return true
-
-        return false
-    }
-
-    private fun isEmojiCodePoint(codePoint: Int): Boolean {
-        // Cover supplementary-plane emoji plus legacy BMP emoji/dingbat symbols.
-        if (codePoint in 0x1F000..0x1FAFF) return true
-        if (codePoint in 0x2600..0x27BF) return true
-        if (codePoint == 0x00A9 || codePoint == 0x00AE) return true
-        if (codePoint == 0x203C || codePoint == 0x2049) return true
-        if (codePoint == 0x2122 || codePoint == 0x2139) return true
-        if (codePoint == 0x3030 || codePoint == 0x303D) return true
-        if (codePoint == 0x3297 || codePoint == 0x3299) return true
-        return false
     }
 
     private fun buildParagraph(): MongolParagraph {

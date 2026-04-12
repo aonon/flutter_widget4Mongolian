@@ -86,6 +86,7 @@ fun MongolBasicTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color(0xFF1B5E20),
     selectionColor: Color = Color(0x552196F3),
+    normalizeTextChange: (String, String) -> String = { _, proposed -> proposed },
     onTextChange: (String) -> Unit = {},
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
@@ -152,8 +153,8 @@ fun MongolBasicTextField(
             )
         }
     }
-    val inputSession = remember(state, onTextChange) {
-        DefaultMongolInputSession(state, onTextChange)
+    val inputSession = remember(state, onTextChange, normalizeTextChange) {
+        DefaultMongolInputSession(state, onTextChange, normalizeTextChange)
     }
 
     // Declare mutable state BEFORE it is referenced in LaunchedEffect keys.
@@ -728,6 +729,7 @@ fun MongolBasicTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color(0xFF1B5E20),
     selectionColor: Color = Color(0x552196F3),
+    normalizeTextChange: (String, String) -> String = { _, proposed -> proposed },
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
     onFocusChanged: (Boolean) -> Unit = {},
@@ -751,6 +753,7 @@ fun MongolBasicTextField(
         readOnly = readOnly,
         caretColor = caretColor,
         selectionColor = selectionColor,
+        normalizeTextChange = normalizeTextChange,
         onTextChange = onValueChange,
         onInputSessionReady = onInputSessionReady,
         onSelectionHandlesChanged = onSelectionHandlesChanged,

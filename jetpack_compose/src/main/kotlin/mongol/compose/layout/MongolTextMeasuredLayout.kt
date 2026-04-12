@@ -24,6 +24,8 @@ internal fun MongolTextMeasuredLayout(
         content = content,
     ) { measurables, constraints ->
         val measurable = measurables.single()
+        
+        // 探测高度：如果有约束则用最大高度，否则给一个足够大的值用于布局计算
         val probeHeightPx = if (constraints.hasBoundedHeight) {
             constraints.maxHeight.coerceAtLeast(1)
         } else {
@@ -32,14 +34,11 @@ internal fun MongolTextMeasuredLayout(
 
         painter.layout(maxHeight = probeHeightPx.toFloat())
 
-        val desiredHeightPx = if (constraints.hasBoundedHeight) {
-            constraints.maxHeight
-        } else {
-            ceil(painter.longestLine.toDouble()).toInt().coerceAtLeast(1)
-        }
-        val resolvedHeightPx = desiredHeightPx
-            .coerceAtLeast(1)
-            .coerceIn(constraints.minHeight, constraints.maxHeight)
+        // 核心修改：优先使用文字本身的长度 (longestLine)
+        val intrinsicHeight = ceil(painter.longestLine.toDouble()).toInt().coerceAtLeast(1)
+        
+        // 如果高度不是强行固定的（minHeight != maxHeight），则包裹内容
+        val resolvedHeightPx = intrinsicHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
 
         if (resolvedHeightPx != probeHeightPx) {
             painter.layout(maxHeight = resolvedHeightPx.toFloat())

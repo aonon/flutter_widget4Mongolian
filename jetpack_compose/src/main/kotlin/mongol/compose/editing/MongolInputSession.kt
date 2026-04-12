@@ -28,9 +28,49 @@ interface MongolInputSession {
 class DefaultMongolInputSession(
     private val state: MongolEditableState,
     private val onTextChange: (String) -> Unit,
+    private val normalizeTextChange: (String, String) -> String = { _, proposed -> proposed },
 ) : MongolInputSession {
     private var batchDepth: Int = 0
     private var hasPendingTextChange: Boolean = false
+
+    private fun buildProposedText(start: Int, end: Int, replacement: String): String {
+        return buildString {
+            append(state.text.substring(0, start))
+            append(replacement)
+            append(state.text.substring(end))
+        }
+    }
+
+    private fun replaceWithNormalization(
+        start: Int,
+        end: Int,
+        replacement: String,
+        newCursorPosition: Int,
+        composing: Boolean,
+    ) {
+        val normalizedStart = start.coerceIn(0, state.text.length)
+        val normalizedEnd = end.coerceIn(0, state.text.length)
+        val proposedText = buildProposedText(normalizedStart, normalizedEnd, replacement)
+        val transformedText = normalizeTextChange(state.text, proposedText)
+
+        if (transformedText == proposedText) {
+            state.replaceRange(normalizedStart, normalizedEnd, replacement, clearComposing = !composing)
+            if (composing) {
+                state.setComposingRange(normalizedStart, normalizedStart + replacement.length)
+            }
+        } else {
+            state.replaceText(transformedText)
+            if (composing) {
+                val composingStart = normalizedStart.coerceIn(0, transformedText.length)
+                val composingEnd = (composingStart + replacement.length).coerceIn(composingStart, transformedText.length)
+                state.setComposingRange(composingStart, composingEnd)
+            }
+        }
+
+        val cursor = resolveCursorPosition(normalizedStart, replacement.length, newCursorPosition)
+            .coerceIn(0, state.text.length)
+        state.setSelection(cursor, cursor, clearComposing = !composing)
+    }
 
     private fun notifyTextChanged() {
         if (batchDepth > 0) {
@@ -82,12 +122,14 @@ class DefaultMongolInputSession(
         val composing = state.composingRange
         val selection = state.selection
         val active = composing ?: selection
-        
-        val replacementStart = active.start
-        state.replaceRange(active.start, active.end, text, clearComposing = true)
-        
-        val cursor = resolveCursorPosition(replacementStart, text.length, newCursorPosition)
-        state.setSelection(cursor, cursor, clearComposing = true)
+
+        replaceWithNormalization(
+            start = active.start,
+            end = active.end,
+            replacement = text,
+            newCursorPosition = newCursorPosition,
+            composing = false,
+        )
         notifyTextChanged()
     }
 
@@ -95,13 +137,14 @@ class DefaultMongolInputSession(
         val composing = state.composingRange
         val selection = state.selection
         val active = composing ?: selection
-        
-        val replacementStart = active.start
-        state.replaceRange(active.start, active.end, text, clearComposing = false)
-        state.setComposingRange(replacementStart, replacementStart + text.length)
-        
-        val cursor = resolveCursorPosition(replacementStart, text.length, newCursorPosition)
-        state.setSelection(cursor, cursor, clearComposing = false)
+
+        replaceWithNormalization(
+            start = active.start,
+            end = active.end,
+            replacement = text,
+            newCursorPosition = newCursorPosition,
+            composing = true,
+        )
         notifyTextChanged()
     }
 
@@ -119,7 +162,13 @@ class DefaultMongolInputSession(
 
         val selection = state.selection.normalized()
         if (!selection.isCollapsed) {
-            state.replaceRange(selection.start, selection.end, "", clearComposing = false)
+            replaceWithNormalization(
+                start = selection.start,
+                end = selection.end,
+                replacement = "",
+                newCursorPosition = 1,
+                composing = false,
+            )
             notifyTextChanged()
             return
         }
@@ -136,7 +185,13 @@ class DefaultMongolInputSession(
         }
 
         if (start < end) {
-            state.replaceRange(start, end, "", clearComposing = false)
+            replaceWithNormalization(
+                start = start,
+                end = end,
+                replacement = "",
+                newCursorPosition = 1,
+                composing = false,
+            )
             notifyTextChanged()
         }
     }
