@@ -159,7 +159,7 @@ class MainActivity : ComponentActivity() {
                                 labelPosition = MongolTextFieldLabelPosition.Above,
                                 placeholder = {
                                     MongolText(
-                                        text = "ᠴᠢ ᠭᠡᠨ ᠪᠤᠢ",
+                                        text = "ᠴᠢ ᠭᠡᠨ ᠪᠤᠢ ᠴᠢ ᠭᠡᠨ ᠪᠤᠢ ᠴᠢ ᠭᠡᠨ ",
                                         style = TextStyle(fontFamily = font, color = Color.Red),
                                     )
                                 },
@@ -179,7 +179,7 @@ class MainActivity : ComponentActivity() {
                                     MongolText("Supports text")
                                 },
                                 modifier = Modifier
-                                    .padding(8.dp).fillMaxHeight().width(80.dp)
+                                    .padding(8.dp).fillMaxHeight()
                             )
                             class DigitOnlyTransformation : InputTransformation {
                                 override fun TextFieldBuffer.transformInput() {
@@ -193,7 +193,11 @@ class MainActivity : ComponentActivity() {
                                 onValueChange = { mongolOutlinedFieldValue = it },
                                 inputTransformation = InputTransformation.maxLength(195),
                                 style = TextStyle(fontFamily = font),
-                                label = { MongolText("Mongol Outlined") },
+                                label = { MongolText("ᠲᠤᠷᠰᠢᠯᠲᠠ ᠶᠢᠨ ᠲᠠᠯᠠᠪᠤᠷ Mongol Outlined",
+                                    style = TextStyle(fontFamily = font),
+                                    modifier = Modifier.fillMaxHeight(1f),
+                                    textAlign = MongolTextAlign.CENTER  )
+                                        },
                                 labelPosition = MongolTextFieldLabelPosition.Attached,
                                 placeholder = {
                                     MongolText(

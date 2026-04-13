@@ -274,8 +274,7 @@ object MongolTextFieldDefaults {
 
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minWidth = 24.dp),
+                            .weight(1f),
                     ) {
                         if (decorationState.isEmpty && placeholder != null) {
                             androidx.compose.material3.ProvideTextStyle(placeholderStyle) {
@@ -403,8 +402,7 @@ object MongolTextFieldDefaults {
 
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .defaultMinSize(minWidth = 24.dp),
+                                .weight(1f),
                         ) {
                             if (decorationState.isEmpty && placeholder != null) {
                                 androidx.compose.material3.ProvideTextStyle(placeholderStyle) {
@@ -503,6 +501,7 @@ fun MongolTextField(
             placeholderStyle = placeholderStyle,
         )
     },
+    autoWidthByContent: Boolean = true,
 ) {
     MongolOutlinedTextField(
         state = state,
@@ -537,6 +536,7 @@ fun MongolTextField(
         borderWidth = borderWidth,
         contentPadding = contentPadding,
         decorationBox = decorationBox,
+        autoWidthByContent = autoWidthByContent,
     )
 }
 
@@ -595,6 +595,7 @@ fun MongolOutlinedTextField(
             placeholderStyle = placeholderStyle,
         )
     },
+    autoWidthByContent: Boolean = true,
 ) {
     val state = rememberMongolEditableState(initialText = value)
 
@@ -630,6 +631,7 @@ fun MongolOutlinedTextField(
         borderWidth = borderWidth,
         contentPadding = contentPadding,
         decorationBox = decorationBox,
+        autoWidthByContent = autoWidthByContent,
     )
 }
 
@@ -690,6 +692,7 @@ fun MongolOutlinedTextField(
             placeholderStyle = placeholderStyle,
         )
     },
+    autoWidthByContent: Boolean = true,
 ) {
     var focused by remember { mutableStateOf(false) }
     LaunchedEffect(value, state) {
@@ -794,7 +797,8 @@ fun MongolOutlinedTextField(
         },
     ) { measurables, constraints ->
         val spacing = 6.dp.roundToPx()
-        val fieldMinWidth = 120.dp.roundToPx()
+        val fieldMinWidth = 20.dp.roundToPx()
+        val unconstrainedWidthFallback = 1200.dp.roundToPx()
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
         var index = 0
         val labelPlaceable = if (showAboveLabel) {
@@ -818,43 +822,60 @@ fun MongolOutlinedTextField(
 
         val supportSlotSpacing = if (supportingTextMeasurable != null) spacing else 0
 
-        // 首先测量辅助文本，允许它根据内容决定宽度
         val supportingTextPlaceable = supportingTextMeasurable?.measure(looseConstraints)
         val supportingWidth = supportingTextPlaceable?.width ?: 0
 
-        // 计算输入框真正可用的最大宽度
         val fieldMaxWidth = if (constraints.maxWidth == Int.MAX_VALUE) {
             Int.MAX_VALUE
         } else {
-            // 剩余空间 = 总最大宽度 - 标签宽度 - 辅助文本宽度 - 间距
-            // 必须保证不小于 0
             max(0, availableAfterLabel - supportingWidth - if (supportingWidth > 0) spacing else 0)
         }
+        val effectiveFieldMaxWidth = if (fieldMaxWidth == Int.MAX_VALUE) {
+            unconstrainedWidthFallback
+        } else {
+            fieldMaxWidth
+        }
 
-        // 计算单行宽度 (蒙古文垂直布局中，行高即宽度)
-        // 这是一个估算值，更好的做法是从 painter 获取，但这里我们先用 fontSize 估算
         val fontSizePx = if (style.fontSize.type == TextUnitType.Sp) style.fontSize.toPx() else 16.sp.toPx()
-        val lineSpan = (fontSizePx * 1.5f).toInt() // 假设行间距 + 字宽
+        val lineSpan = max((fontSizePx * 1.5f).toInt(), 1)
+        val intrinsicHeightHint = if (constraints.hasBoundedHeight) {
+            constraints.maxHeight
+        } else {
+            10_000
+        }
+
+        val intrinsicFieldWidth = fieldMeasurable
+            .minIntrinsicWidth(intrinsicHeightHint)
+            .coerceAtLeast(0)
+
+        val targetFieldWidth = if (autoWidthByContent) {
+            val steppedWidth = if (intrinsicFieldWidth <= 0) {
+                lineSpan
+            } else {
+                ((intrinsicFieldWidth + lineSpan - 1) / lineSpan) * lineSpan
+            }
+
+            steppedWidth.coerceIn(
+                minimumValue = fieldMinWidth,
+                maximumValue = max(fieldMinWidth, effectiveFieldMaxWidth),
+            )
+        } else {
+            intrinsicFieldWidth
+                .coerceAtLeast(fieldMinWidth)
+                .coerceAtMost(max(fieldMinWidth, effectiveFieldMaxWidth))
+        }
 
         val fieldPlaceable = fieldMeasurable.measure(
-            constraints.copy(
-                minWidth = 0,
-                maxWidth = fieldMaxWidth,
+            looseConstraints.copy(
+                minWidth = targetFieldWidth,
+                maxWidth = targetFieldWidth,
             ),
         )
-
-        // 核心修改：实现阶梯式宽度增长 (1行, 2行, 3行...)
-        // 如果宽度 > 0，则向上取整到 lineSpan 的倍数
-        val steppedWidth = if (fieldPlaceable.width <= 0) {
-            lineSpan
-        } else {
-            ((fieldPlaceable.width + lineSpan - 1) / lineSpan) * lineSpan
-        }
 
         val totalWidth =
             (labelPlaceable?.width ?: 0) +
                 labelSpacing +
-                steppedWidth +
+                fieldPlaceable.width +
                 (if (supportingWidth > 0) spacing + supportingWidth else 0)
         val supportingHeight =
             if (supportingTextPlaceable != null) {
@@ -941,6 +962,7 @@ fun MongolTextField(
             placeholderStyle = placeholderStyle,
         )
     },
+    autoWidthByContent: Boolean = true,
 ) {
     val state = rememberMongolEditableState(initialText = value)
 
@@ -976,5 +998,6 @@ fun MongolTextField(
         borderWidth = borderWidth,
         contentPadding = contentPadding,
         decorationBox = decorationBox,
+        autoWidthByContent = autoWidthByContent,
     )
 }

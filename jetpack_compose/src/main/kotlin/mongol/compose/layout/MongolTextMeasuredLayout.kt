@@ -24,8 +24,8 @@ internal fun MongolTextMeasuredLayout(
         content = content,
     ) { measurables, constraints ->
         val measurable = measurables.single()
-        
-        // 探测高度：如果有约束则用最大高度，否则给一个足够大的值用于布局计算
+
+        // Use a large but finite probe for unbounded constraints to avoid Int.MAX sizes.
         val probeHeightPx = if (constraints.hasBoundedHeight) {
             constraints.maxHeight.coerceAtLeast(1)
         } else {
@@ -34,19 +34,35 @@ internal fun MongolTextMeasuredLayout(
 
         painter.layout(maxHeight = probeHeightPx.toFloat())
 
-        // 核心修改：优先使用文字本身的长度 (longestLine)
-        val intrinsicHeight = ceil(painter.longestLine.toDouble()).toInt().coerceAtLeast(1)
-        
-        // 如果高度不是强行固定的（minHeight != maxHeight），则包裹内容
-        val resolvedHeightPx = intrinsicHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
+        val intrinsicHeight = if (painter.longestLine.isFinite()) {
+            ceil(painter.longestLine.toDouble()).toInt().coerceAtLeast(1)
+        } else {
+            probeHeightPx
+        }
+
+        val boundedMaxHeight = if (constraints.hasBoundedHeight) {
+            constraints.maxHeight
+        } else {
+            probeHeightPx
+        }
+        val resolvedHeightPx = intrinsicHeight.coerceIn(constraints.minHeight, boundedMaxHeight)
 
         if (resolvedHeightPx != probeHeightPx) {
             painter.layout(maxHeight = resolvedHeightPx.toFloat())
         }
 
-        val desiredWidthPx = ceil(painter.width.toDouble()).toInt().coerceAtLeast(1)
+        val desiredWidthPx = if (painter.width.isFinite()) {
+            ceil(painter.width.toDouble()).toInt().coerceAtLeast(1)
+        } else {
+            constraints.minWidth.coerceAtLeast(1)
+        }
+        val boundedMaxWidth = if (constraints.hasBoundedWidth) {
+            constraints.maxWidth
+        } else {
+            100_000
+        }
         val resolvedWidthPx = desiredWidthPx
-            .coerceIn(constraints.minWidth, constraints.maxWidth)
+            .coerceIn(constraints.minWidth, boundedMaxWidth)
 
         val placeable = measurable.measure(
             Constraints.fixed(resolvedWidthPx, resolvedHeightPx),

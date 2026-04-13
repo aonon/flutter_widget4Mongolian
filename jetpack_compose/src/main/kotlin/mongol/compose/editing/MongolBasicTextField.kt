@@ -63,6 +63,8 @@ import mongol.compose.core.TextRun
 import mongol.compose.core.TextRunMeasurer
 import mongol.compose.core.VerticalGlyphPlacementPolicy
 import mongol.compose.layout.MongolTextMeasuredLayout
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Editable-stage text canvas backed by MongolTextPainter APIs.
@@ -161,6 +163,7 @@ fun MongolBasicTextField(
     var widthPx by remember { mutableIntStateOf(1) }
     var heightPx by remember { mutableIntStateOf(1) }
     var dragAnchor by remember { mutableIntStateOf(-1) }
+    var handleDragAnchor by remember { mutableIntStateOf(-1) }
     var activeHandleType by remember { mutableStateOf<MongolSelectionHandleType?>(null) }
     var hasFocus by remember { mutableStateOf(false) }
     var imeBridgeHasFocus by remember { mutableStateOf(false) }
@@ -170,6 +173,7 @@ fun MongolBasicTextField(
     val multiTapWindowMs = 320L
     val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
     val bringIntoViewBottomMarginPx = with(density) { 24.dp.toPx() }
+    val edgeDragSlopPx = with(density) { 18.dp.toPx() }
 
     fun resolveCaretPositionForOffset(tapOffset: Offset): mongol.compose.core.TextPosition {
         if (state.text.isEmpty()) {
@@ -205,23 +209,75 @@ fun MongolBasicTextField(
         return mongol.compose.core.TextPosition(resolved)
     }
 
+    fun distanceToPoint(from: Offset, to: Offset): Float {
+        val dx = from.x - to.x
+        val dy = from.y - to.y
+        return sqrt(dx * dx + dy * dy)
+    }
+
+    fun resolveSelectionDragHandle(tapOffset: Offset): MongolSelectionHandleType? {
+        val normalized = state.selection.normalized()
+        if (normalized.isCollapsed) return null
+
+        val boxes = painter.getBoxesForRange(normalized.start, normalized.end)
+        if (boxes.isEmpty()) return null
+
+        val left = boxes.minOf { it.left }
+        val top = boxes.minOf { it.top }
+        val right = boxes.maxOf { it.right }
+        val bottom = boxes.maxOf { it.bottom }
+
+        val startCorner = Offset(left, top)
+        val endCorner = Offset(right, bottom)
+
+        val startEdgeVertical = if (tapOffset.y in top..bottom) abs(tapOffset.x - left) else Float.POSITIVE_INFINITY
+        val startEdgeHorizontal = if (tapOffset.x in left..right) abs(tapOffset.y - top) else Float.POSITIVE_INFINITY
+        val endEdgeVertical = if (tapOffset.y in top..bottom) abs(tapOffset.x - right) else Float.POSITIVE_INFINITY
+        val endEdgeHorizontal = if (tapOffset.x in left..right) abs(tapOffset.y - bottom) else Float.POSITIVE_INFINITY
+
+        val startScore = minOf(
+            distanceToPoint(tapOffset, startCorner),
+            startEdgeVertical,
+            startEdgeHorizontal,
+        )
+        val endScore = minOf(
+            distanceToPoint(tapOffset, endCorner),
+            endEdgeVertical,
+            endEdgeHorizontal,
+        )
+
+        val bestScore = minOf(startScore, endScore)
+        if (bestScore > edgeDragSlopPx) return null
+
+        return if (startScore <= endScore) {
+            MongolSelectionHandleType.START
+        } else {
+            MongolSelectionHandleType.END
+        }
+    }
+
     LaunchedEffect(inputSession, onInputSessionReady) {
         onInputSessionReady(inputSession)
     }
-    LaunchedEffect(state.selection, painter, activeHandleType, onSelectionHandlesChanged) {
-        onSelectionHandlesChanged(
-            MongolSelectionHandlesCalculator.calculate(
-                painter = painter,
-                selection = state.selection,
-                activeHandle = activeHandleType,
-            ),
+    val selectionHandlesState = remember(state.selection, painter, activeHandleType) {
+        MongolSelectionHandlesCalculator.calculate(
+            painter = painter,
+            selection = state.selection,
+            activeHandle = activeHandleType,
         )
+    }
+    LaunchedEffect(state.selection, painter, activeHandleType, onSelectionHandlesChanged) {
+        onSelectionHandlesChanged(selectionHandlesState)
     }
     LaunchedEffect(state.text, state.selection, state.composingRange, imeBridgeView) {
         imeBridgeView?.syncSelection()
     }
     LaunchedEffect(hasFocus, imeBridgeHasFocus, onFocusChanged) {
-        onFocusChanged(hasFocus || imeBridgeHasFocus)
+        val focused = hasFocus || imeBridgeHasFocus
+        onFocusChanged(focused)
+        if (!focused && state.hasSelection()) {
+            state.placeCaret(state.caret)
+        }
     }
     LaunchedEffect(hasFocus, imeBottomPadding, widthPx, heightPx) {
         if (hasFocus && widthPx > 0 && heightPx > 0) {
@@ -485,30 +541,43 @@ fun MongolBasicTextField(
                             activeHandleType = MongolSelectionHandleType.CARET
                             dragAnchor = pos.offset
                         } else {
-                            val startPos = painter.getOffsetForCaret(mongol.compose.core.TextPosition(selection.start))
-                            val endPos = painter.getOffsetForCaret(mongol.compose.core.TextPosition(selection.end))
-                            val dxStart = dragStart.x - startPos.x
-                            val dyStart = dragStart.y - startPos.y
-                            val dxEnd = dragStart.x - endPos.x
-                            val dyEnd = dragStart.y - endPos.y
-                            val distStart = dxStart * dxStart + dyStart * dyStart
-                            val distEnd = dxEnd * dxEnd + dyEnd * dyEnd
-                            if (distStart <= distEnd) {
+                            val edgeHandle = resolveSelectionDragHandle(dragStart)
+                            if (edgeHandle == MongolSelectionHandleType.START) {
                                 activeHandleType = MongolSelectionHandleType.START
                                 dragAnchor = selection.end
-                            } else {
+                            } else if (edgeHandle == MongolSelectionHandleType.END) {
                                 activeHandleType = MongolSelectionHandleType.END
                                 dragAnchor = selection.start
+                            } else {
+                                val startHandle = selectionHandlesState.handles
+                                    .firstOrNull { it.type == MongolSelectionHandleType.START }
+                                val endHandle = selectionHandlesState.handles
+                                    .firstOrNull { it.type == MongolSelectionHandleType.END }
+                                val distStart = startHandle?.let {
+                                    distanceToPoint(dragStart, Offset(it.offset.x, it.offset.y))
+                                } ?: Float.POSITIVE_INFINITY
+                                val distEnd = endHandle?.let {
+                                    distanceToPoint(dragStart, Offset(it.offset.x, it.offset.y))
+                                } ?: Float.POSITIVE_INFINITY
+                                if (distStart <= distEnd) {
+                                    activeHandleType = MongolSelectionHandleType.START
+                                    dragAnchor = selection.end
+                                } else {
+                                    activeHandleType = MongolSelectionHandleType.END
+                                    dragAnchor = selection.start
+                                }
                             }
                         }
                         state.setSelection(dragAnchor, pos.offset)
                     },
                     onDragEnd = {
                         dragAnchor = -1
+                        handleDragAnchor = -1
                         activeHandleType = null
                     },
                     onDragCancel = {
                         dragAnchor = -1
+                        handleDragAnchor = -1
                         activeHandleType = null
                     },
                     onDrag = { change, _ ->
@@ -707,6 +776,47 @@ fun MongolBasicTextField(
                             strokeWidth = caretStroke,
                         )
                     }
+                }
+
+                val shouldShowHandles = enabled && (hasFocus || imeBridgeHasFocus)
+                if (selectionHandlesState.isVisible && shouldShowHandles && !state.selection.isCollapsed) {
+                    MongolSelectionHandles(
+                        state = selectionHandlesState,
+                        color = selectionColor.copy(alpha = 1f),
+                        onHandleDragStart = { handleType ->
+                            val normalized = state.selection.normalized()
+                            activeHandleType = handleType
+                            handleDragAnchor = when (handleType) {
+                                MongolSelectionHandleType.START -> normalized.end
+                                MongolSelectionHandleType.END -> normalized.start
+                                MongolSelectionHandleType.CARET -> -1
+                            }
+                        },
+                        onHandleDragEnd = {
+                            handleDragAnchor = -1
+                            activeHandleType = null
+                        },
+                        onHandleDrag = { handleType, absolutePos ->
+                            val position = resolveCaretPositionForOffset(absolutePos).offset
+                            val normalized = state.selection.normalized()
+                            activeHandleType = handleType
+                            when (handleType) {
+                                MongolSelectionHandleType.CARET -> {
+                                    state.placeCaret(mongol.compose.core.TextPosition(position))
+                                }
+
+                                MongolSelectionHandleType.START -> {
+                                    val anchor = if (handleDragAnchor >= 0) handleDragAnchor else normalized.end
+                                    state.setSelection(position, anchor)
+                                }
+
+                                MongolSelectionHandleType.END -> {
+                                    val anchor = if (handleDragAnchor >= 0) handleDragAnchor else normalized.start
+                                    state.setSelection(anchor, position)
+                                }
+                            }
+                        },
+                    )
                 }
             }
         }
