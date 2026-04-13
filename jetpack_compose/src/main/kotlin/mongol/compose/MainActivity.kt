@@ -71,11 +71,11 @@ class MainActivity : ComponentActivity() {
                             .verticalScroll(scrollState)
 
                     ) {
-                       /* val t =
+                       val t =
                             "\u300Aᠨᠢᠭᠡ\u300B\u3008ᠪᠠᠰᠠ ᠨᠢᠭᠡ\u3009 \uFF3Bᠬᠣᠶᠠᠷ\uFF3D ᠭᠣᠷᠪᠠ\uFF1B ᠳᠥᠷᠪᠡ \uFF08ᠲᠠᠪᠤ\uFF09 ᠵᠢᠷᠭᠤᠭ᠎ᠠ\u2048\u2049 ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ\uFF01\uFF0D\uFF1F  ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾"
 
                         var textAlign by remember { mutableStateOf(MongolTextAlign.TOP) }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                         Row(verticalAlignment = Alignment.CenterVertically) {
                             MongolTextAlign.entries.forEach { align ->
                                 RadioButton(
                                     selected = textAlign == align,
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(10.dp)
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
-                        )*/
+                        )
 
                         val textFieldState = rememberTextFieldState()
                         var mongolTextFieldValue by remember { mutableStateOf("") }

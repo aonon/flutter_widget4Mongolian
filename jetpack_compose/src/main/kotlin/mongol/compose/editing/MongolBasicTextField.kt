@@ -180,17 +180,6 @@ fun MongolBasicTextField(
             return mongol.compose.core.TextPosition(0)
         }
 
-        val boxes = painter.getBoxesForRange(0, state.text.length)
-        val hitGlyphBox = boxes.firstOrNull { box ->
-            tapOffset.x >= box.left && tapOffset.x <= box.right &&
-                tapOffset.y >= box.top && tapOffset.y <= box.bottom
-        }
-
-        // Product rule: tapping/dragging in blank area moves caret to end.
-        if (hitGlyphBox == null) {
-            return mongol.compose.core.TextPosition(state.text.length)
-        }
-
         val nearest = painter.getPositionForOffset(
             mongol.compose.core.Offset(tapOffset.x, tapOffset.y),
         )
@@ -259,14 +248,18 @@ fun MongolBasicTextField(
     LaunchedEffect(inputSession, onInputSessionReady) {
         onInputSessionReady(inputSession)
     }
-    val selectionHandlesState = remember(state.selection, painter, activeHandleType) {
+    val selectionHandlesState = remember(state.selection, painter, activeHandleType, density, textAlign, heightPx) {
+        if (heightPx > 0) {
+            painter.layout(maxHeight = heightPx.toFloat())
+        }
         MongolSelectionHandlesCalculator.calculate(
             painter = painter,
             selection = state.selection,
+            density = density.density,
             activeHandle = activeHandleType,
         )
     }
-    LaunchedEffect(state.selection, painter, activeHandleType, onSelectionHandlesChanged) {
+    LaunchedEffect(selectionHandlesState, onSelectionHandlesChanged) {
         onSelectionHandlesChanged(selectionHandlesState)
     }
     LaunchedEffect(state.text, state.selection, state.composingRange, imeBridgeView) {
@@ -494,7 +487,7 @@ fun MongolBasicTextField(
                 heightPx = size.height.coerceAtLeast(1)
                 painter.layout(maxHeight = heightPx.toFloat())
             }
-            .pointerInput(state.text, heightPx) {
+            .pointerInput(state.text, heightPx, textAlign) {
                 if (!enabled) return@pointerInput
                 detectTapGestures(
                     onTap = { tapOffset ->
@@ -528,7 +521,7 @@ fun MongolBasicTextField(
                     },
                 )
             }
-            .pointerInput(state.text, heightPx, enabled, readOnly) {
+            .pointerInput(state.text, heightPx, enabled, readOnly, textAlign) {
                 if (!enabled) return@pointerInput
                 detectDragGestures(
                     onDragStart = { dragStart ->

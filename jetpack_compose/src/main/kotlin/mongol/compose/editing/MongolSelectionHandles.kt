@@ -159,9 +159,13 @@ fun MongolSelectionHandles(
 }
 
 object MongolSelectionHandlesCalculator {
+    private const val HANDLE_SIZE_DP = 30f
+    private const val HANDLE_RADIUS_RATIO = 0.4f
+
     fun calculate(
         painter: MongolTextPainter,
         selection: MongolSelection,
+        density: Float, // Pass density to calculate accurate pixel offset
         activeHandle: MongolSelectionHandleType? = null,
     ): MongolSelectionHandlesState {
         val normalized = selection.normalized()
@@ -172,25 +176,23 @@ object MongolSelectionHandlesCalculator {
             )
         }
 
-        val start = painter.getOffsetForCaret(TextPosition(normalized.start))
-        val end = painter.getOffsetForCaret(TextPosition(normalized.end))
+        val handleRadiusPx = HANDLE_SIZE_DP * density * HANDLE_RADIUS_RATIO
         val selectionBoxes = painter.getBoxesForRange(normalized.start, normalized.end)
+
         val startHandleOffset = if (selectionBoxes.isNotEmpty()) {
-            CoreOffset(
-                x = selectionBoxes.minOf { it.left },
-                y = selectionBoxes.minOf { it.top },
-            )
+            val first = selectionBoxes.first()
+            CoreOffset(x = first.left, y = first.top)
         } else {
-            start
+            painter.getOffsetForCaret(TextPosition(normalized.start))
         }
+
         val endHandleOffset = if (selectionBoxes.isNotEmpty()) {
-            CoreOffset(
-                x = selectionBoxes.maxOf { it.right },
-                y = selectionBoxes.maxOf { it.bottom },
-            )
+            val last = selectionBoxes.last()
+            CoreOffset(x = last.right, y = last.bottom)
         } else {
-            end
+            painter.getOffsetForCaret(TextPosition(normalized.end))
         }
+
         return MongolSelectionHandlesState(
             handles = listOf(
                 MongolSelectionHandle(
