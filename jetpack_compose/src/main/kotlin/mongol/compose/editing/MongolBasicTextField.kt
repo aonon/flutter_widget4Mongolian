@@ -105,7 +105,7 @@ fun MongolBasicTextField(
         initialValue = 1f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 450, easing = LinearEasing),
+            animation = tween(durationMillis = 533, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "mongolCaretAlpha",
@@ -742,30 +742,16 @@ fun MongolBasicTextField(
                         ?: prevCaretBox?.let { it.right - it.left }
                         ?: fallbackCaretWidth).coerceAtLeast(1f)
                     val caretY = caretOffset.y
-                    val caretStroke = 4f
-                    val caretLeft = caretOffset.x
-                    val caretRight = caretLeft + caretWidth
-                    val capHalfHeight = 4f
-                    val clampedCaretY = caretY.coerceAtLeast(capHalfHeight + caretStroke / 2f)
+                    val caretStroke = with(density) { 2.dp.toPx() }
+                    val caretLeft = caretOffset.x - 1.dp.toPx()
+                    val caretRight = caretLeft + caretWidth + 2.dp.toPx()
                     val visibleCaretColor = caretColor.copy(alpha = caretAlpha)
                     val shouldShowCaret = enabled && (hasFocus || imeBridgeHasFocus)
                     if (shouldShowCaret) {
                         drawLine(
                             color = visibleCaretColor,
-                            start = Offset(caretLeft, clampedCaretY),
-                            end = Offset(caretRight, clampedCaretY),
-                            strokeWidth = caretStroke,
-                        )
-                        drawLine(
-                            color = visibleCaretColor,
-                            start = Offset(caretLeft, clampedCaretY - capHalfHeight),
-                            end = Offset(caretLeft, clampedCaretY + capHalfHeight),
-                            strokeWidth = caretStroke,
-                        )
-                        drawLine(
-                            color = visibleCaretColor,
-                            start = Offset(caretRight, clampedCaretY - capHalfHeight),
-                            end = Offset(caretRight, clampedCaretY + capHalfHeight),
+                            start = Offset(caretLeft, caretY),
+                            end = Offset(caretRight, caretY),
                             strokeWidth = caretStroke,
                         )
                     }

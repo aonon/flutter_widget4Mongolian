@@ -13,13 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -39,8 +40,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.Icon
 import mongol.compose.core.MongolTextAlign
-import mongol.compose.editing.MongolBasicTextField
 import mongol.compose.editing.MongolOutlinedTextField
 import mongol.compose.editing.MongolTextField
 import mongol.compose.editing.MongolTextFieldLabelPosition
@@ -71,9 +73,9 @@ class MainActivity : ComponentActivity() {
                             .verticalScroll(scrollState)
 
                     ) {
-                       val t =
+                        /*val t =
                             "\u300Aᠨᠢᠭᠡ\u300B\u3008ᠪᠠᠰᠠ ᠨᠢᠭᠡ\u3009 \uFF3Bᠬᠣᠶᠠᠷ\uFF3D ᠭᠣᠷᠪᠠ\uFF1B ᠳᠥᠷᠪᠡ \uFF08ᠲᠠᠪᠤ\uFF09 ᠵᠢᠷᠭᠤᠭ᠎ᠠ\u2048\u2049 ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ\uFF01\uFF0D\uFF1F  ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾"
-
+                        */
                         var textAlign by remember { mutableStateOf(MongolTextAlign.TOP) }
                          Row(verticalAlignment = Alignment.CenterVertically) {
                             MongolTextAlign.entries.forEach { align ->
@@ -85,7 +87,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        Text("Use Compose MongolText:〖汉字〗한국어モンゴル語")
+                        /*Text("Use Compose MongolText:")
                         MongolText(
                             text = t,
                             rotateCjk = true,
@@ -106,7 +108,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(10.dp)
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
-                        )
+                        )*/
 
                         val textFieldState = rememberTextFieldState()
                         var mongolTextFieldValue by remember { mutableStateOf("") }
@@ -121,7 +123,7 @@ class MainActivity : ComponentActivity() {
                             placeholder = { Text("Placeholder") },
                             prefix = {
                                 Text(
-                                    text = "￥",
+                                    text = "₮",
                                     style = TextStyle(fontFamily = font),
                                 )
                             },
@@ -147,12 +149,15 @@ class MainActivity : ComponentActivity() {
                         )
                         Row(Modifier
                             .height(320.dp)
+                            .horizontalScroll(rememberScrollState())
                             .border(1.dp,Color.Red)) {
                             MongolTextField(
                                 value = mongolTextFieldValue,
+                                leadingIcon = {Icon(imageVector = Icons.Filled.Info, contentDescription = null)},
+                                trailingIcon = {Icon(imageVector = Icons.Filled.Add, contentDescription = null)},
                                 onValueChange = { mongolTextFieldValue = it },
                                 inputTransformation = InputTransformation.maxLength(180),
-                                style = TextStyle(fontFamily = font, fontSize = 28.sp),
+                                style = TextStyle(fontFamily = font),
                                 label = { MongolText("ᠨᠡᠷ᠎ᠡ Mongol Filled",
                                     style = TextStyle(fontFamily = font, fontSize = 8.sp ),
                                     textAlign = MongolTextAlign.JUSTIFY) },
@@ -181,6 +186,40 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .padding(8.dp).fillMaxHeight()
                             )
+                            //
+                            MongolTextField(
+                                value = mongolTextFieldValue,
+                                onValueChange = { mongolTextFieldValue = it },
+                                inputTransformation = InputTransformation.maxLength(180),
+                                style = TextStyle(fontFamily = font),
+                                label = { MongolText("ᠨᠡᠷ᠎ᠡ Mongol Filled",
+                                    style = TextStyle(fontFamily = font, fontSize = 8.sp ),
+                                    textAlign = MongolTextAlign.JUSTIFY) },
+                                labelPosition = MongolTextFieldLabelPosition.Attached,
+                                placeholder = {
+                                    MongolText(
+                                        text = "ᠴᠢ ᠭᠡᠨ ᠪᠤᠢ",
+                                        style = TextStyle(fontFamily = font, color = Color.Red),
+                                    )
+                                },
+                                prefix = {
+                                    MongolText(
+                                        text = "₮",
+                                        style = TextStyle(fontFamily = font),
+                                    )
+                                },
+                                suffix = {
+                                    MongolText(
+                                        text = ".00",
+                                        style = TextStyle(fontFamily = font),
+                                    )
+                                },
+                                supportingText = {
+                                    MongolText("Supports text")
+                                },
+                                modifier = Modifier
+                                    .padding(8.dp).fillMaxHeight()
+                            )
                             class DigitOnlyTransformation : InputTransformation {
                                 override fun TextFieldBuffer.transformInput() {
                                     if (!asCharSequence().all { it.isDigit() }) {
@@ -188,16 +227,50 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                            //输入框MongolTextField/MongolOutlinedTextField边线内，左右两侧空白微妙的不对称，能修复吗？
                             MongolOutlinedTextField(
                                 value = mongolOutlinedFieldValue,
                                 onValueChange = { mongolOutlinedFieldValue = it },
-                                inputTransformation = InputTransformation.maxLength(195),
+                                inputTransformation = DigitOnlyTransformation().maxLength(195),
                                 style = TextStyle(fontFamily = font),
                                 label = { MongolText("ᠲᠤᠷᠰᠢᠯᠲᠠ ᠶᠢᠨ ᠲᠠᠯᠠᠪᠤᠷ Mongol Outlined",
                                     style = TextStyle(fontFamily = font),
                                     modifier = Modifier.fillMaxHeight(1f),
                                     textAlign = MongolTextAlign.CENTER  )
                                         },
+                                labelPosition = MongolTextFieldLabelPosition.Above,
+                                placeholder = {
+                                    MongolText(
+                                        text = "ᠪᠢᠴᠢᠪᠦᠷᠢ ᠣᠷᠣᠨ᠎ᠠ",
+                                        style = TextStyle(fontFamily = font),
+                                    )
+                                },
+                                prefix = {
+                                    MongolText(
+                                        text = "ᠦᠵᠡᠭ",
+                                        style = TextStyle(fontFamily = font),
+                                    )
+                                },
+                                suffix = {
+                                    MongolText(
+                                        text = "ᠬᠡᠰᠡᠭ",
+                                        style = TextStyle(fontFamily = font),
+                                    )
+                                },
+                                supportingText = { MongolText("Outlined style comparison") },
+                                modifier = Modifier
+                                    .padding(8.dp)
+                            )
+                            MongolOutlinedTextField(
+                                value = mongolOutlinedFieldValue,
+                                onValueChange = { mongolOutlinedFieldValue = it },
+                                inputTransformation = DigitOnlyTransformation().maxLength(195),
+                                style = TextStyle(fontFamily = font),
+                                label = { MongolText("ᠲᠤᠷᠰᠢᠯᠲᠠ ᠶᠢᠨ ᠲᠠᠯᠠᠪᠤᠷ Mongol Outlined",
+                                    style = TextStyle(fontFamily = font),
+                                    modifier = Modifier.fillMaxHeight(1f),
+                                    textAlign = MongolTextAlign.CENTER  )
+                                },
                                 labelPosition = MongolTextFieldLabelPosition.Attached,
                                 placeholder = {
                                     MongolText(
