@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
                                 value = mongolTextFieldValue,
                                 onValueChange = { mongolTextFieldValue = it },
                                 inputTransformation = InputTransformation.maxLength(180),
-                                style = TextStyle(fontFamily = font),
+                                style = TextStyle(fontFamily = font, fontSize = 28.sp),
                                 label = { MongolText("ᠨᠡᠷ᠎ᠡ Mongol Filled",
                                     style = TextStyle(fontFamily = font, fontSize = 8.sp ),
                                     textAlign = MongolTextAlign.JUSTIFY) },

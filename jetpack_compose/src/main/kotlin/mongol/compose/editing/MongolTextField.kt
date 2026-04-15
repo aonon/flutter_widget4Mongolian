@@ -28,8 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -170,6 +174,11 @@ private fun applyInputTransformation(
 }
 
 object MongolTextFieldDefaults {
+    val FocusedBorderThickness: Dp = 2.dp
+    val UnfocusedBorderThickness: Dp = 1.dp
+    val FocusedIndicatorThickness: Dp = 2.dp
+    val UnfocusedIndicatorThickness: Dp = 1.dp
+
     @Composable
     fun filledColors(): MongolTextFieldColors = colors(TextFieldDefaults.colors())
 
@@ -223,9 +232,11 @@ object MongolTextFieldDefaults {
         colors: MongolTextFieldColors = colors(),
         contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         shape: Shape = RoundedCornerShape(12.dp),
-        borderWidth: Dp = 1.dp,
+        focusedBorderWidth: Dp = FocusedBorderThickness,
+        unfocusedBorderWidth: Dp = UnfocusedBorderThickness,
         placeholderStyle: TextStyle = decorationState.style,
     ) {
+        val effectiveBorderWidth = if (decorationState.focused) focusedBorderWidth else unfocusedBorderWidth
         val container: @Composable (Modifier) -> Unit = { containerModifier ->
             Row(
                 modifier = containerModifier
@@ -238,7 +249,7 @@ object MongolTextFieldDefaults {
                         shape = shape,
                     )
                     .border(
-                        width = borderWidth,
+                        width = effectiveBorderWidth,
                         color = colors.borderColor(
                             enabled = decorationState.enabled,
                             focused = decorationState.focused,
@@ -316,7 +327,8 @@ object MongolTextFieldDefaults {
         colors: MongolTextFieldColors = colors(),
         contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         shape: Shape = RoundedCornerShape(12.dp),
-        borderWidth: Dp = 1.dp,
+        focusedBorderWidth: Dp = FocusedBorderThickness,
+        unfocusedBorderWidth: Dp = UnfocusedBorderThickness,
         placeholderStyle: TextStyle = decorationState.style,
     ) {
         OutlinedDecorationBox(
@@ -333,7 +345,8 @@ object MongolTextFieldDefaults {
             colors = colors,
             contentPadding = contentPadding,
             shape = shape,
-            borderWidth = borderWidth,
+            focusedBorderWidth = focusedBorderWidth,
+            unfocusedBorderWidth = unfocusedBorderWidth,
             placeholderStyle = placeholderStyle,
         )
     }
@@ -353,9 +366,11 @@ object MongolTextFieldDefaults {
         colors: MongolTextFieldColors = colors(),
         contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-        indicatorWidth: Dp = 1.dp,
+        focusedIndicatorWidth: Dp = FocusedIndicatorThickness,
+        unfocusedIndicatorWidth: Dp = UnfocusedIndicatorThickness,
         placeholderStyle: TextStyle = decorationState.style,
     ) {
+        val effectiveIndicatorWidth = if (decorationState.focused) focusedIndicatorWidth else unfocusedIndicatorWidth
         val container: @Composable (Modifier) -> Unit = { containerModifier ->
             Row(
                 modifier = containerModifier
@@ -428,7 +443,7 @@ object MongolTextFieldDefaults {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(indicatorWidth)
+                        .width(effectiveIndicatorWidth)
                         .background(
                             color = colors.borderColor(
                                 enabled = decorationState.enabled,
@@ -478,7 +493,8 @@ fun MongolTextField(
     suffix: (@Composable () -> Unit)? = null,
     colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
     shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-    borderWidth: Dp = 1.dp,
+    focusedIndicatorWidth: Dp = MongolTextFieldDefaults.FocusedIndicatorThickness,
+    unfocusedIndicatorWidth: Dp = MongolTextFieldDefaults.UnfocusedIndicatorThickness,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     decorationBox: @Composable (
         innerTextField: @Composable () -> Unit,
@@ -497,7 +513,8 @@ fun MongolTextField(
             colors = colors,
             contentPadding = contentPadding,
             shape = shape,
-            indicatorWidth = borderWidth,
+            focusedIndicatorWidth = focusedIndicatorWidth,
+            unfocusedIndicatorWidth = unfocusedIndicatorWidth,
             placeholderStyle = placeholderStyle,
         )
     },
@@ -533,7 +550,8 @@ fun MongolTextField(
         suffix = suffix,
         colors = colors,
         shape = shape,
-        borderWidth = borderWidth,
+        focusedBorderWidth = focusedIndicatorWidth,
+        unfocusedBorderWidth = unfocusedIndicatorWidth,
         contentPadding = contentPadding,
         decorationBox = decorationBox,
         autoWidthByContent = autoWidthByContent,
@@ -572,7 +590,8 @@ fun MongolOutlinedTextField(
     suffix: (@Composable () -> Unit)? = null,
     colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
     shape: Shape = RoundedCornerShape(12.dp),
-    borderWidth: Dp = 1.dp,
+    focusedBorderWidth: Dp = MongolTextFieldDefaults.FocusedBorderThickness,
+    unfocusedBorderWidth: Dp = MongolTextFieldDefaults.UnfocusedBorderThickness,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     decorationBox: @Composable (
         innerTextField: @Composable () -> Unit,
@@ -591,7 +610,8 @@ fun MongolOutlinedTextField(
             colors = colors,
             contentPadding = contentPadding,
             shape = shape,
-            borderWidth = borderWidth,
+            focusedBorderWidth = focusedBorderWidth,
+            unfocusedBorderWidth = unfocusedBorderWidth,
             placeholderStyle = placeholderStyle,
         )
     },
@@ -628,7 +648,8 @@ fun MongolOutlinedTextField(
         suffix = suffix,
         colors = colors,
         shape = shape,
-        borderWidth = borderWidth,
+        focusedBorderWidth = focusedBorderWidth,
+        unfocusedBorderWidth = unfocusedBorderWidth,
         contentPadding = contentPadding,
         decorationBox = decorationBox,
         autoWidthByContent = autoWidthByContent,
@@ -669,7 +690,8 @@ fun MongolOutlinedTextField(
     suffix: (@Composable () -> Unit)? = null,
     colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
     shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-    borderWidth: Dp = 1.dp,
+    focusedBorderWidth: Dp = MongolTextFieldDefaults.FocusedBorderThickness,
+    unfocusedBorderWidth: Dp = MongolTextFieldDefaults.UnfocusedBorderThickness,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     decorationBox: @Composable (
         innerTextField: @Composable () -> Unit,
@@ -688,13 +710,15 @@ fun MongolOutlinedTextField(
             colors = colors,
             contentPadding = contentPadding,
             shape = shape,
-            borderWidth = borderWidth,
+            focusedBorderWidth = focusedBorderWidth,
+            unfocusedBorderWidth = unfocusedBorderWidth,
             placeholderStyle = placeholderStyle,
         )
     },
     autoWidthByContent: Boolean = true,
 ) {
     var focused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
     LaunchedEffect(value, state) {
         if (value != null && value != state.text) {
             state.replaceText(value)
@@ -732,7 +756,9 @@ fun MongolOutlinedTextField(
     val innerTextField: @Composable () -> Unit = {
         MongolBasicTextField(
             state = state,
-            modifier = Modifier.fillMaxHeight(),
+            modifier = Modifier
+                .fillMaxHeight()
+                .focusRequester(focusRequester),
             style = style.copy(color = colors.textColor(enabled, focused, isError)),
             textAlign = textAlign,
             textRuns = textRuns,
@@ -764,7 +790,14 @@ fun MongolOutlinedTextField(
     val showAboveLabel = label != null && labelPosition == MongolTextFieldLabelPosition.Above
 
     Layout(
-        modifier = modifier,
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    if (enabled && !readOnly) {
+                        focusRequester.requestFocus()
+                    }
+                }
+            },
         content = {
             if (showAboveLabel) {
                 CompositionLocalProvider(
@@ -939,7 +972,8 @@ fun MongolTextField(
     suffix: (@Composable () -> Unit)? = null,
     colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
     shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-    borderWidth: Dp = 1.dp,
+    focusedIndicatorWidth: Dp = MongolTextFieldDefaults.FocusedIndicatorThickness,
+    unfocusedIndicatorWidth: Dp = MongolTextFieldDefaults.UnfocusedIndicatorThickness,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     decorationBox: @Composable (
         innerTextField: @Composable () -> Unit,
@@ -958,7 +992,8 @@ fun MongolTextField(
             colors = colors,
             contentPadding = contentPadding,
             shape = shape,
-            indicatorWidth = borderWidth,
+            focusedIndicatorWidth = focusedIndicatorWidth,
+            unfocusedIndicatorWidth = unfocusedIndicatorWidth,
             placeholderStyle = placeholderStyle,
         )
     },
@@ -995,7 +1030,8 @@ fun MongolTextField(
         suffix = suffix,
         colors = colors,
         shape = shape,
-        borderWidth = borderWidth,
+        focusedIndicatorWidth = focusedIndicatorWidth,
+        unfocusedIndicatorWidth = unfocusedIndicatorWidth,
         contentPadding = contentPadding,
         decorationBox = decorationBox,
         autoWidthByContent = autoWidthByContent,
