@@ -43,9 +43,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.Icon
 import mongol.compose.core.MongolTextAlign
+import mongol.compose.editing.MongolBasicTextField
+import mongol.compose.editing.MongolEditableState
 import mongol.compose.editing.MongolOutlinedTextField
 import mongol.compose.editing.MongolTextField
 import mongol.compose.editing.MongolTextFieldLabelPosition
+import mongol.compose.selectable.MongolSelectableText
+import mongol.compose.text.MongolRichText
 import mongol.compose.text.MongolText
 import mongol.compose.ui.theme.Test_composeTheme
 
@@ -73,9 +77,8 @@ class MainActivity : ComponentActivity() {
                             .verticalScroll(scrollState)
 
                     ) {
-                        /*val t =
-                            "\u300Aᠨᠢᠭᠡ\u300B\u3008ᠪᠠᠰᠠ ᠨᠢᠭᠡ\u3009 \uFF3Bᠬᠣᠶᠠᠷ\uFF3D ᠭᠣᠷᠪᠠ\uFF1B ᠳᠥᠷᠪᠡ \uFF08ᠲᠠᠪᠤ\uFF09 ᠵᠢᠷᠭᠤᠭ᠎ᠠ\u2048\u2049 ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ\uFF01\uFF0D\uFF1F  ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾"
-                        */
+                        val t =
+                            "\u300Aᠨᠢᠭᠡ\u300B\u3008ᠪᠠᠰᠠ ᠨᠢᠭᠡ\u3009 \uFF3Bᠬᠣᠶᠠᠷ\uFF3D ᠭᠣᠷᠪᠠ\uFF1B ᠳᠥᠷᠪᠡ \uFF08ᠲᠠᠪᠤ\uFF09 ᠵᠢᠷᠭᠤᠭ᠎ᠠ\u2048\u2049 ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ\uFF01\uFF0D\uFF1F  ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六C:\\Users\\itegel\\StudioProjects\\compose\\.idea\\misc.xml七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾".repeat(3)
                         var textAlign by remember { mutableStateOf(MongolTextAlign.TOP) }
                          Row(verticalAlignment = Alignment.CenterVertically) {
                             MongolTextAlign.entries.forEach { align ->
@@ -87,9 +90,22 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        /*Text("Use Compose MongolText:")
+                        Text("Use Compose MongolText:")
+                        val basicState = MongolEditableState(t)
                         MongolText(
                             text = t,
+                            rotateCjk = true,
+                            style = TextStyle(fontFamily = font),
+                            textAlign = textAlign,
+                            horizontalScrollEnabled = true,
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .height(200.dp)
+                                .border(1.dp, Color.Red)
+                        )
+                        /*MongolBasicTextField(
+                            text = t,
+                            onValueChange = {},
                             rotateCjk = true,
                             style = TextStyle(fontFamily = font),
                             textAlign = textAlign,
@@ -98,17 +114,15 @@ class MainActivity : ComponentActivity() {
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
                         )
-                        MongolBasicTextField(
-                                value = t,
-                                onValueChange = {},
-                                textStyle = TextStyle(fontFamily = font),
-                            textAlign = textAlign,
-                                readOnly = true,
+                        */
+                        MongolSelectableText(
+                            text = t,
+                            style = TextStyle(fontFamily = font),
                             modifier = Modifier
                                 .padding(10.dp)
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
-                        )*/
+                        )
 
                         val textFieldState = rememberTextFieldState()
                         var mongolTextFieldValue by remember { mutableStateOf("") }
@@ -143,7 +157,7 @@ class MainActivity : ComponentActivity() {
                             state = textFieldState,
                             labelPosition = TextFieldLabelPosition.Above(),
                             label = { Text("Standard Outlined Label") },
-                            placeholder = { Text("Standard Outlined Placeholder Standard Outlined Placeholder Standard Outlined Placeholder Standard Outlined Placeholder ") },
+                            placeholder = { Text("Standard Outlined Placeholder") },
                             modifier = Modifier
                                 .padding(8.dp)
                         )

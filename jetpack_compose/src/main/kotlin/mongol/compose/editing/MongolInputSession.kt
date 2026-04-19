@@ -23,15 +23,22 @@ interface MongolInputSession {
     fun finishComposingText()
     fun deleteSurroundingText(beforeLength: Int, afterLength: Int)
     fun setSelection(start: Int, end: Int)
+    fun onAction()
 }
 
 class DefaultMongolInputSession(
     private val state: MongolEditableState,
     private val onTextChange: (String) -> Unit,
     private val normalizeTextChange: (String, String) -> String = { _, proposed -> proposed },
+    private val readOnly: Boolean = false,
+    private val onSessionAction: () -> Unit = {},
 ) : MongolInputSession {
     private var batchDepth: Int = 0
     private var hasPendingTextChange: Boolean = false
+
+    override fun onAction() {
+        onSessionAction()
+    }
 
     private fun buildProposedText(start: Int, end: Int, replacement: String): String {
         return buildString {
@@ -48,6 +55,7 @@ class DefaultMongolInputSession(
         newCursorPosition: Int,
         composing: Boolean,
     ) {
+        onAction()
         val normalizedStart = start.coerceIn(0, state.text.length)
         val normalizedEnd = end.coerceIn(0, state.text.length)
         val proposedText = buildProposedText(normalizedStart, normalizedEnd, replacement)
@@ -119,6 +127,7 @@ class DefaultMongolInputSession(
     }
 
     override fun commitText(text: String, newCursorPosition: Int) {
+        if (readOnly) return
         val composing = state.composingRange
         val selection = state.selection
         val active = composing ?: selection
@@ -134,6 +143,7 @@ class DefaultMongolInputSession(
     }
 
     override fun setComposingText(text: String, newCursorPosition: Int) {
+        if (readOnly) return
         val composing = state.composingRange
         val selection = state.selection
         val active = composing ?: selection
@@ -149,15 +159,18 @@ class DefaultMongolInputSession(
     }
 
     override fun setComposingRegion(start: Int, end: Int) {
+        if (readOnly) return
         state.setComposingRange(start, end)
     }
 
     override fun finishComposingText() {
+        if (readOnly) return
         state.clearComposingRange()
         notifyTextChanged()
     }
 
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int) {
+        if (readOnly) return
         if (beforeLength < 0 || afterLength < 0) return
 
         val selection = state.selection.normalized()
@@ -197,6 +210,7 @@ class DefaultMongolInputSession(
     }
 
     override fun setSelection(start: Int, end: Int) {
+        onAction()
         state.setSelection(start, end)
     }
 }

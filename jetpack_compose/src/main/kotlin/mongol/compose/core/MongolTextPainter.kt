@@ -394,6 +394,11 @@ class MongolTextPainter(
         return paragraph.getBoxesForRange(start, end)
     }
 
+    fun requiresClusterDrawing(start: Int, end: Int): Boolean {
+        check(!disposed) { "MongolTextPainter is disposed." }
+        return paragraph.requiresClusterDrawing(start, end)
+    }
+
     fun dispose() {
         if (disposed) return
         paragraph.dispose()

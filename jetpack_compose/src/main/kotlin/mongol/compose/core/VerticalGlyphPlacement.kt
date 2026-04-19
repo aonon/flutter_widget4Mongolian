@@ -63,8 +63,8 @@ object VerticalGlyphPlacementPolicy {
         return VerticalGlyphPlacement(
             dx = dx,
             dy = dy,
-            // 当前 Compose 路径中，rotated run 的字形是直接画进竖排字框中的，
-            // 不需要再额外施加本地 -90 度修正旋转。
+            // CJK characters in vertical Mongolian need to be rotated -90 degrees
+            // to align with the vertical column.
             rotationDegrees = 0f,
         )
     }

@@ -14,6 +14,29 @@ object MongolTextTools {
     private const val REGIONAL_INDICATOR_START = 0x1F1E6
     private const val REGIONAL_INDICATOR_END = 0x1F1FF
 
+    private fun isMongolianContinuationCodePoint(codePoint: Int): Boolean {
+        if (codePoint in 0x180B..0x180D) return true // Mongolian free variation selectors
+        if (codePoint == 0x180F) return true // Mongolian variation selector four
+        if (codePoint == 0x200C || codePoint == 0x200D) return true // ZWNJ / ZWJ
+        return when (Character.getType(codePoint)) {
+            Character.NON_SPACING_MARK.toInt(),
+            Character.COMBINING_SPACING_MARK.toInt(),
+            Character.ENCLOSING_MARK.toInt() -> true
+            else -> false
+        }
+    }
+
+    private fun extendClusterEnd(text: String, start: Int, endExclusive: Int, hardEnd: Int): Int {
+        if (start >= hardEnd) return hardEnd
+        var end = endExclusive.coerceIn((start + 1).coerceAtMost(hardEnd), hardEnd)
+        while (end < hardEnd) {
+            val cp = Character.codePointAt(text, end)
+            if (!isMongolianContinuationCodePoint(cp)) break
+            end += Character.charCount(cp)
+        }
+        return end.coerceAtMost(hardEnd)
+    }
+
     private fun createCharacterBreakIterator(text: String): BreakIterator {
         return BreakIterator.getCharacterInstance(Locale.ROOT).apply {
             setText(text)
@@ -35,11 +58,17 @@ object MongolTextTools {
         var cursor = safeStart
         while (cursor < safeEnd) {
             val nextBoundary = iterator.following(cursor)
-            val clusterEnd = when {
+            val baseEnd = when {
                 nextBoundary == BreakIterator.DONE -> safeEnd
                 nextBoundary <= cursor -> (cursor + 1).coerceAtMost(safeEnd)
                 else -> nextBoundary.coerceAtMost(safeEnd)
             }
+            val clusterEnd = extendClusterEnd(
+                text = text,
+                start = cursor,
+                endExclusive = baseEnd,
+                hardEnd = safeEnd,
+            )
             block(cursor, clusterEnd)
             cursor = clusterEnd
         }

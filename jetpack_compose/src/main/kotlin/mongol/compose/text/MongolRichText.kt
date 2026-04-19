@@ -1,12 +1,16 @@
 package mongol.compose.text
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.drawText
@@ -37,6 +41,8 @@ fun MongolRichText(
     maxLines: Int? = null,
     textRuns: List<TextRun>? = null,
     rotateCjk: Boolean = true,
+    horizontalScrollState: ScrollState? = null,
+    horizontalScrollEnabled: Boolean = false,
     style: TextStyle = TextStyle.Default,
     debugColor: Color = Color(0xFF3A7D44),
     debugDrawBoxes: Boolean = false,
@@ -48,6 +54,8 @@ fun MongolRichText(
         maxLines = maxLines,
         textRuns = textRuns,
         rotateCjk = rotateCjk,
+        horizontalScrollState = horizontalScrollState,
+        horizontalScrollEnabled = horizontalScrollEnabled,
         style = style,
         debugColor = debugColor,
         debugDrawBoxes = debugDrawBoxes,
@@ -62,6 +70,8 @@ fun MongolRichText(
     maxLines: Int? = null,
     textRuns: List<TextRun>? = null,
     rotateCjk: Boolean = true,
+    horizontalScrollState: ScrollState? = null,
+    horizontalScrollEnabled: Boolean = false,
     style: TextStyle = TextStyle.Default,
     debugColor: Color = Color(0xFF3A7D44),
     debugDrawBoxes: Boolean = false,
@@ -115,12 +125,28 @@ fun MongolRichText(
         }
     }
 
+    val effectiveHorizontalScrollState = when {
+        !horizontalScrollEnabled -> null
+        horizontalScrollState != null -> horizontalScrollState
+        else -> rememberScrollState()
+    }
+
+    val contentModifier = if (effectiveHorizontalScrollState != null) {
+        modifier.horizontalScroll(
+            state = effectiveHorizontalScrollState,
+            enabled = true,
+        )
+    } else {
+        modifier
+    }
+
     MongolTextMeasuredLayout(
         painter = painter,
-        modifier = modifier,
+        modifier = contentModifier,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            for (run in painter.textRuns) {
+            clipRect(left = 0f, top = 0f, right = size.width, bottom = size.height) {
+                for (run in painter.textRuns) {
                 if (run.start >= run.end) continue
 
                 if (run.isRotated) {
@@ -164,42 +190,97 @@ fun MongolRichText(
                     continue
                 }
 
-                val runText = plainText.substring(run.start, run.end)
-                if (runText.isBlank()) {
+                if (!painter.requiresClusterDrawing(run.start, run.end)) {
+                    val runText = plainText.substring(run.start, run.end)
+                    if (runText.isBlank()) {
+                        continue
+                    }
+
+                    val runBoxes = painter.getBoxesForRange(run.start, run.end)
+                    if (runBoxes.isEmpty()) continue
+
+                    val left = runBoxes.minOf { it.left }
+                    val top = runBoxes.minOf { it.top }
+                    val right = runBoxes.maxOf { it.right }
+                    val bottom = runBoxes.maxOf { it.bottom }
+                    val layout = runLayouts[run] ?: continue
+                    val runHeight = layout.size.height.toFloat().coerceAtLeast(1f)
+
+                    clipRect(
+                        left = left,
+                        top = top,
+                        right = right,
+                        bottom = bottom,
+                    ) {
+                        withTransform({
+                            translate(left = left + runHeight, top = top)
+                            rotate(degrees = 90f, pivot = Offset.Zero)
+                        }) {
+                            drawText(
+                                textLayoutResult = layout,
+                                topLeft = Offset.Zero,
+                            )
+                        }
+                    }
+
+                    if (debugDrawBoxes) {
+                        drawRect(
+                            color = debugColor,
+                            topLeft = Offset(left, top),
+                            size = androidx.compose.ui.geometry.Size(
+                                width = right - left,
+                                height = bottom - top,
+                            ),
+                            alpha = 0.16f,
+                        )
+                    }
                     continue
                 }
 
-                val runBoxes = painter.getBoxesForRange(run.start, run.end)
-                if (runBoxes.isEmpty()) continue
+                MongolTextTools.forEachGraphemeCluster(plainText, run.start, run.end) { clusterStart, clusterEnd ->
+                    val clusterText = plainText.substring(clusterStart, clusterEnd)
+                    if (clusterText == "\n" || clusterText.isBlank()) {
+                        return@forEachGraphemeCluster
+                    }
 
-                val left = runBoxes.minOf { it.left }
-                val top = runBoxes.minOf { it.top }
-                val right = runBoxes.maxOf { it.right }
-                val bottom = runBoxes.maxOf { it.bottom }
-                val layout = runLayouts[run] ?: continue
-                val runHeight = layout.size.height.toFloat().coerceAtLeast(1f)
-
-                withTransform({
-                    translate(left = left + runHeight, top = top)
-                    rotate(degrees = 90f, pivot = Offset.Zero)
-                }) {
-                    drawText(
-                        textLayoutResult = layout,
-                        topLeft = Offset.Zero,
+                    val box = painter.getBoxesForRange(clusterStart, clusterEnd).firstOrNull()
+                        ?: return@forEachGraphemeCluster
+                    val glyphLayout = textMeasurer.measure(
+                        text = text.subSequence(clusterStart, clusterEnd),
+                        style = style,
                     )
-                }
+                    val glyphHeight = glyphLayout.size.height.toFloat().coerceAtLeast(1f)
 
-                if (debugDrawBoxes) {
-                    drawRect(
-                        color = debugColor,
-                        topLeft = Offset(left, top),
-                        size = androidx.compose.ui.geometry.Size(
-                            width = right - left,
-                            height = bottom - top,
-                        ),
-                        alpha = 0.16f,
-                    )
+                    clipRect(
+                        left = box.left,
+                        top = box.top,
+                        right = box.right,
+                        bottom = box.bottom,
+                    ) {
+                        withTransform({
+                            translate(left = box.left + glyphHeight, top = box.top)
+                            rotate(degrees = 90f, pivot = Offset.Zero)
+                        }) {
+                            drawText(
+                                textLayoutResult = glyphLayout,
+                                topLeft = Offset.Zero,
+                            )
+                        }
+                    }
+
+                    if (debugDrawBoxes) {
+                        drawRect(
+                            color = debugColor,
+                            topLeft = Offset(box.left, box.top),
+                            size = androidx.compose.ui.geometry.Size(
+                                width = box.right - box.left,
+                                height = box.bottom - box.top,
+                            ),
+                            alpha = 0.16f,
+                        )
+                    }
                 }
+            }
             }
         }
     }

@@ -5,17 +5,21 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import mongol.compose.core.MongolTextPainter
 import kotlin.math.roundToInt
 import mongol.compose.core.Offset as CoreOffset
@@ -46,37 +50,49 @@ fun MongolSelectionHandleIcon(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier.size(12.dp)) {
-        val radius = size.width
-        val W = size.width * 2.6f
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val r = w / 2f 
 
         when (type) {
             MongolSelectionHandleType.START -> {
-                // Circle at top-left, tip at bottom-right (2R, 2R)
-                drawCircle(color = color, radius = radius, center = Offset(radius, radius))
                 val path = Path().apply {
-                    moveTo(2 * radius, 2 * radius)
-                    lineTo(radius, 2 * radius)
-                    lineTo(2 * radius, radius)
+                    moveTo(w, h)
+                    lineTo(r, h) 
+                    arcTo(Rect(0f, 0f, w, h), 90f, 270f, false)
+                    lineTo(w, r) 
                     close()
                 }
-                drawPath(path, color)
+                drawPath(path, color, style = Fill)
             }
 
             MongolSelectionHandleType.END -> {
-                // Circle at bottom-right, tip at top-left (W-2R, W-2R)
-                drawCircle(color = color, radius = radius, center = Offset(W - radius, W - radius))
                 val path = Path().apply {
-                    moveTo(W - 2 * radius, W - 2 * radius)
-                    lineTo(W - radius, W - 2 * radius)
-                    lineTo(W - 2 * radius, W - radius)
+                    moveTo(0f, 0f)
+                    lineTo(w - r, 0f) 
+                    arcTo(Rect(0f, 0f, w, h), 270f, 270f, false)
+                    lineTo(0f, h - r) 
                     close()
                 }
-                drawPath(path, color)
+                drawPath(path, color, style = Fill)
             }
 
             MongolSelectionHandleType.CARET -> {
-                drawCircle(color = color, radius = radius * 0.5f, center = center)
+                // For CARET in vertical text, the handle is a teardrop pointing left.
+                // The tip of the teardrop should be at the horizontal caret line.
+                // We use (w/2, 0) as the tip/anchor point relative to the icon box.
+                val path = Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(w - r, 0f)
+                    arcTo(Rect(0f, 0f, w, h), 270f, 270f, false)
+                    lineTo(0f, h - r)
+                    close()
+                }
+                // Rotate to point left (90 degrees clockwise from the 'END' orientation which points down-right)
+                rotate(degrees = -45f, pivot = Offset(r, r)) {
+                    drawPath(path, color, style = Fill)
+                }
             }
         }
     }
@@ -84,14 +100,12 @@ fun MongolSelectionHandleIcon(
 
 private fun handleAnchorInIcon(
     type: MongolSelectionHandleType,
-    handleSizePx: Float,
+    visualSizePx: Float,
 ): Offset {
-    // START tip is at 2*radius = 2*0.35*W = 0.7*W
-    // END tip is at W - 2*radius = W - 0.7*W = 0.3*W
     return when (type) {
-        MongolSelectionHandleType.START -> Offset(handleSizePx * 0.7f, handleSizePx * 0.7f)
-        MongolSelectionHandleType.END -> Offset(handleSizePx * 0.3f, handleSizePx * 0.3f)
-        MongolSelectionHandleType.CARET -> Offset(handleSizePx * 0.5f, handleSizePx * 0.5f)
+        MongolSelectionHandleType.START -> Offset(visualSizePx, visualSizePx) 
+        MongolSelectionHandleType.END -> Offset(0f, 0f)                     
+        MongolSelectionHandleType.CARET -> Offset(0f, visualSizePx / 2f)
     }
 }
 
@@ -104,7 +118,11 @@ fun MongolSelectionHandles(
     color: Color = Color(0xFF2196F3),
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val handleSizePx = with(density) { 30.dp.toPx() }
+    val haptic = LocalHapticFeedback.current
+    val visualSizeDp = 22.dp
+    val visualSizePx = with(density) { visualSizeDp.toPx() }
+    val touchSizeDp = 40.dp
+    val touchSizePx = with(density) { touchSizeDp.toPx() }
 
     val latestOnDrag by rememberUpdatedState(onHandleDrag)
     val latestOnDragStart by rememberUpdatedState(onHandleDragStart)
@@ -112,86 +130,138 @@ fun MongolSelectionHandles(
 
     state.handles.forEach { handle ->
         key(handle.type) {
-            val anchorInIcon = handleAnchorInIcon(handle.type, handleSizePx)
             val currentOffset by rememberUpdatedState(handle.offset)
+            var dragOffset by remember { mutableStateOf<Offset?>(null) }
+            val displayOffset = dragOffset ?: Offset(currentOffset.x, currentOffset.y)
+            
+            // 监听逻辑位置变化，触发触感反馈
+            LaunchedEffect(currentOffset) {
+                if (dragOffset != null) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
 
-            Box(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            (currentOffset.x - anchorInIcon.x).roundToInt(),
-                            (currentOffset.y - anchorInIcon.y).roundToInt(),
-                        )
-                    }
-                    .pointerInput(handle.type) {
-                        var dragAnchor = Offset.Zero
-                        detectDragGestures(
-                            onDragStart = {
-                                dragAnchor = Offset(currentOffset.x, currentOffset.y)
-                                latestOnDragStart(handle.type)
-                            },
-                            onDragEnd = { latestOnDragEnd(handle.type) },
-                            onDragCancel = { latestOnDragEnd(handle.type) },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            dragAnchor += dragAmount
-                            latestOnDrag(handle.type, dragAnchor)
-                        }
-                    }
+            val anchorInTouchArea = Offset(touchSizePx / 2f, touchSizePx / 2f)
+
+            Popup(
+                offset = IntOffset(
+                    (displayOffset.x - anchorInTouchArea.x).roundToInt(),
+                    (displayOffset.y - anchorInTouchArea.y).roundToInt(),
+                ),
+                properties = PopupProperties(
+                    focusable = false,
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                    excludeFromSystemGesture = true,
+                )
             ) {
-                MongolSelectionHandleIcon(type = handle.type, color = color)
+                Box(
+                    modifier = Modifier
+                        .size(touchSizeDp)
+                        .pointerInput(handle.type) {
+                            detectDragGestures(
+                                onDragStart = { offset ->
+                                    dragOffset = Offset(currentOffset.x, currentOffset.y)
+                                    latestOnDragStart(handle.type)
+                                },
+                                onDragEnd = {
+                                    dragOffset = null
+                                    latestOnDragEnd(handle.type)
+                                },
+                                onDragCancel = {
+                                    dragOffset = null
+                                    latestOnDragEnd(handle.type)
+                                },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                val current = dragOffset ?: Offset(currentOffset.x, currentOffset.y)
+                                val next = current + dragAmount
+                                dragOffset = next
+                                latestOnDrag(handle.type, next)
+                            }
+                        }
+                ) {
+                    val iconAnchor = handleAnchorInIcon(handle.type, visualSizePx)
+                    MongolSelectionHandleIcon(
+                        type = handle.type,
+                        color = color,
+                        modifier = Modifier
+                            .size(visualSizeDp)
+                            .offset {
+                                IntOffset(
+                                    (anchorInTouchArea.x - iconAnchor.x).roundToInt(),
+                                    (anchorInTouchArea.y - iconAnchor.y).roundToInt()
+                                )
+                            }
+                    )
+                }
             }
         }
     }
 }
 
 object MongolSelectionHandlesCalculator {
-    private const val HANDLE_SIZE_DP = 30f
-    private const val HANDLE_RADIUS_RATIO = 0.4f
-
     fun calculate(
         painter: MongolTextPainter,
         selection: MongolSelection,
-        density: Float, // Pass density to calculate accurate pixel offset
+        density: Float,
         activeHandle: MongolSelectionHandleType? = null,
+        showCaretHandle: Boolean = false,
     ): MongolSelectionHandlesState {
         val normalized = selection.normalized()
+        
+        // 如果是闭合选区
         if (normalized.isCollapsed) {
-            return MongolSelectionHandlesState(
-                handles = emptyList(),
-                activeHandle = activeHandle,
-            )
+            if (activeHandle == MongolSelectionHandleType.CARET || showCaretHandle) {
+                val raw = painter.getOffsetForCaret(TextPosition(normalized.start))
+                
+                // For CARET handle in vertical Mongolian text, we want the handle icon
+                // to appear to the RIGHT of the caret line, with the tip pointing LEFT
+                // to anchor at the RIGHT edge of the caret line.
+                
+                // 1. Find the width of the glyph at the caret to determine the right boundary.
+                val glyphBox = if (normalized.start in painter.text.indices) {
+                    painter.getBoxesForRange(normalized.start, normalized.start + 1).firstOrNull()
+                } else if (normalized.start > 0) {
+                    painter.getBoxesForRange(normalized.start - 1, normalized.start).firstOrNull()
+                } else null
+                
+                val caretRight = glyphBox?.right ?: (raw.x + 18f) // fallback to typical width
+                
+                val caretHandle = MongolSelectionHandle(
+                    type = MongolSelectionHandleType.CARET,
+                    offset = mongol.compose.core.Offset(caretRight, raw.y)
+                )
+                return MongolSelectionHandlesState(handles = listOf(caretHandle), activeHandle = activeHandle)
+            }
+            return MongolSelectionHandlesState(handles = emptyList(), activeHandle = activeHandle)
         }
 
-        val handleRadiusPx = HANDLE_SIZE_DP * density * HANDLE_RADIUS_RATIO
-        val selectionBoxes = painter.getBoxesForRange(normalized.start, normalized.end)
+        // 优化：不再获取整个选区的矩形，只获取起始和结束位置的单个字形矩形
+        val startBox = painter.getBoxesForRange(normalized.start, (normalized.start + 1).coerceAtMost(painter.text.length))
+            .firstOrNull()
+        val endBox = if (normalized.end > normalized.start) {
+            painter.getBoxesForRange(normalized.end - 1, normalized.end).firstOrNull()
+        } else null
 
-        val startHandleOffset = if (selectionBoxes.isNotEmpty()) {
-            val first = selectionBoxes.first()
-            CoreOffset(x = first.left - 2f * density, y = first.top - 2f * density)
+        val startHandleOffset = if (startBox != null) {
+            CoreOffset(x = startBox.left, y = startBox.top)
         } else {
             val raw = painter.getOffsetForCaret(TextPosition(normalized.start))
-            CoreOffset(x = raw.x - 2f * density, y = raw.y - 2f * density)
+            CoreOffset(x = raw.x, y = raw.y)
         }
 
-        val endHandleOffset = if (selectionBoxes.isNotEmpty()) {
-            val last = selectionBoxes.last()
-            CoreOffset(x = last.right, y = last.bottom + 1f * density)
+        val endHandleOffset = if (endBox != null) {
+            CoreOffset(x = endBox.right, y = endBox.bottom)
         } else {
             val raw = painter.getOffsetForCaret(TextPosition(normalized.end))
-            CoreOffset(x = raw.x, y = raw.y + 1f * density)
+            CoreOffset(x = raw.x, y = raw.y)
         }
 
         return MongolSelectionHandlesState(
             handles = listOf(
-                MongolSelectionHandle(
-                    type = MongolSelectionHandleType.START,
-                    offset = startHandleOffset,
-                ),
-                MongolSelectionHandle(
-                    type = MongolSelectionHandleType.END,
-                    offset = endHandleOffset,
-                ),
+                MongolSelectionHandle(type = MongolSelectionHandleType.START, offset = startHandleOffset),
+                MongolSelectionHandle(type = MongolSelectionHandleType.END, offset = endHandleOffset),
             ),
             activeHandle = activeHandle,
         )

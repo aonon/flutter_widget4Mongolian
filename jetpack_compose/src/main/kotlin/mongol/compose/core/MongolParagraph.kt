@@ -39,8 +39,9 @@ class MongolParagraph(
     )
 
     private val columns: MutableList<LayoutColumn> = mutableListOf()
-    private val glyphBoxesByIndex: MutableMap<Int, Rect> = mutableMapOf()
-    private val glyphMetricsByIndex: MutableMap<Int, GlyphMetrics> = mutableMapOf()
+    private val glyphBoxesByIndex: Array<Rect?> = arrayOfNulls(text.length)
+    private val glyphMetricsByIndex: Array<GlyphMetrics?> = arrayOfNulls(text.length)
+    private val forcedBreakRanges: MutableSet<TextRange> = linkedSetOf()
 
     // Deterministic fallback metrics before Compose TextMeasurer integration.
     private val columnWidthPx: Float = 18f
@@ -70,11 +71,20 @@ class MongolParagraph(
     val debugDisposed: Boolean
         get() = disposed
 
+    private fun computeLayoutSignature(height: Float): Int {
+        var result = height.toBits()
+        result = 31 * result + text.hashCode()
+        result = 31 * result + runs.hashCode()
+        result = 31 * result + (maxLines ?: 0)
+        result = 31 * result + textAlign.hashCode()
+        return result
+    }
+
     fun layout(constraints: MongolParagraphConstraints) {
         check(!disposed) { "MongolParagraph is disposed." }
         require(constraints.height.isFinite()) { "Constraint height must be finite" }
         require(constraints.height >= 0f) { "Constraint height must be >= 0" }
-        val signature = arrayOf(constraints.height, text, runs, maxLines, textAlign).contentHashCode()
+        val signature = computeLayoutSignature(constraints.height)
         if (lastLayoutSignatureHash == signature) {
             return
         }
@@ -86,8 +96,9 @@ class MongolParagraph(
 
     private fun resetComputedLayout() {
         columns.clear()
-        glyphBoxesByIndex.clear()
-        glyphMetricsByIndex.clear()
+        glyphBoxesByIndex.fill(null)
+        glyphMetricsByIndex.fill(null)
+        forcedBreakRanges.clear()
         width = 0f
         height = 0f
         longestLine = 0f
@@ -140,9 +151,9 @@ class MongolParagraph(
             return true
         }
 
-        fun fallbackRunMetrics(segmentText: String): RunMetrics {
+        fun fallbackRunMetrics(startIndex: Int, endIndex: Int): RunMetrics {
             val clusterAdvances = mutableListOf<Float>()
-            MongolTextTools.forEachGraphemeCluster(segmentText) { _, _ ->
+            MongolTextTools.forEachGraphemeCluster(text, startIndex, endIndex) { _, _ ->
                 clusterAdvances += glyphAdvancePx
             }
             if (clusterAdvances.isEmpty()) {
@@ -200,12 +211,6 @@ class MongolParagraph(
 
         fun placeUnrotatedRun(startIndex: Int, endIndex: Int, metrics: RunMetrics) {
             if (startIndex >= endIndex) return
-            if (consumedAdvance + metrics.advance > availableHeight && currentColumn.glyphIndices.isNotEmpty()) {
-                if (!moveToNextColumn()) return
-            }
-
-            val left = currentColumn.left
-            val top = consumedAdvance
             val clusters = mutableListOf<TextRange>()
             MongolTextTools.forEachGraphemeCluster(text, startIndex, endIndex) { clusterStart, clusterEnd ->
                 clusters += TextRange(start = clusterStart, end = clusterEnd)
@@ -220,6 +225,119 @@ class MongolParagraph(
             }
             val rawSum = rawAdvances.sum().takeIf { it > 0f } ?: 1f
             val scale = metrics.advance / rawSum
+
+            val isUnspacedSegment = (startIndex until endIndex).none { idx ->
+                idx in text.indices && isEdgeWhitespace(text[idx])
+            }
+            val shouldForceBreak = isUnspacedSegment && metrics.advance > availableHeight
+
+            if (shouldForceBreak) {
+                forcedBreakRanges += TextRange(startIndex, endIndex)
+                val scaledAdvances = rawAdvances.map { (it * scale).coerceAtLeast(1f) }
+
+                // For break-all long words, start from a fresh column when possible,
+                // then continue splitting before overflow.
+                if (currentColumn.glyphIndices.isNotEmpty() && consumedAdvance > 0f) {
+                    if (!moveToNextColumn()) return
+                }
+
+                var cursor = 0
+
+                while (cursor < clusters.size) {
+                    if (consumedAdvance >= availableHeight && currentColumn.glyphIndices.isNotEmpty()) {
+                        if (!moveToNextColumn()) return
+                    }
+
+                    val room = (availableHeight - consumedAdvance).coerceAtLeast(0f)
+                    var takeCount = 0
+                    var chunkAdvance = 0f
+                    while (cursor + takeCount < clusters.size) {
+                        val nextAdvance = scaledAdvances[cursor + takeCount]
+                        if (takeCount > 0 && chunkAdvance + nextAdvance > room) break
+                        if (takeCount == 0 && nextAdvance > room && currentColumn.glyphIndices.isNotEmpty()) {
+                            if (!moveToNextColumn()) return
+                            break
+                        }
+                        chunkAdvance += nextAdvance
+                        takeCount += 1
+                        if (chunkAdvance >= room) break
+                    }
+
+                    if (takeCount == 0) {
+                        val singleAdvance = scaledAdvances[cursor]
+                        val firstCluster = clusters[cursor]
+                        val left = currentColumn.left
+                        val top = consumedAdvance
+                        val rect = Rect(
+                            left = left,
+                            top = top,
+                            right = left + metrics.crossAxis,
+                            bottom = top + singleAdvance,
+                        )
+                        for (textIndex in firstCluster.start until firstCluster.end) {
+                            glyphBoxesByIndex[textIndex] = rect
+                            glyphMetricsByIndex[textIndex] = GlyphMetrics(
+                                advance = singleAdvance,
+                                crossAxis = metrics.crossAxis,
+                                ascent = metrics.ascent,
+                                descent = metrics.descent,
+                            )
+                            currentColumn.glyphIndices += textIndex
+                        }
+                        consumedAdvance += singleAdvance
+                        currentColumn.usedAdvance += singleAdvance
+                        currentColumn.maxCrossAxis = maxOf(currentColumn.maxCrossAxis, metrics.crossAxis)
+                        currentColumn.maxAscent = maxOf(currentColumn.maxAscent, metrics.ascent)
+                        currentColumn.maxDescent = maxOf(currentColumn.maxDescent, metrics.descent)
+                        cursor += 1
+                        continue
+                    }
+
+                    val left = currentColumn.left
+                    val top = consumedAdvance
+                    var y = top
+                    for (i in 0 until takeCount) {
+                        val cluster = clusters[cursor + i]
+                        val clusterAdvance = if (i == takeCount - 1) {
+                            (top + chunkAdvance) - y
+                        } else {
+                            scaledAdvances[cursor + i]
+                        }
+                        val rect = Rect(
+                            left = left,
+                            top = y,
+                            right = left + metrics.crossAxis,
+                            bottom = y + clusterAdvance,
+                        )
+                        for (textIndex in cluster.start until cluster.end) {
+                            glyphBoxesByIndex[textIndex] = rect
+                            glyphMetricsByIndex[textIndex] = GlyphMetrics(
+                                advance = clusterAdvance,
+                                crossAxis = metrics.crossAxis,
+                                ascent = metrics.ascent,
+                                descent = metrics.descent,
+                            )
+                            currentColumn.glyphIndices += textIndex
+                        }
+                        y += clusterAdvance
+                    }
+
+                    consumedAdvance += chunkAdvance
+                    currentColumn.usedAdvance += chunkAdvance
+                    currentColumn.maxCrossAxis = maxOf(currentColumn.maxCrossAxis, metrics.crossAxis)
+                    currentColumn.maxAscent = maxOf(currentColumn.maxAscent, metrics.ascent)
+                    currentColumn.maxDescent = maxOf(currentColumn.maxDescent, metrics.descent)
+                    cursor += takeCount
+                }
+                return
+            }
+
+            if (consumedAdvance + metrics.advance > availableHeight && currentColumn.glyphIndices.isNotEmpty()) {
+                if (!moveToNextColumn()) return
+            }
+
+            val left = currentColumn.left
+            val top = consumedAdvance
             var cursorTop = top
 
             var firstRenderableClusterIndex = 0
@@ -288,17 +406,15 @@ class MongolParagraph(
                 if (text[cursor] == '\n') {
                     val segmentEnd = cursor
                     if (segmentStart < segmentEnd) {
-                        val segmentText = text.substring(segmentStart, segmentEnd)
                         if (run.isRotated) {
                             MongolTextTools.forEachGraphemeCluster(text, segmentStart, segmentEnd) { clusterStart, clusterEnd ->
-                                val clusterText = text.substring(clusterStart, clusterEnd)
                                 val clusterMetrics = runMeasurer?.measureRunRange(
                                     fullText = text,
                                     start = clusterStart,
                                     end = clusterEnd,
                                     isRotated = true,
                                 )
-                                    ?: fallbackRunMetrics(clusterText)
+                                    ?: fallbackRunMetrics(clusterStart, clusterEnd)
                                 placeCluster(clusterStart, clusterEnd, clusterMetrics)
                             }
                         } else {
@@ -308,7 +424,7 @@ class MongolParagraph(
                                 end = segmentEnd,
                                 isRotated = false,
                             )
-                                ?: fallbackRunMetrics(segmentText)
+                                ?: fallbackRunMetrics(segmentStart, segmentEnd)
                             placeUnrotatedRun(segmentStart, segmentEnd, runMetrics)
                         }
                     }
@@ -321,17 +437,15 @@ class MongolParagraph(
             }
 
             if (!exceeded && segmentStart < run.end) {
-                val segmentText = text.substring(segmentStart, run.end)
                 if (run.isRotated) {
                     MongolTextTools.forEachGraphemeCluster(text, segmentStart, run.end) { clusterStart, clusterEnd ->
-                        val clusterText = text.substring(clusterStart, clusterEnd)
                         val clusterMetrics = runMeasurer?.measureRunRange(
                             fullText = text,
                             start = clusterStart,
                             end = clusterEnd,
                             isRotated = true,
                         )
-                            ?: fallbackRunMetrics(clusterText)
+                            ?: fallbackRunMetrics(clusterStart, clusterEnd)
                         placeCluster(clusterStart, clusterEnd, clusterMetrics)
                     }
                 } else {
@@ -341,7 +455,7 @@ class MongolParagraph(
                         end = run.end,
                         isRotated = false,
                     )
-                        ?: fallbackRunMetrics(segmentText)
+                        ?: fallbackRunMetrics(segmentStart, run.end)
                     placeUnrotatedRun(segmentStart, run.end, runMetrics)
                 }
             }
@@ -569,7 +683,7 @@ class MongolParagraph(
 
         width = columns.sumOf { it.maxCrossAxis.toDouble() }.toFloat()
         longestLine = columns.maxOfOrNull { it.usedAdvance } ?: 0f
-        minIntrinsicHeight = glyphMetricsByIndex.values.maxOfOrNull { it.advance } ?: glyphAdvancePx
+        minIntrinsicHeight = glyphMetricsByIndex.maxOfOrNull { it?.advance ?: 0f }?.takeIf { it > 0f } ?: glyphAdvancePx
         maxIntrinsicHeight = availableHeight
     }
 
@@ -628,29 +742,45 @@ class MongolParagraph(
         return boxes
     }
 
+    fun requiresClusterDrawing(start: Int, end: Int): Boolean {
+        check(!disposed) { "MongolParagraph is disposed." }
+        return forcedBreakRanges.contains(TextRange(start, end))
+    }
+
     fun getPositionForOffset(offset: Offset): TextPosition {
         check(!disposed) { "MongolParagraph is disposed." }
         if (glyphBoxesByIndex.isEmpty()) {
             return TextPosition(offset = 0)
         }
 
-        var bestIndex = 0
-        var bestDistance = Float.POSITIVE_INFINITY
-        for ((index, rect) in glyphBoxesByIndex) {
-            val cx = (rect.left + rect.right) / 2f
+        // 1. Find the column that contains offset.x, or the closest column.
+        val bestColumn = columns.minByOrNull { column ->
+            val colLeft = column.left
+            val colRight = colLeft + column.maxCrossAxis
+            if (offset.x >= colLeft && offset.x <= colRight) {
+                0f
+            } else {
+                minOf(abs(offset.x - colLeft), abs(offset.x - colRight))
+            }
+        } ?: return TextPosition(offset = 0)
+
+        // 2. Find the glyph in this column that is vertically closest.
+        var bestIndexInColumn = 0
+        var bestDistanceY = Float.POSITIVE_INFINITY
+        for (index in bestColumn.glyphIndices) {
+            val rect = glyphBoxesByIndex[index] ?: continue
             val cy = (rect.top + rect.bottom) / 2f
-            val dx = offset.x - cx
-            val dy = offset.y - cy
-            val distance = dx * dx + dy * dy
-            if (distance < bestDistance) {
-                bestDistance = distance
-                bestIndex = index
+            val dy = abs(offset.y - cy)
+            if (dy < bestDistanceY) {
+                bestDistanceY = dy
+                bestIndexInColumn = index
             }
         }
-        val normalized = if (bestIndex in 0 until text.length) {
-            MongolTextTools.getGraphemeRangeAt(text, bestIndex).start
+
+        val normalized = if (bestIndexInColumn in 0 until text.length) {
+            MongolTextTools.getGraphemeRangeAt(text, bestIndexInColumn).start
         } else {
-            bestIndex
+            bestIndexInColumn
         }
         return TextPosition(offset = normalized)
     }
@@ -666,6 +796,14 @@ class MongolParagraph(
             clamped == text.length -> clamped
             clamped in 0 until text.length -> MongolTextTools.getGraphemeRangeAt(text, clamped).start
             else -> 0
+        }
+
+        if (normalized == text.length) {
+            for (index in (text.length - 1) downTo 0) {
+                val rect = glyphBoxesByIndex[index] ?: continue
+                return Offset(rect.left, rect.bottom)
+            }
+            return Offset(0f, 0f)
         }
 
         val exact = glyphBoxesByIndex[normalized]
@@ -773,7 +911,9 @@ class MongolParagraph(
         if (disposed) return
         disposed = true
         columns.clear()
-        glyphBoxesByIndex.clear()
+        glyphBoxesByIndex.fill(null)
+        glyphMetricsByIndex.fill(null)
+        forcedBreakRanges.clear()
         lastLayoutSignatureHash = null
         width = 0f
         height = 0f

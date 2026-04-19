@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import mongol.compose.core.MongolTextAlign
 import mongol.compose.core.TextRun
+import androidx.compose.foundation.ScrollState
 
 /**
  * Simple vertical Mongolian text composable.
@@ -20,6 +21,8 @@ fun MongolText(
     maxLines: Int? = null,
     textRuns: List<TextRun>? = null,
     rotateCjk: Boolean = true,
+    horizontalScrollState: ScrollState? = null,
+    horizontalScrollEnabled: Boolean = false,
     style: TextStyle = TextStyle.Default,
     debugColor: Color = Color(0xFF3A7D44),
     debugDrawBoxes: Boolean = false,
@@ -31,6 +34,8 @@ fun MongolText(
         maxLines = maxLines,
         textRuns = textRuns,
         rotateCjk = rotateCjk,
+        horizontalScrollState = horizontalScrollState,
+        horizontalScrollEnabled = horizontalScrollEnabled,
         style = style,
         debugColor = debugColor,
         debugDrawBoxes = debugDrawBoxes,
