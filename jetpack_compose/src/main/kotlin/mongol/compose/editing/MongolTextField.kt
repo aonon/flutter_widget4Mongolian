@@ -2,19 +2,20 @@ package mongol.compose.editing
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
@@ -33,7 +34,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -236,7 +236,8 @@ object MongolTextFieldDefaults {
         unfocusedBorderWidth: Dp = UnfocusedBorderThickness,
         placeholderStyle: TextStyle = decorationState.style,
     ) {
-        val effectiveBorderWidth = if (decorationState.focused) focusedBorderWidth else unfocusedBorderWidth
+        val effectiveBorderWidth =
+            if (decorationState.focused) focusedBorderWidth else unfocusedBorderWidth
         val container: @Composable (Modifier) -> Unit = { containerModifier ->
             Row(
                 modifier = containerModifier
@@ -370,7 +371,8 @@ object MongolTextFieldDefaults {
         unfocusedIndicatorWidth: Dp = UnfocusedIndicatorThickness,
         placeholderStyle: TextStyle = decorationState.style,
     ) {
-        val effectiveIndicatorWidth = if (decorationState.focused) focusedIndicatorWidth else unfocusedIndicatorWidth
+        val effectiveIndicatorWidth =
+            if (decorationState.focused) focusedIndicatorWidth else unfocusedIndicatorWidth
         val container: @Composable (Modifier) -> Unit = { containerModifier ->
             Row(
                 modifier = containerModifier
@@ -474,6 +476,7 @@ fun MongolTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color.Unspecified,
     selectionColor: Color = Color.Unspecified,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onTextChange: (String) -> Unit = {},
     value: String? = null,
     onValueChange: ((String) -> Unit)? = null,
@@ -531,6 +534,7 @@ fun MongolTextField(
         readOnly = readOnly,
         caretColor = caretColor,
         selectionColor = selectionColor,
+        keyboardOptions = keyboardOptions,
         onTextChange = onTextChange,
         value = value,
         onValueChange = onValueChange,
@@ -574,6 +578,7 @@ fun MongolOutlinedTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color.Unspecified,
     selectionColor: Color = Color.Unspecified,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
     inputTransformation: InputTransformation? = null,
@@ -630,6 +635,7 @@ fun MongolOutlinedTextField(
         readOnly = readOnly,
         caretColor = caretColor,
         selectionColor = selectionColor,
+        keyboardOptions = keyboardOptions,
         onValueChange = onValueChange,
         value = value,
         onInputSessionReady = onInputSessionReady,
@@ -671,6 +677,7 @@ fun MongolOutlinedTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color.Unspecified,
     selectionColor: Color = Color.Unspecified,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onTextChange: (String) -> Unit = {},
     value: String? = null,
     onValueChange: ((String) -> Unit)? = null,
@@ -750,8 +757,10 @@ fun MongolOutlinedTextField(
         isError = isError,
     )
 
-    val effectiveCaretColor = if (caretColor != Color.Unspecified) caretColor else colors.caretColor(isError)
-    val effectiveSelectionColor = if (selectionColor != Color.Unspecified) selectionColor else colors.selectionColor
+    val effectiveCaretColor =
+        if (caretColor != Color.Unspecified) caretColor else colors.caretColor(isError)
+    val effectiveSelectionColor =
+        if (selectionColor != Color.Unspecified) selectionColor else colors.selectionColor
 
     val innerTextField: @Composable () -> Unit = {
         MongolBasicTextField(
@@ -767,6 +776,8 @@ fun MongolOutlinedTextField(
             readOnly = readOnly,
             caretColor = effectiveCaretColor,
             selectionColor = effectiveSelectionColor,
+            keyboardOptions = keyboardOptions,
+            singleLine = singleLine,
             normalizeTextChange = { current, proposed ->
                 var normalized = applyInputTransformation(current, proposed, inputTransformation)
                 if (singleLine) {
@@ -791,10 +802,13 @@ fun MongolOutlinedTextField(
 
     Layout(
         modifier = modifier
-            .pointerInput(Unit) {
-                detectTapGestures {
-                    if (enabled && !readOnly) {
-                        focusRequester.requestFocus()
+            .pointerInput(enabled, readOnly) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.changedToDown() } && enabled && !readOnly) {
+                            focusRequester.requestFocus()
+                        }
                     }
                 }
             },
@@ -848,12 +862,13 @@ fun MongolOutlinedTextField(
         }
 
         val fieldMeasurable = measurables[index++]
-        val supportingTextMeasurable = measurables.getOrNull(index)?.takeIf { supportingText != null }
+        val supportingTextMeasurable =
+            measurables.getOrNull(index)?.takeIf { supportingText != null }
         if (supportingText != null) {
             index += 1
         }
 
-        val supportSlotSpacing = if (supportingTextMeasurable != null) spacing else 0
+        if (supportingTextMeasurable != null) spacing else 0
 
         val supportingTextPlaceable = supportingTextMeasurable?.measure(looseConstraints)
         val supportingWidth = supportingTextPlaceable?.width ?: 0
@@ -869,7 +884,8 @@ fun MongolOutlinedTextField(
             fieldMaxWidth
         }
 
-        val fontSizePx = if (style.fontSize.type == TextUnitType.Sp) style.fontSize.toPx() else 16.sp.toPx()
+        val fontSizePx =
+            if (style.fontSize.type == TextUnitType.Sp) style.fontSize.toPx() else 16.sp.toPx()
         val lineSpan = max((fontSizePx * 1.5f).toInt(), 1)
         val intrinsicHeightHint = if (constraints.hasBoundedHeight) {
             constraints.maxHeight
@@ -907,9 +923,9 @@ fun MongolOutlinedTextField(
 
         val totalWidth =
             (labelPlaceable?.width ?: 0) +
-                labelSpacing +
-                fieldPlaceable.width +
-                (if (supportingWidth > 0) spacing + supportingWidth else 0)
+                    labelSpacing +
+                    fieldPlaceable.width +
+                    (if (supportingWidth > 0) spacing + supportingWidth else 0)
         val supportingHeight =
             if (supportingTextPlaceable != null) {
                 max(
@@ -919,7 +935,8 @@ fun MongolOutlinedTextField(
             } else {
                 0
             }
-        val totalHeight = max(max(labelPlaceable?.height ?: 0, fieldPlaceable.height), supportingHeight)
+        val totalHeight =
+            max(max(labelPlaceable?.height ?: 0, fieldPlaceable.height), supportingHeight)
 
         layout(
             width = totalWidth.coerceIn(constraints.minWidth, constraints.maxWidth),
@@ -956,6 +973,7 @@ fun MongolTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color.Unspecified,
     selectionColor: Color = Color.Unspecified,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
     inputTransformation: InputTransformation? = null,
@@ -1012,6 +1030,7 @@ fun MongolTextField(
         readOnly = readOnly,
         caretColor = caretColor,
         selectionColor = selectionColor,
+        keyboardOptions = keyboardOptions,
         onValueChange = onValueChange,
         value = value,
         onInputSessionReady = onInputSessionReady,

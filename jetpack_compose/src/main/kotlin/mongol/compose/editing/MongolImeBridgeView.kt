@@ -1,8 +1,8 @@
 package mongol.compose.editing
 
 import android.content.Context
-import android.text.InputType
 import android.os.Build
+import android.text.InputType
 import android.util.AttributeSet
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -19,6 +19,8 @@ internal class MongolImeBridgeView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     var session: MongolInputSession? = null
+    var inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+    var imeOptions: Int = EditorInfo.IME_FLAG_NO_FULLSCREEN
 
     init {
         isFocusable = true
@@ -32,8 +34,8 @@ internal class MongolImeBridgeView @JvmOverloads constructor(
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         val currentSession = session ?: return null
-        outAttrs.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN
+        outAttrs.inputType = inputType
+        outAttrs.imeOptions = imeOptions
         outAttrs.initialSelStart = currentSession.snapshot().selectionStart
         outAttrs.initialSelEnd = currentSession.snapshot().selectionEnd
         return MongolInputConnection(this, currentSession)

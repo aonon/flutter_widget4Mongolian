@@ -1,5 +1,7 @@
 package mongol.compose.editing
 
+import android.text.InputType
+import android.view.inputmethod.EditorInfo
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -60,6 +63,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -67,10 +72,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import mongol.compose.core.MongolTextAlign
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import mongol.compose.R
+import mongol.compose.core.MongolTextAlign
 import mongol.compose.core.MongolTextPainter
 import mongol.compose.core.MongolTextTools
 import mongol.compose.core.RunMetrics
@@ -86,12 +91,8 @@ import kotlin.math.sqrt
 /**
  * Editable-stage text canvas backed by MongolTextPainter APIs.
  *
- * This component currently supports:
- * - Caret placement on tap
- * - Word selection on long press
- * - Selection and caret rendering
- *
- * Keyboard input wiring is the next step.
+ * Supports caret placement on tap, word selection on long press,
+ * selection and caret rendering, and keyboard/IME input.
  */
 @Composable
 fun MongolBasicTextField(
@@ -105,23 +106,22 @@ fun MongolBasicTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color(0xFF1B5E20),
     selectionColor: Color = Color(0x552196F3),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    singleLine: Boolean = false,
     normalizeTextChange: (String, String) -> String = { _, proposed -> proposed },
     onTextChange: (String) -> Unit = {},
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
     onFocusChanged: (Boolean) -> Unit = {},
 ) {
-    // ========== Platform & Context Providers ==========
     val focusRequester = remember { FocusRequester() }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
 
-    @Suppress("DEPRECATION")
-    val clipboardManager = LocalClipboardManager.current
+    @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val textMeasurer = rememberTextMeasurer()
-    
-    // ========== Text Measurement & Layout Pipeline ==========
+
     val caretAlpha by rememberInfiniteTransition(label = "mongolCaretBlink").animateFloat(
         initialValue = 1f,
         targetValue = 0f,
@@ -176,8 +176,7 @@ fun MongolBasicTextField(
             )
         }
     }
-    
-    // ========== UI State (Layout Dimensions, Focus, Visibility) ==========
+
     var canvasWidthPx by remember { mutableIntStateOf(1) }
     var canvasHeightPx by remember { mutableIntStateOf(1) }
     var hasFocus by remember { mutableStateOf(false) }
@@ -185,20 +184,13 @@ fun MongolBasicTextField(
     var showContextMenu by remember { mutableStateOf(false) }
     var fieldSize by remember { mutableStateOf(IntSize(1, 1)) }
     var contextMenuSize by remember { mutableStateOf(IntSize(1, 1)) }
-    
-    // ========== Gesture & Interaction State ==========
-    /** Whether a selection drag gesture is currently in progress */
+
     var selectionGestureInProgress by remember { mutableStateOf(false) }
-    /** Anchor point for selection during canvas drag operations */
     var dragSelectionAnchor by remember { mutableIntStateOf(-1) }
-    /** Anchor point for handle drag operations (different from canvas drag) */
     var handleDragAnchor by remember { mutableIntStateOf(-1) }
-    /** Which selection handle is currently active (START, END, or CARET) */
     var activeHandleType by remember { mutableStateOf<MongolSelectionHandleType?>(null) }
-    /** Whether to display the caret/single-point selection handle */
     var showCaretHandle by remember { mutableStateOf(false) }
-    
-    // ========== Input Session & IME Bridge ==========
+
     val inputSession = remember(state, onTextChange, normalizeTextChange, readOnly) {
         DefaultMongolInputSession(
             state = state,
@@ -207,17 +199,13 @@ fun MongolBasicTextField(
             readOnly = readOnly,
             onSessionAction = {
                 showCaretHandle = false
-            }
-        )
+            })
     }
     var imeBridgeView by remember { mutableStateOf<MongolImeBridgeView?>(null) }
-    
-    // ========== Layout & Spacing Constants (DIP to Pixel conversion) ==========
+
     val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
     val bringIntoViewBottomMarginPx = with(density) { 24.dp.toPx() }
-    /** Hit slop for detecting interactions near selection handles */
-    val handleGestureHitSlopPx = with(density) { 24.dp.toPx() }
-    /** Slop for distinguishing selection edge from interior */
+    with(density) { 24.dp.toPx() }
     val selectionDragEdgeSlopPx = with(density) { 18.dp.toPx() }
     val contextMenuMarginPx = with(density) { 8.dp.toPx().roundToInt() }
     val contextMenuMinWidthPx = with(density) { 40.dp.roundToPx() }
@@ -225,9 +213,6 @@ fun MongolBasicTextField(
 
     data class ContextMenuAnchor(val left: Float, val right: Float, val centerY: Float)
 
-    // ========== Helper: Caret Position Resolution ==========
-    /** Resolve the caret position for a given tap offset on the canvas.
-     * Considers the glyph height to determine whether to place caret at start or end. */
     fun resolveCaretPositionForOffset(tapOffset: Offset): mongol.compose.core.TextPosition {
         if (state.text.isEmpty()) {
             return mongol.compose.core.TextPosition(0)
@@ -245,8 +230,7 @@ fun MongolBasicTextField(
         val glyphIndex = normalizedNearest.coerceIn(0, (state.text.length - 1).coerceAtLeast(0))
         val glyphBox =
             painter.getBoxesForRange(glyphIndex, (glyphIndex + 1).coerceAtMost(state.text.length))
-                .firstOrNull()
-                ?: return mongol.compose.core.TextPosition(normalizedNearest)
+                .firstOrNull() ?: return mongol.compose.core.TextPosition(normalizedNearest)
 
         // For vertical Mongolian:
         // If tap is in the upper half of the glyph, place caret at the start of the glyph.
@@ -254,8 +238,7 @@ fun MongolBasicTextField(
         val insertAfter = clippedY >= (glyphBox.top + glyphBox.bottom) / 2f
         val resolved = if (insertAfter) {
             val range = MongolTextTools.getGraphemeRangeAt(
-                state.text,
-                normalizedNearest
+                state.text, normalizedNearest
             )
             range.end.coerceAtMost(state.text.length)
         } else {
@@ -316,7 +299,6 @@ fun MongolBasicTextField(
     }
 
     // ========== Helper: Context Menu Positioning ==========
-    /** Calculate anchor point for context menu based on selection or caret. */
     fun resolveContextMenuAnchor(): ContextMenuAnchor {
         val normalized = state.selection.normalized()
         if (!normalized.isCollapsed) {
@@ -342,51 +324,29 @@ fun MongolBasicTextField(
         )
     }
 
-    /**
-     * Calculates the optimal window offset for the context menu based on selection/caret position.
-     *
-     * Uses a smart horizontal placement strategy:
-     * 1. **Right side** (右侧): Preferred - place to the right of selection
-     * 2. **Left side** (左侧): Fallback - place to the left if right doesn't fit
-     *
-     * Vertical: Centered on selection, allowing overflow beyond component bounds.
-     *
-     * Menu is NOT constrained to field boundaries—it can overflow horizontally
-     * to avoid covering the selected text.
-     *
-     * @param anchor The anchor position (selection bounds or caret position)
-     * @return The optimal [IntOffset] for menu placement (field-relative coordinates)
-     */
     fun resolveContextMenuWindowOffset(anchor: ContextMenuAnchor): IntOffset {
         val menuWidth = contextMenuSize.width.coerceAtLeast(contextMenuMinWidthPx)
         val menuHeight = contextMenuSize.height.coerceAtLeast(contextMenuMinHeightPx)
 
-        // ========== Horizontal Positioning (允许超出组件边界) ==========
-        // Priority: Right → Left (never clamp to field bounds)
+        // Prefer right side, fall back to left if there's not enough space
         val leftSpace = anchor.left - contextMenuMarginPx
         val rightSpace = fieldSize.width - anchor.right - contextMenuMarginPx
 
         val localX = when {
-            // Preferred: Right side has enough space
             rightSpace >= menuWidth -> {
                 (anchor.right + contextMenuMarginPx).roundToInt()
             }
-            // Fallback: Left side, or if both sides fail, still prefer right
+
             else -> {
                 if (leftSpace >= menuWidth) {
                     (anchor.left - menuWidth - contextMenuMarginPx).roundToInt()
                 } else {
-                    // Both sides tight: place right (allows overflow)
                     (anchor.right + contextMenuMarginPx).roundToInt()
                 }
             }
         }
 
-        // ========== Vertical Positioning (居中) ==========
-        // Simply center menu vertically on the selection
         var localY = (anchor.centerY - menuHeight / 2f).roundToInt()
-
-        // Minimal Y clamping: only prevent going way off-screen
         val minY = -menuHeight + contextMenuMarginPx
         val maxY = fieldSize.height - contextMenuMarginPx
         localY = localY.coerceIn(minY, maxY)
@@ -397,48 +357,50 @@ fun MongolBasicTextField(
     LaunchedEffect(inputSession, onInputSessionReady) {
         onInputSessionReady(inputSession)
     }
-    
-    // ========== Derived State: Computed Focus State ==========
-    /** Indicates whether field should be considered "focused" for UI purposes.
-     * Includes both keyboard focus and interaction states (gesture, context menu). */
-    val isFocused = hasFocus || imeBridgeHasFocus || selectionGestureInProgress || showContextMenu
-    
-    val selectionHandlesState =
-        remember(state.selection, painter, activeHandleType, density, textAlign, canvasHeightPx, showCaretHandle) {
-            if (canvasHeightPx > 0) {
-                painter.layout(maxHeight = canvasHeightPx.toFloat())
-            }
-            MongolSelectionHandlesCalculator.calculate(
-                painter = painter,
-                selection = state.selection,
-                density = density.density,
-                activeHandle = activeHandleType,
-                showCaretHandle = showCaretHandle,
-            )
+
+    val selectionHandlesState = remember(
+        state.selection,
+        painter,
+        activeHandleType,
+        density,
+        textAlign,
+        canvasHeightPx,
+        showCaretHandle
+    ) {
+        if (canvasHeightPx > 0) {
+            painter.layout(maxHeight = canvasHeightPx.toFloat())
         }
+        MongolSelectionHandlesCalculator.calculate(
+            painter = painter,
+            selection = state.selection,
+            density = density.density,
+            activeHandle = activeHandleType,
+            showCaretHandle = showCaretHandle,
+        )
+    }
     LaunchedEffect(selectionHandlesState, onSelectionHandlesChanged) {
         onSelectionHandlesChanged(selectionHandlesState)
     }
     LaunchedEffect(state.text, state.selection, state.composingRange, imeBridgeView) {
         imeBridgeView?.syncSelection()
     }
-    
-    // ========== Focus & Keyboard Management ==========
-    /** Unified focus state management: handle focus changes, keyboard visibility, selection cleanup */
-    LaunchedEffect(hasFocus, imeBridgeHasFocus, selectionGestureInProgress, showContextMenu, readOnly, enabled) {
+
+    LaunchedEffect(
+        hasFocus, imeBridgeHasFocus, selectionGestureInProgress, showContextMenu, readOnly, enabled
+    ) {
         val focused = hasFocus || imeBridgeHasFocus || selectionGestureInProgress || showContextMenu
         onFocusChanged(focused)
-        
+
         // Clear selection when losing focus
         if (!focused && state.hasSelection()) {
             state.placeCaret(state.caret)
         }
-        
+
         // Hide menu when losing focus
         if (!focused) {
             showContextMenu = false
         }
-        
+
         // Keep keyboard open while focused and not read-only
         if (focused && !readOnly && enabled) {
             keyboardController?.show()
@@ -456,17 +418,7 @@ fun MongolBasicTextField(
             bringIntoViewRequester.bringIntoView(fieldRect)
         }
     }
-    
-    LaunchedEffect(imeBottomPadding, hasFocus, imeBridgeHasFocus, selectionGestureInProgress, showContextMenu, readOnly, enabled) {
-        val focused = hasFocus || imeBridgeHasFocus || selectionGestureInProgress || showContextMenu
-        if (focused && !readOnly && enabled && imeBottomPadding == 0.dp) {
-            keyboardController?.show()
-            imeBridgeView?.showIme()
-        }
-    }
-    
-    // ========== Delayed Context Menu Display ==========
-    /** Show context menu after delay to avoid flickering during gesture */
+
     LaunchedEffect(state.selection, hasFocus, imeBridgeHasFocus, selectionGestureInProgress) {
         val focused = hasFocus || imeBridgeHasFocus
         if (!focused || selectionGestureInProgress) {
@@ -486,11 +438,8 @@ fun MongolBasicTextField(
 
     MongolTextMeasuredLayout(
         painter = painter,
-        modifier = Modifier
-            .bringIntoViewRequester(bringIntoViewRequester)
-            .then(modifier)
-            .focusRequester(focusRequester)
-            .onFocusChanged { focusState ->
+        modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester).then(modifier)
+            .focusRequester(focusRequester).onFocusChanged { focusState ->
                 hasFocus = focusState.isFocused || imeBridgeHasFocus
                 if (focusState.isFocused) {
                     if (!readOnly) {
@@ -498,9 +447,7 @@ fun MongolBasicTextField(
                         imeBridgeView?.showIme()
                     }
                 }
-            }
-            .focusable(enabled = enabled)
-            .mongolImeSession(inputSession)
+            }.focusable(enabled = enabled).mongolImeSession(inputSession)
             .onPreviewKeyEvent { event ->
                 if (!enabled) {
                     return@onPreviewKeyEvent false
@@ -682,99 +629,91 @@ fun MongolBasicTextField(
                         }
                     }
                 }
-            }
-            .onGloballyPositioned { coords ->
+            }.onGloballyPositioned { coords ->
                 canvasWidthPx = coords.size.width.coerceAtLeast(1)
                 canvasHeightPx = coords.size.height.coerceAtLeast(1)
                 painter.layout(maxHeight = canvasHeightPx.toFloat())
-            }
-            .pointerInput(canvasHeightPx, textAlign, enabled, readOnly) {
+            }.pointerInput(canvasHeightPx, textAlign, enabled, readOnly) {
                 if (!enabled) return@pointerInput
                 coroutineScope {
-                    // ========== Tap, Double-Tap, Long-Press Gestures ==========
                     launch {
-                        detectTapGestures(
-                            onTap = { tapOffset ->
-                                val pos = resolveCaretPositionForOffset(tapOffset)
-                                focusRequester.requestFocus()
-                                // M3-like: any caret tap shows caret handle; keyboard actions will hide it.
-                                state.placeCaret(pos)
-                                showCaretHandle = true
-                                showContextMenu = false
-                            },
-                            onDoubleTap = { tapOffset ->
-                                focusRequester.requestFocus()
-                                val pos = resolveCaretPositionForOffset(tapOffset)
-                                state.setSelection(painter.getWordBoundary(pos))
-                                showCaretHandle = false
-                                showContextMenu = true
-                            },
-                            onLongPress = { tapOffset ->
-                                focusRequester.requestFocus()
-                                val pos = resolveCaretPositionForOffset(tapOffset)
-                                state.setSelection(painter.getWordBoundary(pos))
-                                showCaretHandle = false
-                                showContextMenu = true
+                        detectTapGestures(onTap = { tapOffset ->
+                            val pos = resolveCaretPositionForOffset(tapOffset)
+                            focusRequester.requestFocus()
+                            if (!readOnly && enabled) {
+                                keyboardController?.show()
+                                imeBridgeView?.showIme()
                             }
-                        )
+                            // M3-like: any caret tap shows caret handle; keyboard actions will hide it.
+                            state.placeCaret(pos)
+                            showCaretHandle = !readOnly
+                            showContextMenu = false
+                        }, onDoubleTap = { tapOffset ->
+                            focusRequester.requestFocus()
+                            val pos = resolveCaretPositionForOffset(tapOffset)
+                            state.setSelection(painter.getWordBoundary(pos))
+                            showCaretHandle = false
+                            showContextMenu = true
+                        }, onLongPress = { tapOffset ->
+                            focusRequester.requestFocus()
+                            val pos = resolveCaretPositionForOffset(tapOffset)
+                            state.setSelection(painter.getWordBoundary(pos))
+                            showCaretHandle = false
+                            showContextMenu = true
+                        })
                     }
-                    // ========== Selection Drag Gesture ==========
                     launch {
-                        detectDragGestures(
-                            onDragStart = { dragStart ->
-                                selectionGestureInProgress = true
-                                showContextMenu = false
-                                focusRequester.requestFocus()
-                                if (!readOnly) {
-                                    keyboardController?.show()
-                                    imeBridgeView?.showIme()
-                                }
-                                val pos = resolveCaretPositionForOffset(dragStart)
-                                val selection = state.selection.normalized()
-                                if (selection.isCollapsed) {
-                                    activeHandleType = MongolSelectionHandleType.CARET
-                                    dragSelectionAnchor = pos.offset
-                                } else {
-                                    val edgeHandle = resolveSelectionDragHandle(dragStart)
-                                    activeHandleType = edgeHandle ?: MongolSelectionHandleType.END
-                                    dragSelectionAnchor = if (activeHandleType == MongolSelectionHandleType.START) selection.end else selection.start
-                                }
-                                state.setSelection(dragSelectionAnchor, pos.offset)
-                            },
-                            onDragEnd = {
-                                selectionGestureInProgress = false
-                                activeHandleType = null
-                                dragSelectionAnchor = -1
-                                // Note: Delayed menu display is handled in LaunchedEffect
-                            },
-                            onDragCancel = {
-                                selectionGestureInProgress = false
-                                activeHandleType = null
-                                dragSelectionAnchor = -1
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                val anchor = if (dragSelectionAnchor >= 0) dragSelectionAnchor else state.caret.offset
-                                val pos = resolveCaretPositionForOffset(change.position)
-                                state.setSelection(anchor, pos.offset)
+                        detectDragGestures(onDragStart = { dragStart ->
+                            selectionGestureInProgress = true
+                            showContextMenu = false
+                            focusRequester.requestFocus()
+                            if (!readOnly) {
+                                keyboardController?.show()
+                                imeBridgeView?.showIme()
                             }
-                        )
+                            val pos = resolveCaretPositionForOffset(dragStart)
+                            val selection = state.selection.normalized()
+                            if (selection.isCollapsed) {
+                                activeHandleType = MongolSelectionHandleType.CARET
+                                dragSelectionAnchor = pos.offset
+                            } else {
+                                val edgeHandle = resolveSelectionDragHandle(dragStart)
+                                activeHandleType = edgeHandle ?: MongolSelectionHandleType.END
+                                dragSelectionAnchor =
+                                    if (activeHandleType == MongolSelectionHandleType.START) selection.end else selection.start
+                            }
+                            state.setSelection(dragSelectionAnchor, pos.offset)
+                        }, onDragEnd = {
+                            selectionGestureInProgress = false
+                            activeHandleType = null
+                            dragSelectionAnchor = -1
+                            // Note: Delayed menu display is handled in LaunchedEffect
+                        }, onDragCancel = {
+                            selectionGestureInProgress = false
+                            activeHandleType = null
+                            dragSelectionAnchor = -1
+                        }, onDrag = { change, _ ->
+                            change.consume()
+                            val anchor =
+                                if (dragSelectionAnchor >= 0) dragSelectionAnchor else state.caret.offset
+                            val pos = resolveCaretPositionForOffset(change.position)
+                            state.setSelection(anchor, pos.offset)
+                        })
                     }
                 }
-            }
-    ) {
+            }) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
-                modifier = Modifier
-                    .weight(1f, fill = true)
-                    .onGloballyPositioned { coordinates ->
-                        fieldSize = coordinates.size
-                    },
+                modifier = Modifier.weight(1f, fill = true).onGloballyPositioned { coordinates ->
+                    fieldSize = coordinates.size
+                },
             ) {
                 AndroidView(
                     factory = { context ->
                         MongolImeBridgeView(context).also { view ->
                             view.session = inputSession
+                            view.inputType = keyboardOptions.toInputType(singleLine)
+                            view.imeOptions = keyboardOptions.toImeOptions(singleLine)
                             view.onFocusChangeListener =
                                 android.view.View.OnFocusChangeListener { _, focused ->
                                     imeBridgeHasFocus = focused
@@ -787,232 +726,245 @@ fun MongolBasicTextField(
                     },
                     update = { view ->
                         view.session = inputSession
+                        view.inputType = keyboardOptions.toInputType(singleLine)
+                        view.imeOptions = keyboardOptions.toImeOptions(singleLine)
                         imeBridgeView = view
                     },
                     modifier = Modifier.size(1.dp),
                 )
 
                 Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RectangleShape)
+                    modifier = Modifier.fillMaxSize().clip(RectangleShape)
                 ) {
                     clipRect(left = 0f, top = 0f, right = size.width, bottom = size.height) {
-                    val selection = state.selection.normalized()
-                    
-                    // 1. 优先绘制选区背景：优化为“三段式”无缝合并，消除列间白条和锯齿
-                    if (!selection.isCollapsed) {
-                        val selectionBoxes = painter.getBoxesForRange(selection.start, selection.end)
-                        if (selectionBoxes.isNotEmpty()) {
-                            val selMinTop = selectionBoxes.minOf { it.top }
-                            val selMaxBottom = selectionBoxes.maxOf { it.bottom }
-                            val columnGroups = selectionBoxes.groupBy { it.left }
-                                .toList()
-                                .sortedBy { it.first } // 按横向（左到右）排序
-                            
-                            val n = columnGroups.size
-                            if (n == 1) {
-                                // 单列选区：维持原样
-                                val boxes = columnGroups[0].second
-                                drawRect(
-                                    color = selectionColor,
-                                    topLeft = Offset(boxes.first().left, boxes.minOf { it.top }),
-                                    size = Size(boxes.first().right - boxes.first().left, boxes.maxOf { it.bottom } - boxes.minOf { it.top })
-                                )
-                            } else {
-                                val firstCol = columnGroups[0]
-                                val lastCol = columnGroups[n - 1]
-                                
-                                drawRect(
-                                    color = selectionColor,
-                                    topLeft = Offset(firstCol.first, firstCol.second.minOf { it.top }),
-                                    size = Size(columnGroups[1].first - firstCol.first, selMaxBottom - firstCol.second.minOf { it.top })
-                                )
-                                
-                                if (n > 2) {
-                                    val midLeft = columnGroups[1].first
-                                    val midRight = lastCol.first
+                        val selection = state.selection.normalized()
+
+                        if (!selection.isCollapsed) {
+                            val selectionBoxes =
+                                painter.getBoxesForRange(selection.start, selection.end)
+                            if (selectionBoxes.isNotEmpty()) {
+                                val selMinTop = selectionBoxes.minOf { it.top }
+                                val selMaxBottom = selectionBoxes.maxOf { it.bottom }
+                                val columnGroups = selectionBoxes.groupBy { it.left }.toList()
+                                    .sortedBy { it.first }
+                                val n = columnGroups.size
+                                if (n == 1) {
+                                    val boxes = columnGroups[0].second
                                     drawRect(
                                         color = selectionColor,
-                                        topLeft = Offset(midLeft, selMinTop),
-                                        size = Size(midRight - midLeft, selMaxBottom - selMinTop)
+                                        topLeft = Offset(
+                                            boxes.first().left, boxes.minOf { it.top }),
+                                        size = Size(
+                                            boxes.first().right - boxes.first().left,
+                                            boxes.maxOf { it.bottom } - boxes.minOf { it.top })
                                     )
+                                } else {
+                                    val firstCol = columnGroups[0]
+                                    val lastCol = columnGroups[n - 1]
+
+                                    drawRect(
+                                        color = selectionColor,
+                                        topLeft = Offset(
+                                            firstCol.first, firstCol.second.minOf { it.top }),
+                                        size = Size(
+                                            columnGroups[1].first - firstCol.first,
+                                            selMaxBottom - firstCol.second.minOf { it.top })
+                                    )
+
+                                    if (n > 2) {
+                                        val midLeft = columnGroups[1].first
+                                        val midRight = lastCol.first
+                                        drawRect(
+                                            color = selectionColor,
+                                            topLeft = Offset(midLeft, selMinTop),
+                                            size = Size(
+                                                midRight - midLeft, selMaxBottom - selMinTop
+                                            )
+                                        )
+                                    }
+
+                                    drawRect(
+                                        color = selectionColor,
+                                        topLeft = Offset(lastCol.first, selMinTop),
+                                        size = Size(
+                                            lastCol.second.first().right - lastCol.first,
+                                            lastCol.second.maxOf { it.bottom } - selMinTop))
                                 }
-                                
-                                drawRect(
-                                    color = selectionColor,
-                                    topLeft = Offset(lastCol.first, selMinTop),
-                                    size = Size(lastCol.second.first().right - lastCol.first, lastCol.second.maxOf { it.bottom } - selMinTop)
-                                )
                             }
                         }
-                    }
 
-                    val styleMap = state.spans.buildStyleMap(
-                        textLength = state.text.length,
-                        baseStyle = style.toSpanStyle(),
-                    )
-                    for (run in painter.textRuns) {
-                        if (run.start >= run.end) continue
+                        for (run in painter.textRuns) {
+                            if (run.start >= run.end) continue
 
-                        val useForcedClusterDraw = !run.isRotated && painter.requiresClusterDrawing(run.start, run.end)
+                            val useForcedClusterDraw =
+                                !run.isRotated && painter.requiresClusterDrawing(run.start, run.end)
 
-                        val useRunLevelDraw = !run.isRotated && !useForcedClusterDraw && state.spans.isEmpty()
-                        if (useRunLevelDraw) {
-                            val runText = state.text.substring(run.start, run.end)
-                            if (runText.isNotBlank()) {
-                                val runBoxes = painter.getBoxesForRange(run.start, run.end)
-                                if (runBoxes.isNotEmpty()) {
-                                    val left = runBoxes.minOf { it.left }
-                                    val top = runBoxes.minOf { it.top }
-                                    val right = runBoxes.maxOf { it.right }
-                                    val bottom = runBoxes.maxOf { it.bottom }
-                                    val layout = runLayouts[run]
-                                    if (layout != null) {
-                                        val runHeight =
-                                            layout.size.height.toFloat().coerceAtLeast(1f)
+                            val useRunLevelDraw =
+                                !run.isRotated && !useForcedClusterDraw && state.spans.isEmpty()
+                            if (useRunLevelDraw) {
+                                val runText = state.text.substring(run.start, run.end)
+                                if (runText.isNotBlank()) {
+                                    val runBoxes = painter.getBoxesForRange(run.start, run.end)
+                                    if (runBoxes.isNotEmpty()) {
+                                        val left = runBoxes.minOf { it.left }
+                                        val top = runBoxes.minOf { it.top }
+                                        val right = runBoxes.maxOf { it.right }
+                                        val bottom = runBoxes.maxOf { it.bottom }
+                                        val layout = runLayouts[run]
+                                        if (layout != null) {
+                                            val runHeight =
+                                                layout.size.height.toFloat().coerceAtLeast(1f)
+                                            clipRect(
+                                                left = left,
+                                                top = top,
+                                                right = right,
+                                                bottom = bottom,
+                                            ) {
+                                                withTransform({
+                                                    translate(left = left + runHeight, top = top)
+                                                    rotate(degrees = 90f, pivot = Offset.Zero)
+                                                }) {
+                                                    drawText(
+                                                        textLayoutResult = layout,
+                                                        topLeft = Offset.Zero,
+                                                    )
+                                                }
+                                            }
+                                            continue
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (run.isRotated) {
+                                val layout = runLayouts[run]
+                                if (layout != null) {
+                                    MongolTextTools.forEachGraphemeCluster(
+                                        state.text, run.start, run.end
+                                    ) { clusterStart, clusterEnd ->
+                                        val clusterText =
+                                            state.text.substring(clusterStart, clusterEnd)
+                                        if (clusterText == "\n") return@forEachGraphemeCluster
+
+                                        val box = painter.getBoxesForRange(clusterStart, clusterEnd)
+                                            .firstOrNull() ?: return@forEachGraphemeCluster
+                                        val codePoint =
+                                            Character.codePointAt(state.text, clusterStart)
+                                        val glyphLayout = textMeasurer.measure(
+                                            text = state.text.substring(clusterStart, clusterEnd),
+                                            style = style,
+                                        )
+
+                                        with(VerticalGlyphPlacementPolicy) {
+                                            drawGlyphInVerticalBox(
+                                                codePoint = codePoint,
+                                                previousCodePoint = VerticalGlyphPlacementPolicy.previousVisibleCodePoint(
+                                                    state.text, clusterStart
+                                                ),
+                                                box = box,
+                                                glyphLayout = glyphLayout,
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (useForcedClusterDraw) {
+                                MongolTextTools.forEachGraphemeCluster(
+                                    state.text, run.start, run.end
+                                ) { clusterStart, clusterEnd ->
+                                    val clusterText = state.text.substring(clusterStart, clusterEnd)
+                                    if (clusterText == "\n" || clusterText.isBlank()) {
+                                        return@forEachGraphemeCluster
+                                    }
+
+                                    val box = painter.getBoxesForRange(clusterStart, clusterEnd)
+                                        .firstOrNull() ?: return@forEachGraphemeCluster
+                                    val glyphLayout = textMeasurer.measure(
+                                        text = clusterText,
+                                        style = style,
+                                    )
+                                    val glyphHeight =
+                                        glyphLayout.size.height.toFloat().coerceAtLeast(1f)
+
+                                    clipRect(
+                                        left = box.left,
+                                        top = box.top,
+                                        right = box.right,
+                                        bottom = box.bottom,
+                                    ) {
+                                        withTransform({
+                                            translate(left = box.left + glyphHeight, top = box.top)
+                                            rotate(degrees = 90f, pivot = Offset.Zero)
+                                        }) {
+                                            drawText(
+                                                textLayoutResult = glyphLayout,
+                                                topLeft = Offset.Zero,
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                val layout = runLayouts[run]
+                                if (layout != null) {
+                                    val runBoxes = painter.getBoxesForRange(run.start, run.end)
+                                    if (runBoxes.isNotEmpty()) {
+                                        val left = runBoxes.minOf { it.left }
+                                        val top = runBoxes.minOf { it.top }
+                                        val right = runBoxes.maxOf { it.right }
+                                        val bottom = runBoxes.maxOf { it.bottom }
                                         clipRect(
                                             left = left,
                                             top = top,
                                             right = right,
                                             bottom = bottom,
                                         ) {
-                                            withTransform({
-                                                translate(left = left + runHeight, top = top)
-                                                rotate(degrees = 90f, pivot = Offset.Zero)
-                                            }) {
-                                                drawText(
-                                                    textLayoutResult = layout,
-                                                    topLeft = Offset.Zero,
-                                                )
-                                            }
+                                            drawText(layout, topLeft = Offset(left, top))
                                         }
-                                        continue
                                     }
                                 }
                             }
                         }
 
-                        if (run.isRotated) {
-                            val layout = runLayouts[run]
-                            if (layout != null) {
-                                MongolTextTools.forEachGraphemeCluster(state.text, run.start, run.end) { clusterStart, clusterEnd ->
-                                    val clusterText = state.text.substring(clusterStart, clusterEnd)
-                                    if (clusterText == "\n") return@forEachGraphemeCluster
-
-                                    val box = painter.getBoxesForRange(clusterStart, clusterEnd).firstOrNull() ?: return@forEachGraphemeCluster
-                                    val codePoint = Character.codePointAt(state.text, clusterStart)
-                                    val glyphLayout = textMeasurer.measure(
-                                        text = state.text.substring(clusterStart, clusterEnd),
-                                        style = style,
-                                    )
-
-                                    with(VerticalGlyphPlacementPolicy) {
-                                        drawGlyphInVerticalBox(
-                                            codePoint = codePoint,
-                                            previousCodePoint = VerticalGlyphPlacementPolicy.previousVisibleCodePoint(state.text, clusterStart),
-                                            box = box,
-                                            glyphLayout = glyphLayout,
-                                        )
-                                    }
-                                }
-                            }
-                        } else if (useForcedClusterDraw) {
-                            MongolTextTools.forEachGraphemeCluster(state.text, run.start, run.end) { clusterStart, clusterEnd ->
-                                val clusterText = state.text.substring(clusterStart, clusterEnd)
-                                if (clusterText == "\n" || clusterText.isBlank()) {
-                                    return@forEachGraphemeCluster
-                                }
-
-                                val box = painter.getBoxesForRange(clusterStart, clusterEnd).firstOrNull()
-                                    ?: return@forEachGraphemeCluster
-                                val glyphLayout = textMeasurer.measure(
-                                    text = clusterText,
-                                    style = style,
-                                )
-                                val glyphHeight = glyphLayout.size.height.toFloat().coerceAtLeast(1f)
-
-                                clipRect(
-                                    left = box.left,
-                                    top = box.top,
-                                    right = box.right,
-                                    bottom = box.bottom,
-                                ) {
-                                    withTransform({
-                                        translate(left = box.left + glyphHeight, top = box.top)
-                                        rotate(degrees = 90f, pivot = Offset.Zero)
-                                    }) {
-                                        drawText(
-                                            textLayoutResult = glyphLayout,
-                                            topLeft = Offset.Zero,
-                                        )
-                                    }
-                                }
-                            }
+                        val caretOffset = painter.getOffsetForCaret(state.caret)
+                        val directCaretBox = if (state.caret.offset in state.text.indices) {
+                            painter.getBoxesForRange(state.caret.offset, state.caret.offset + 1)
+                                .firstOrNull()
                         } else {
-                            val layout = runLayouts[run]
-                            if (layout != null) {
-                                val runBoxes = painter.getBoxesForRange(run.start, run.end)
-                                if (runBoxes.isNotEmpty()) {
-                                    val left = runBoxes.minOf { it.left }
-                                    val top = runBoxes.minOf { it.top }
-                                    val right = runBoxes.maxOf { it.right }
-                                    val bottom = runBoxes.maxOf { it.bottom }
-                                    clipRect(
-                                        left = left,
-                                        top = top,
-                                        right = right,
-                                        bottom = bottom,
-                                    ) {
-                                        drawText(layout, topLeft = Offset(left, top))
-                                    }
-                                }
-                            }
+                            null
                         }
-                    }
-
-                    val caretOffset = painter.getOffsetForCaret(state.caret)
-                    val directCaretBox = if (state.caret.offset in state.text.indices) {
-                        painter.getBoxesForRange(state.caret.offset, state.caret.offset + 1)
-                            .firstOrNull()
-                    } else {
-                        null
-                    }
-                    val prevCaretBox = if (state.caret.offset > 0) {
-                        painter.getBoxesForRange(state.caret.offset - 1, state.caret.offset)
-                            .firstOrNull()
-                    } else {
-                        null
-                    }
-                    val fallbackCaretLayout = textMeasurer.measure(
-                        text = "ᠠ",
-                        style = style,
-                    )
-                    val fallbackCaretWidth =
-                        fallbackCaretLayout.size.height.toFloat().coerceAtLeast(1f)
-                    val caretWidth = (directCaretBox?.let { it.right - it.left }
-                        ?: prevCaretBox?.let { it.right - it.left }
-                        ?: fallbackCaretWidth).coerceAtLeast(1f)
-                    val caretY = caretOffset.y
-                    val caretStroke = with(density) { 2.dp.toPx() }
-                    val caretLeft = caretOffset.x - 1.dp.toPx()
-                    val caretRight = caretLeft + caretWidth + 2.dp.toPx()
-                    val visibleCaretColor = caretColor.copy(alpha = caretAlpha)
-                    
-                    // ========== RENDER: Caret (Blinking text insertion point) ==========
-                    val shouldShowCaret = enabled && (hasFocus || imeBridgeHasFocus)
-                    if (shouldShowCaret) {
-                        drawLine(
-                            color = visibleCaretColor,
-                            start = Offset(caretLeft, caretY),
-                            end = Offset(caretRight, caretY),
-                            strokeWidth = caretStroke,
+                        val prevCaretBox = if (state.caret.offset > 0) {
+                            painter.getBoxesForRange(state.caret.offset - 1, state.caret.offset)
+                                .firstOrNull()
+                        } else {
+                            null
+                        }
+                        val fallbackCaretLayout = textMeasurer.measure(
+                            text = "ᠠ",
+                            style = style,
                         )
-                    }
+                        val fallbackCaretWidth =
+                            fallbackCaretLayout.size.height.toFloat().coerceAtLeast(1f)
+                        val caretWidth = (directCaretBox?.let { it.right - it.left }
+                            ?: prevCaretBox?.let { it.right - it.left }
+                            ?: fallbackCaretWidth).coerceAtLeast(1f)
+                        val caretY = caretOffset.y
+                        val caretStroke = with(density) { 2.dp.toPx() }
+                        val caretLeft = caretOffset.x - 1.dp.toPx()
+                        val caretRight = caretLeft + caretWidth + 2.dp.toPx()
+                        val visibleCaretColor = caretColor.copy(alpha = caretAlpha)
+
+                        // ========== RENDER: Caret (Blinking text insertion point) ==========
+                        val shouldShowCaret = enabled && !readOnly && (hasFocus || imeBridgeHasFocus)
+                        if (shouldShowCaret) {
+                            drawLine(
+                                color = visibleCaretColor,
+                                start = Offset(caretLeft, caretY),
+                                end = Offset(caretRight, caretY),
+                                strokeWidth = caretStroke,
+                            )
+                        }
                     }
                 }
 
-                // ========== RENDER: Selection Handles (Interactive resize points) ==========
                 val shouldShowHandles = enabled && (hasFocus || imeBridgeHasFocus)
                 if (selectionHandlesState.isVisible && shouldShowHandles) {
                     MongolSelectionHandles(
@@ -1022,7 +974,7 @@ fun MongolBasicTextField(
                             selectionGestureInProgress = true
                             showContextMenu = false
                             if (handleType == MongolSelectionHandleType.CARET) {
-                                showCaretHandle = true
+                                showCaretHandle = !readOnly
                             }
                             val normalized = state.selection.normalized()
                             activeHandleType = handleType
@@ -1038,8 +990,6 @@ fun MongolBasicTextField(
                             activeHandleType = null
                         },
                         onHandleDrag = { handleType, nextLocalPos ->
-                            // 由于 MongolSelectionHandles 内部使用了相对 Anchor 的 Popup，
-                            // 传入的 nextLocalPos 即为相对于组件自身的坐标
                             val position = resolveCaretPositionForOffset(nextLocalPos).offset
                             val normalized = state.selection.normalized()
                             activeHandleType = handleType
@@ -1065,7 +1015,6 @@ fun MongolBasicTextField(
                 }
 
                 if (enabled && showContextMenu) {
-                    // ========== RENDER: Context Menu (Cut/Copy/Paste actions) ==========
                     val anchor = resolveContextMenuAnchor()
                     val popupOffset = resolveContextMenuWindowOffset(anchor)
                     val selectedText = state.selectedText()
@@ -1079,10 +1028,10 @@ fun MongolBasicTextField(
                         offset = popupOffset,
                         onDismissRequest = { showContextMenu = false },
                         properties = PopupProperties(
-                            focusable = false,                    // Menu won't steal IME focus
-                            dismissOnBackPress = false,           // System handles back button
-                            dismissOnClickOutside = true,         // Close on external tap
-                            usePlatformDefaultWidth = false,      // Use exact computed width
+                            focusable = false,
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = true,
+                            usePlatformDefaultWidth = false,
                         ),
                     ) {
                         Surface(
@@ -1139,7 +1088,6 @@ private fun ContextMenuItem(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    /** Single action item for context menu */
     val font = FontFamily(Font(R.font.moskwa))
     val textColor = if (enabled) {
         MaterialTheme.colorScheme.onSurface
@@ -1150,8 +1098,7 @@ private fun ContextMenuItem(
     MongolText(
         text = label,
         style = TextStyle(color = textColor, fontFamily = font),
-        modifier = Modifier
-            .clickable(enabled = enabled, onClick = onClick)
+        modifier = Modifier.clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     )
 }
@@ -1178,6 +1125,8 @@ fun MongolBasicTextField(
     readOnly: Boolean = false,
     caretColor: Color = Color(0xFF1B5E20),
     selectionColor: Color = Color(0x552196F3),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    singleLine: Boolean = false,
     normalizeTextChange: (String, String) -> String = { _, proposed -> proposed },
     onInputSessionReady: (MongolInputSession) -> Unit = {},
     onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
@@ -1202,11 +1151,47 @@ fun MongolBasicTextField(
         readOnly = readOnly,
         caretColor = caretColor,
         selectionColor = selectionColor,
+        keyboardOptions = keyboardOptions,
+        singleLine = singleLine,
         normalizeTextChange = normalizeTextChange,
         onTextChange = onValueChange,
         onInputSessionReady = onInputSessionReady,
         onSelectionHandlesChanged = onSelectionHandlesChanged,
         onFocusChanged = onFocusChanged,
     )
+}
+
+private fun KeyboardOptions.toImeOptions(singleLine: Boolean): Int {
+    var imeOptions = when (imeAction) {
+        ImeAction.None -> EditorInfo.IME_ACTION_NONE
+        ImeAction.Default -> if (singleLine) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NONE
+        ImeAction.Go -> EditorInfo.IME_ACTION_GO
+        ImeAction.Search -> EditorInfo.IME_ACTION_SEARCH
+        ImeAction.Send -> EditorInfo.IME_ACTION_SEND
+        ImeAction.Previous -> EditorInfo.IME_ACTION_PREVIOUS
+        ImeAction.Next -> EditorInfo.IME_ACTION_NEXT
+        ImeAction.Done -> EditorInfo.IME_ACTION_DONE
+        else -> EditorInfo.IME_ACTION_UNSPECIFIED
+    }
+    imeOptions = imeOptions or EditorInfo.IME_FLAG_NO_FULLSCREEN
+    return imeOptions
+}
+
+private fun KeyboardOptions.toInputType(singleLine: Boolean): Int {
+    var type = when (keyboardType) {
+        KeyboardType.Text -> InputType.TYPE_CLASS_TEXT
+        KeyboardType.Number -> InputType.TYPE_CLASS_NUMBER
+        KeyboardType.Phone -> InputType.TYPE_CLASS_PHONE
+        KeyboardType.Uri -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        KeyboardType.Email -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        KeyboardType.Password -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        KeyboardType.NumberPassword -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        KeyboardType.Decimal -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        else -> InputType.TYPE_CLASS_TEXT
+    }
+    if (type == InputType.TYPE_CLASS_TEXT && !singleLine) {
+        type = type or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+    }
+    return type
 }
 

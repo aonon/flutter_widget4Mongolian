@@ -47,9 +47,7 @@ class CaretMetricsCalculator {
         plainText: String,
         paragraph: ParagraphBoxProvider,
     ): Boolean {
-        return position == lastQueriedCaretPosition &&
-            plainText === lastQueriedPlainText &&
-            paragraph === lastQueriedParagraph
+        return position == lastQueriedCaretPosition && plainText === lastQueriedPlainText && paragraph === lastQueriedParagraph
     }
 
     private fun cacheAndReturn(
@@ -82,13 +80,19 @@ class CaretMetricsCalculator {
 
         val metrics = when (position.affinity) {
             TextAffinity.UPSTREAM -> {
-                getMetricsFromUpstream(offset, plainText, paragraph)
-                    ?: getMetricsFromDownstream(offset, plainText, paragraph)
+                getMetricsFromUpstream(offset, plainText, paragraph) ?: getMetricsFromDownstream(
+                    offset,
+                    plainText,
+                    paragraph
+                )
             }
 
             TextAffinity.DOWNSTREAM -> {
-                getMetricsFromDownstream(offset, plainText, paragraph)
-                    ?: getMetricsFromUpstream(offset, plainText, paragraph)
+                getMetricsFromDownstream(offset, plainText, paragraph) ?: getMetricsFromUpstream(
+                    offset,
+                    plainText,
+                    paragraph
+                )
             }
         }
 
@@ -218,9 +222,8 @@ class CaretMetricsCalculator {
     }
 
     private fun needsGraphemeExtendedSearch(codeUnit: Int, codeUnitAfter: Int?): Boolean {
-        return MongolTextTools.isHighSurrogate(codeUnit) ||
-            MongolTextTools.isLowSurrogate(codeUnit) ||
-            codeUnitAfter == ZERO_WIDTH_JOINER_CODE_UNIT ||
-            MongolTextTools.isUnicodeDirectionality(codeUnit)
+        return MongolTextTools.isHighSurrogate(codeUnit) || MongolTextTools.isLowSurrogate(codeUnit) || codeUnitAfter == ZERO_WIDTH_JOINER_CODE_UNIT || MongolTextTools.isUnicodeDirectionality(
+            codeUnit
+        )
     }
 }

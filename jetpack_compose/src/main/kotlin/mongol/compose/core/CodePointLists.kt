@@ -6,26 +6,11 @@ package mongol.compose.core
  * Add newly discovered edge-case code points here to keep policy logic simple.
  */
 object CodePointLists {
-    /**
-     * 基于字形框尺寸的归一化偏移比例。
-     *
-     * 建议取值范围为 -1f..1f：
-     * - 负值表示向左 / 向上移动
-     * - 正值表示向右 / 向下移动
-     */
     data class ShiftAdjustment(
         val dxFactor: Float,
         val dyFactor: Float,
     )
 
-    /**
-     * 单条码点规则。
-     *
-     * 这些属性描述的是不同层级的语义：
-     * - entersRotatedRun: 是否进入逐字形的 rotated run 绘制路径
-     * - shiftAdjustment: 是否需要额外的位置微调
-     * - excludedFromRotate / noRotation / emoji: 辅助分类标记
-     */
     private data class CodePointRule(
         val range: IntRange,
         val entersRotatedRun: Boolean = false,
@@ -35,11 +20,6 @@ object CodePointLists {
         val emoji: Boolean = false,
     )
 
-    // 规则按本项目常见文本频率排序：
-    // 1. 蒙古文与 ASCII
-    // 2. 常见竖排/全角标点
-    // 3. 韩文、CJK、圈号数字与兼容形式
-    // 4. Emoji⁈
     private val rules = listOf(
         CodePointRule(
             range = 0x1800..0x1FFF,

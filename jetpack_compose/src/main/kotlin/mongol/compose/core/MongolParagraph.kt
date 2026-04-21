@@ -212,7 +212,11 @@ class MongolParagraph(
         fun placeUnrotatedRun(startIndex: Int, endIndex: Int, metrics: RunMetrics) {
             if (startIndex >= endIndex) return
             val clusters = mutableListOf<TextRange>()
-            MongolTextTools.forEachGraphemeCluster(text, startIndex, endIndex) { clusterStart, clusterEnd ->
+            MongolTextTools.forEachGraphemeCluster(
+                text,
+                startIndex,
+                endIndex
+            ) { clusterStart, clusterEnd ->
                 clusters += TextRange(start = clusterStart, end = clusterEnd)
             }
             if (clusters.isEmpty()) return
@@ -286,7 +290,8 @@ class MongolParagraph(
                         }
                         consumedAdvance += singleAdvance
                         currentColumn.usedAdvance += singleAdvance
-                        currentColumn.maxCrossAxis = maxOf(currentColumn.maxCrossAxis, metrics.crossAxis)
+                        currentColumn.maxCrossAxis =
+                            maxOf(currentColumn.maxCrossAxis, metrics.crossAxis)
                         currentColumn.maxAscent = maxOf(currentColumn.maxAscent, metrics.ascent)
                         currentColumn.maxDescent = maxOf(currentColumn.maxDescent, metrics.descent)
                         cursor += 1
@@ -324,7 +329,8 @@ class MongolParagraph(
 
                     consumedAdvance += chunkAdvance
                     currentColumn.usedAdvance += chunkAdvance
-                    currentColumn.maxCrossAxis = maxOf(currentColumn.maxCrossAxis, metrics.crossAxis)
+                    currentColumn.maxCrossAxis =
+                        maxOf(currentColumn.maxCrossAxis, metrics.crossAxis)
                     currentColumn.maxAscent = maxOf(currentColumn.maxAscent, metrics.ascent)
                     currentColumn.maxDescent = maxOf(currentColumn.maxDescent, metrics.descent)
                     cursor += takeCount
@@ -407,7 +413,11 @@ class MongolParagraph(
                     val segmentEnd = cursor
                     if (segmentStart < segmentEnd) {
                         if (run.isRotated) {
-                            MongolTextTools.forEachGraphemeCluster(text, segmentStart, segmentEnd) { clusterStart, clusterEnd ->
+                            MongolTextTools.forEachGraphemeCluster(
+                                text,
+                                segmentStart,
+                                segmentEnd
+                            ) { clusterStart, clusterEnd ->
                                 val clusterMetrics = runMeasurer?.measureRunRange(
                                     fullText = text,
                                     start = clusterStart,
@@ -438,7 +448,11 @@ class MongolParagraph(
 
             if (!exceeded && segmentStart < run.end) {
                 if (run.isRotated) {
-                    MongolTextTools.forEachGraphemeCluster(text, segmentStart, run.end) { clusterStart, clusterEnd ->
+                    MongolTextTools.forEachGraphemeCluster(
+                        text,
+                        segmentStart,
+                        run.end
+                    ) { clusterStart, clusterEnd ->
                         val clusterMetrics = runMeasurer?.measureRunRange(
                             fullText = text,
                             start = clusterStart,
@@ -470,9 +484,9 @@ class MongolParagraph(
 
             fun sameRect(a: Rect, b: Rect): Boolean {
                 return abs(a.left - b.left) < 0.01f &&
-                    abs(a.top - b.top) < 0.01f &&
-                    abs(a.right - b.right) < 0.01f &&
-                    abs(a.bottom - b.bottom) < 0.01f
+                        abs(a.top - b.top) < 0.01f &&
+                        abs(a.right - b.right) < 0.01f &&
+                        abs(a.bottom - b.bottom) < 0.01f
             }
 
             fun isJustifyWhitespace(ch: Char): Boolean {
@@ -488,6 +502,7 @@ class MongolParagraph(
                     Character.INITIAL_QUOTE_PUNCTUATION.toInt(),
                     Character.OTHER_PUNCTUATION.toInt(),
                     Character.START_PUNCTUATION.toInt() -> true
+
                     else -> false
                 }
             }
@@ -551,7 +566,8 @@ class MongolParagraph(
                 for ((k, gapIndex) in allGapIndices.withIndex()) {
                     val leftChar = text[groups[gapIndex].lastIndex]
                     val rightChar = text[groups[gapIndex + 1].firstIndex]
-                    val hasWhitespace = isJustifyWhitespace(leftChar) || isJustifyWhitespace(rightChar)
+                    val hasWhitespace =
+                        isJustifyWhitespace(leftChar) || isJustifyWhitespace(rightChar)
                     val hasPunctuation = isPunctuation(leftChar) || isPunctuation(rightChar)
 
                     gapWeights[k] = when {
@@ -571,7 +587,8 @@ class MongolParagraph(
 
                 if (shouldDistributeGaps) {
                     var remaining = extraSpace.toDouble()
-                    val active = allGapIndices.indices.filter { gapWeights[it] > 0.0 }.toMutableSet()
+                    val active =
+                        allGapIndices.indices.filter { gapWeights[it] > 0.0 }.toMutableSet()
 
                     // First pass: weighted distribution with soft caps.
                     while (remaining > 0.01 && active.isNotEmpty()) {
@@ -620,22 +637,23 @@ class MongolParagraph(
                 }
 
                 groups.forEachIndexed { visualIndex, group ->
-                    val adjustedRect = if (visualIndex > lastContentGroupIndex && isWhitespaceGroup(group)) {
-                        Rect(
-                            left = group.rect.left,
-                            top = (height - 1f).coerceAtLeast(0f),
-                            right = group.rect.right,
-                            bottom = height,
-                        )
-                    } else {
-                        val dy = groupShifts[visualIndex].toFloat()
-                        Rect(
-                            left = group.rect.left,
-                            top = group.rect.top + dy,
-                            right = group.rect.right,
-                            bottom = group.rect.bottom + dy,
-                        )
-                    }
+                    val adjustedRect =
+                        if (visualIndex > lastContentGroupIndex && isWhitespaceGroup(group)) {
+                            Rect(
+                                left = group.rect.left,
+                                top = (height - 1f).coerceAtLeast(0f),
+                                right = group.rect.right,
+                                bottom = height,
+                            )
+                        } else {
+                            val dy = groupShifts[visualIndex].toFloat()
+                            Rect(
+                                left = group.rect.left,
+                                top = group.rect.top + dy,
+                                right = group.rect.right,
+                                bottom = group.rect.bottom + dy,
+                            )
+                        }
                     for (index in group.indices) {
                         glyphBoxesByIndex[index] = adjustedRect
                     }
@@ -643,7 +661,8 @@ class MongolParagraph(
 
                 // Final normalize: force the last visible content glyph in this column
                 // to sit exactly on the bottom edge.
-                val contentBottom = glyphBoxesByIndex[groups[lastContentGroupIndex].lastIndex]?.bottom ?: continue
+                val contentBottom =
+                    glyphBoxesByIndex[groups[lastContentGroupIndex].lastIndex]?.bottom ?: continue
                 val normalizeDy = height - contentBottom
                 if (abs(normalizeDy) > 0.01f) {
                     for (visualIndex in 0..lastContentGroupIndex) {
@@ -683,7 +702,9 @@ class MongolParagraph(
 
         width = columns.sumOf { it.maxCrossAxis.toDouble() }.toFloat()
         longestLine = columns.maxOfOrNull { it.usedAdvance } ?: 0f
-        minIntrinsicHeight = glyphMetricsByIndex.maxOfOrNull { it?.advance ?: 0f }?.takeIf { it > 0f } ?: glyphAdvancePx
+        minIntrinsicHeight =
+            glyphMetricsByIndex.maxOfOrNull { it?.advance ?: 0f }?.takeIf { it > 0f }
+                ?: glyphAdvancePx
         maxIntrinsicHeight = availableHeight
     }
 
@@ -794,7 +815,11 @@ class MongolParagraph(
         val clamped = position.offset.coerceIn(0, text.length)
         val normalized = when {
             clamped == text.length -> clamped
-            clamped in 0 until text.length -> MongolTextTools.getGraphemeRangeAt(text, clamped).start
+            clamped in 0 until text.length -> MongolTextTools.getGraphemeRangeAt(
+                text,
+                clamped
+            ).start
+
             else -> 0
         }
 
@@ -851,7 +876,10 @@ class MongolParagraph(
 
         val target = position.offset.coerceIn(0, text.length)
         if (target == text.length) {
-            val last = columns.lastOrNull { it.glyphIndices.isNotEmpty() } ?: return TextRange(text.length, text.length)
+            val last = columns.lastOrNull { it.glyphIndices.isNotEmpty() } ?: return TextRange(
+                text.length,
+                text.length
+            )
             val start = last.glyphIndices.first()
             val end = last.glyphIndices.last() + 1
             return TextRange(start, end)
@@ -861,7 +889,8 @@ class MongolParagraph(
             if (column.glyphIndices.isEmpty()) continue
             val start = column.glyphIndices.first()
             val end = column.glyphIndices.last() + 1
-            val endWithOptionalNewline = if (end < text.length && text[end] == '\n') end + 1 else end
+            val endWithOptionalNewline =
+                if (end < text.length && text[end] == '\n') end + 1 else end
             if (target in start until endWithOptionalNewline) {
                 return TextRange(start, end)
             }

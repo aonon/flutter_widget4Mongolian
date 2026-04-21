@@ -5,7 +5,14 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -21,9 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import mongol.compose.core.MongolTextPainter
+import mongol.compose.core.TextPosition
 import kotlin.math.roundToInt
 import mongol.compose.core.Offset as CoreOffset
-import mongol.compose.core.TextPosition
 
 enum class MongolSelectionHandleType {
     CARET,
@@ -53,15 +60,15 @@ fun MongolSelectionHandleIcon(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val r = w / 2f 
+        val r = w / 2f
 
         when (type) {
             MongolSelectionHandleType.START -> {
                 val path = Path().apply {
                     moveTo(w, h)
-                    lineTo(r, h) 
+                    lineTo(r, h)
                     arcTo(Rect(0f, 0f, w, h), 90f, 270f, false)
-                    lineTo(w, r) 
+                    lineTo(w, r)
                     close()
                 }
                 drawPath(path, color, style = Fill)
@@ -70,9 +77,9 @@ fun MongolSelectionHandleIcon(
             MongolSelectionHandleType.END -> {
                 val path = Path().apply {
                     moveTo(0f, 0f)
-                    lineTo(w - r, 0f) 
+                    lineTo(w - r, 0f)
                     arcTo(Rect(0f, 0f, w, h), 270f, 270f, false)
-                    lineTo(0f, h - r) 
+                    lineTo(0f, h - r)
                     close()
                 }
                 drawPath(path, color, style = Fill)
@@ -103,8 +110,8 @@ private fun handleAnchorInIcon(
     visualSizePx: Float,
 ): Offset {
     return when (type) {
-        MongolSelectionHandleType.START -> Offset(visualSizePx, visualSizePx) 
-        MongolSelectionHandleType.END -> Offset(0f, 0f)                     
+        MongolSelectionHandleType.START -> Offset(visualSizePx, visualSizePx)
+        MongolSelectionHandleType.END -> Offset(0f, 0f)
         MongolSelectionHandleType.CARET -> Offset(0f, visualSizePx / 2f)
     }
 }
@@ -133,8 +140,7 @@ fun MongolSelectionHandles(
             val currentOffset by rememberUpdatedState(handle.offset)
             var dragOffset by remember { mutableStateOf<Offset?>(null) }
             val displayOffset = dragOffset ?: Offset(currentOffset.x, currentOffset.y)
-            
-            // 监听逻辑位置变化，触发触感反馈
+
             LaunchedEffect(currentOffset) {
                 if (dragOffset != null) {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -209,36 +215,40 @@ object MongolSelectionHandlesCalculator {
         showCaretHandle: Boolean = false,
     ): MongolSelectionHandlesState {
         val normalized = selection.normalized()
-        
-        // 如果是闭合选区
+
         if (normalized.isCollapsed) {
             if (activeHandle == MongolSelectionHandleType.CARET || showCaretHandle) {
                 val raw = painter.getOffsetForCaret(TextPosition(normalized.start))
-                
+
                 // For CARET handle in vertical Mongolian text, we want the handle icon
                 // to appear to the RIGHT of the caret line, with the tip pointing LEFT
                 // to anchor at the RIGHT edge of the caret line.
-                
+
                 // 1. Find the width of the glyph at the caret to determine the right boundary.
                 val glyphBox = if (normalized.start in painter.text.indices) {
                     painter.getBoxesForRange(normalized.start, normalized.start + 1).firstOrNull()
                 } else if (normalized.start > 0) {
                     painter.getBoxesForRange(normalized.start - 1, normalized.start).firstOrNull()
                 } else null
-                
+
                 val caretRight = glyphBox?.right ?: (raw.x + 18f) // fallback to typical width
-                
+
                 val caretHandle = MongolSelectionHandle(
                     type = MongolSelectionHandleType.CARET,
                     offset = mongol.compose.core.Offset(caretRight, raw.y)
                 )
-                return MongolSelectionHandlesState(handles = listOf(caretHandle), activeHandle = activeHandle)
+                return MongolSelectionHandlesState(
+                    handles = listOf(caretHandle),
+                    activeHandle = activeHandle
+                )
             }
             return MongolSelectionHandlesState(handles = emptyList(), activeHandle = activeHandle)
         }
 
-        // 优化：不再获取整个选区的矩形，只获取起始和结束位置的单个字形矩形
-        val startBox = painter.getBoxesForRange(normalized.start, (normalized.start + 1).coerceAtMost(painter.text.length))
+        val startBox = painter.getBoxesForRange(
+            normalized.start,
+            (normalized.start + 1).coerceAtMost(painter.text.length)
+        )
             .firstOrNull()
         val endBox = if (normalized.end > normalized.start) {
             painter.getBoxesForRange(normalized.end - 1, normalized.end).firstOrNull()
@@ -260,8 +270,14 @@ object MongolSelectionHandlesCalculator {
 
         return MongolSelectionHandlesState(
             handles = listOf(
-                MongolSelectionHandle(type = MongolSelectionHandleType.START, offset = startHandleOffset),
-                MongolSelectionHandle(type = MongolSelectionHandleType.END, offset = endHandleOffset),
+                MongolSelectionHandle(
+                    type = MongolSelectionHandleType.START,
+                    offset = startHandleOffset
+                ),
+                MongolSelectionHandle(
+                    type = MongolSelectionHandleType.END,
+                    offset = endHandleOffset
+                ),
             ),
             activeHandle = activeHandle,
         )

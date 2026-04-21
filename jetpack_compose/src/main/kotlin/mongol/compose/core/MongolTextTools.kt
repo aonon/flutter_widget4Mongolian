@@ -22,6 +22,7 @@ object MongolTextTools {
             Character.NON_SPACING_MARK.toInt(),
             Character.COMBINING_SPACING_MARK.toInt(),
             Character.ENCLOSING_MARK.toInt() -> true
+
             else -> false
         }
     }
@@ -111,26 +112,6 @@ object MongolTextTools {
         return value == 0x200F || value == 0x200E
     }
 
-    fun shiftLineMetrics(metrics: MongolLineMetrics, offset: Offset): MongolLineMetrics {
-        require(offset.x.isFinite()) { "Offset.x must be finite, got ${offset.x}" }
-        require(offset.y.isFinite()) { "Offset.y must be finite, got ${offset.y}" }
-        return metrics.copy(
-            top = metrics.top + offset.y,
-            baseline = metrics.baseline + offset.x,
-        )
-    }
-
-    fun shiftTextBox(box: Rect, offset: Offset): Rect {
-        require(offset.x.isFinite()) { "Offset.x must be finite, got ${offset.x}" }
-        require(offset.y.isFinite()) { "Offset.y must be finite, got ${offset.y}" }
-        return Rect(
-            left = box.left + offset.x,
-            top = box.top + offset.y,
-            right = box.right + offset.x,
-            bottom = box.bottom + offset.y,
-        )
-    }
-
     /**
      * Returns the next caret position, respecting surrogate pairs.
      */
@@ -202,16 +183,5 @@ object MongolTextTools {
     private fun codePointDistance(text: String, start: Int, end: Int): Int {
         if (start >= end) return 0
         return Character.codePointCount(text, start, end)
-    }
-
-    fun codePointFromSurrogates(highSurrogate: Int, lowSurrogate: Int): Int {
-        require(isHighSurrogate(highSurrogate)) {
-            "U+${highSurrogate.toString(16).uppercase().padStart(4, '0')} is not a high surrogate."
-        }
-        require(isLowSurrogate(lowSurrogate)) {
-            "U+${lowSurrogate.toString(16).uppercase().padStart(4, '0')} is not a low surrogate."
-        }
-        val base = 0x010000 - (0xD800 shl 10) - 0xDC00
-        return (highSurrogate shl 10) + lowSurrogate + base
     }
 }

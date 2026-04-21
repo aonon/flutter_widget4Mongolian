@@ -1,10 +1,13 @@
 package mongol.compose.editing
 
+import android.os.Bundle
 import android.view.KeyEvent
 import android.view.inputmethod.CompletionInfo
+import android.view.inputmethod.CorrectionInfo
+import android.view.inputmethod.ExtractedText
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
-import android.os.Bundle
-import android.view.inputmethod.*
+import android.view.inputmethod.InputContentInfo
 
 
 class MongolInputConnection(
@@ -52,7 +55,6 @@ class MongolInputConnection(
     }
 
     override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
-        // 简单处理：蒙古文主要在 BMP 内，但在支持 Emoji 时此方法很重要
         return deleteSurroundingText(beforeLength, afterLength)
     }
 
@@ -97,7 +99,6 @@ class MongolInputConnection(
     }
 
     override fun sendKeyEvent(event: KeyEvent): Boolean {
-        // 处理退格键等硬件按键
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DEL -> return deleteSurroundingText(1, 0)

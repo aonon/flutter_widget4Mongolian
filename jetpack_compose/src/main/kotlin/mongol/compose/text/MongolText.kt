@@ -1,12 +1,12 @@
 package mongol.compose.text
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import mongol.compose.core.MongolTextAlign
 import mongol.compose.core.TextRun
-import androidx.compose.foundation.ScrollState
 
 /**
  * Simple vertical Mongolian text composable.

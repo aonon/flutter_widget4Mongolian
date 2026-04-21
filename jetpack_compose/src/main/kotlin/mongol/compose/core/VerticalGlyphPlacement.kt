@@ -6,9 +6,6 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 
-/**
- * 竖排运行中单个字形的共享摆放策略。
- */
 data class VerticalGlyphPlacement(
     val dx: Float,
     val dy: Float,
@@ -20,10 +17,6 @@ object VerticalGlyphPlacementPolicy {
         return (boxExtent - glyphExtent) / 2f
     }
 
-    /**
-     * 查找前一个非空白码点，让 ASCII 标点能够利用前文脚本环境判断，
-     * 同时不受空格影响。
-     */
     fun previousVisibleCodePoint(text: String, fromCodeUnitIndex: Int): Int? {
         var i = fromCodeUnitIndex - 1
         while (i >= 0) {
@@ -45,16 +38,11 @@ object VerticalGlyphPlacementPolicy {
         glyphWidth: Float,
         glyphHeight: Float,
     ): VerticalGlyphPlacement {
-        // 先按未旋转状态居中。若后续需要旋转，则统一绕字形框中心旋转。
-        // 先基于未旋转边界做居中，可以保证字形中心锁定在同一个枢轴上，
-        // 避免旋转后出现向右或向下的漂移。
         var dx = centerOffset(boxWidth, glyphWidth)
         var dy = centerOffset(boxHeight, glyphHeight)
 
         val shiftAdjustment = CodePointLists.shiftAdjustment(codePoint)
 
-        // rotateShift 现在只负责偏移量配置，不再决定是否旋转。
-        // 偏移值使用 -1..1 的归一化比例，并按当前字形框尺寸换算。
         if (shiftAdjustment != null) {
             dx += boxWidth * shiftAdjustment.dxFactor
             dy += boxHeight * shiftAdjustment.dyFactor
@@ -88,7 +76,6 @@ object VerticalGlyphPlacementPolicy {
             box.top + placement.dy,
         )
 
-        // 需要时，围绕当前字形框中心施加本地修正旋转。
         if (placement.rotationDegrees != 0f) {
             val pivot = Offset(
                 x = box.left + (box.right - box.left) / 2f,

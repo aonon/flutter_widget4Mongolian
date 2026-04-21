@@ -62,7 +62,12 @@ class DefaultMongolInputSession(
         val transformedText = normalizeTextChange(state.text, proposedText)
 
         if (transformedText == proposedText) {
-            state.replaceRange(normalizedStart, normalizedEnd, replacement, clearComposing = !composing)
+            state.replaceRange(
+                normalizedStart,
+                normalizedEnd,
+                replacement,
+                clearComposing = !composing
+            )
             if (composing) {
                 state.setComposingRange(normalizedStart, normalizedStart + replacement.length)
             }
@@ -70,7 +75,10 @@ class DefaultMongolInputSession(
             state.replaceText(transformedText)
             if (composing) {
                 val composingStart = normalizedStart.coerceIn(0, transformedText.length)
-                val composingEnd = (composingStart + replacement.length).coerceIn(composingStart, transformedText.length)
+                val composingEnd = (composingStart + replacement.length).coerceIn(
+                    composingStart,
+                    transformedText.length
+                )
                 state.setComposingRange(composingStart, composingEnd)
             }
         }
@@ -94,7 +102,10 @@ class DefaultMongolInputSession(
         newCursorPosition: Int,
     ): Int {
         return if (newCursorPosition > 0) {
-            (replacementStart + insertedLength + newCursorPosition - 1).coerceIn(0, state.text.length)
+            (replacementStart + insertedLength + newCursorPosition - 1).coerceIn(
+                0,
+                state.text.length
+            )
         } else {
             (replacementStart + newCursorPosition).coerceIn(0, state.text.length)
         }

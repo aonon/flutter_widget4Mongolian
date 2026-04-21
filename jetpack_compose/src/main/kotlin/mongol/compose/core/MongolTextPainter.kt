@@ -195,7 +195,7 @@ class MongolTextPainter(
                 end = clusterEnd,
                 isRotatable = isRotatableCluster(clusterStart, clusterEnd),
                 isSolo = !isRotatableCluster(clusterStart, clusterEnd) &&
-                    isIdeographicCluster(clusterStart, clusterEnd),
+                        isIdeographicCluster(clusterStart, clusterEnd),
             )
         }
 
@@ -232,7 +232,8 @@ class MongolTextPainter(
                 val nextCluster = clusters[clusterIndex]
                 if (isBreakCluster(nextCluster.start, nextCluster.end) ||
                     nextCluster.isRotatable ||
-                    nextCluster.isSolo) {
+                    nextCluster.isSolo
+                ) {
                     break
                 }
                 segmentEnd = nextCluster.end
@@ -292,10 +293,10 @@ class MongolTextPainter(
 
             val nextSegment = rawSegments.getOrNull(segmentIndex + 1)
             val keepMerging = !endsWithBreak(segment) &&
-                nextSegment != null &&
-                !nextSegment.isRotatable &&
-                !nextSegment.isSolo &&
-                !startsWithBreak(nextSegment)
+                    nextSegment != null &&
+                    !nextSegment.isRotatable &&
+                    !nextSegment.isSolo &&
+                    !startsWithBreak(nextSegment)
 
             if (!keepMerging) {
                 flushPending()
