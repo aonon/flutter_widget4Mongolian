@@ -186,9 +186,9 @@ class MainActivity : ComponentActivity() {
                                 style = TextStyle(fontFamily = font),
                                 textAlign = textAlign,
                                 modifier = Modifier
-                                    .padding(10.dp)
                                     .height(200.dp)
                                     .border(1.dp, Color.Red)
+                                    .padding(10.dp)
                             )
                             MongolTextField(
                                 value = mongolTextFieldValue,

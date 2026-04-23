@@ -845,7 +845,7 @@ fun MongolOutlinedTextField(
     ) { measurables, constraints ->
         val spacing = 6.dp.roundToPx()
         val fieldMinWidth = 20.dp.roundToPx()
-        val unconstrainedWidthFallback = 1200.dp.roundToPx()
+        val unconstrainedWidthFallback = 300.dp.roundToPx()
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
         var index = 0
         val labelPlaceable = if (showAboveLabel) {
@@ -888,7 +888,8 @@ fun MongolOutlinedTextField(
             if (style.fontSize.type == TextUnitType.Sp) style.fontSize.toPx() else 16.sp.toPx()
         val lineSpan = max((fontSizePx * 1.5f).toInt(), 1)
         val intrinsicHeightHint = if (constraints.hasBoundedHeight) {
-            constraints.maxHeight
+            // High enough hint to prevent wrapping during startup, but match parent if possible.
+            max(constraints.maxHeight, 1500)
         } else {
             10_000
         }
@@ -898,13 +899,8 @@ fun MongolOutlinedTextField(
             .coerceAtLeast(0)
 
         val targetFieldWidth = if (autoWidthByContent) {
-            val steppedWidth = if (intrinsicFieldWidth <= 0) {
-                lineSpan
-            } else {
-                ((intrinsicFieldWidth + lineSpan - 1) / lineSpan) * lineSpan
-            }
-
-            steppedWidth.coerceIn(
+            // Add a small safety margin for floating point rounding in painter
+            (intrinsicFieldWidth + 1).coerceIn(
                 minimumValue = fieldMinWidth,
                 maximumValue = max(fieldMinWidth, effectiveFieldMaxWidth),
             )

@@ -1,7 +1,6 @@
 package mongol.compose.editing
 
 import android.text.InputType
-import android.util.Log
 import android.view.inputmethod.EditorInfo
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -45,14 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -69,6 +63,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.isUnspecified
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
@@ -160,15 +156,18 @@ fun MongolBasicTextField(
         }
     }
 
-    val painter = remember(state.text, textAlign, textRuns, rotateCjk, runMeasurer) {
+    val maxLines = if (singleLine) 1 else null
+    val painter = remember(state.text, textAlign, textRuns, rotateCjk, runMeasurer, maxLines) {
         MongolTextPainter(
             text = state.text,
             textRuns = textRuns,
             textAlign = textAlign,
+            maxLines = maxLines,
             rotateCjk = rotateCjk,
             runMeasurer = runMeasurer,
         )
     }
+
     val runLayouts = remember(state.text, style, painter.textRuns) {
         painter.textRuns.associateWith { run ->
             textMeasurer.measure(
@@ -417,272 +416,130 @@ fun MongolBasicTextField(
         }
     }
 
+    val currentPainter by androidx.compose.runtime.rememberUpdatedState(painter)
+    val onCaretMovement = remember { { showCaretHandle = false } }
+    val currentOnTextChange by androidx.compose.runtime.rememberUpdatedState(onTextChange)
+
+    val minFieldWidthPx = remember(style, density) {
+        val fontSize = style.fontSize.let { if (it.isUnspecified) 16.sp else it }
+        with(density) { (fontSize.toPx() * 1.2f).roundToInt() }
+    }
+
     MongolTextMeasuredLayout(
         painter = painter,
-        modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester).then(modifier)
-            .focusRequester(focusRequester).onFocusChanged { focusState ->
+        minWidth = minFieldWidthPx,
+        modifier = Modifier
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .then(modifier)
+            .focusRequester(focusRequester)
+            .pointerInput(enabled, readOnly) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.changedToDown() } && enabled && !readOnly) {
+                            focusRequester.requestFocus()
+                        }
+                    }
+                }
+            }
+            .onFocusChanged { focusState ->
                 hasFocus = focusState.isFocused || imeBridgeHasFocus
-                if (focusState.isFocused) {
-                    if (!readOnly) {
-                        keyboardController?.show()
-                        imeBridgeView?.showIme()
-                    }
+                if (focusState.isFocused && !readOnly) {
+                    keyboardController?.show()
+                    imeBridgeView?.showIme()
                 }
-            }.focusable(enabled = enabled).mongolImeSession(inputSession)
+            }
+            .focusable(enabled = enabled)
+            .mongolImeSession(inputSession)
             .onPreviewKeyEvent { event ->
-                if (!enabled) {
-                    return@onPreviewKeyEvent false
-                }
-                if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                }
-
-                if (event.isCtrlPressed && event.key == Key.A) {
-                    state.applyCommand(MongolEditCommand.SelectAll)
-                    showCaretHandle = false
-                    return@onPreviewKeyEvent true
-                }
-
-                if (event.isCtrlPressed && event.key == Key.Z) {
-                    state.applyCommand(MongolEditCommand.Undo)
-                    onTextChange(state.text)
-                    return@onPreviewKeyEvent true
-                }
-
-                if (event.isCtrlPressed && event.key == Key.Y) {
-                    state.applyCommand(MongolEditCommand.Redo)
-                    onTextChange(state.text)
-                    return@onPreviewKeyEvent true
-                }
-
-                if (event.isCtrlPressed && event.key == Key.C) {
-                    val selected = state.selectedText()
-                    if (selected.isNotEmpty()) {
-                        clipboardManager.setText(AnnotatedString(selected))
-                        return@onPreviewKeyEvent true
-                    }
-                    return@onPreviewKeyEvent false
-                }
-
-                if (event.isCtrlPressed && event.key == Key.Insert) {
-                    val selected = state.selectedText()
-                    if (selected.isNotEmpty()) {
-                        clipboardManager.setText(AnnotatedString(selected))
-                        return@onPreviewKeyEvent true
-                    }
-                    return@onPreviewKeyEvent false
-                }
-
-                if (event.isCtrlPressed && event.key == Key.X) {
-                    if (readOnly) return@onPreviewKeyEvent false
-                    val selected = state.selectedText()
-                    if (selected.isNotEmpty()) {
-                        clipboardManager.setText(AnnotatedString(selected))
-                        inputSession.commitText("")
-                        return@onPreviewKeyEvent true
-                    }
-                    return@onPreviewKeyEvent false
-                }
-
-                if (event.isCtrlPressed && (event.key == Key.V || event.key == Key.Insert && event.isShiftPressed)) {
-                    if (readOnly) return@onPreviewKeyEvent false
-                    val pasted = clipboardManager.getText()?.text.orEmpty()
-                    if (pasted.isNotEmpty()) {
-                        inputSession.commitText(pasted)
-                        return@onPreviewKeyEvent true
-                    }
-                    return@onPreviewKeyEvent false
-                }
-
-                if (event.isShiftPressed && event.key == Key.Delete) {
-                    if (readOnly) return@onPreviewKeyEvent false
-                    val selected = state.selectedText()
-                    if (selected.isNotEmpty()) {
-                        clipboardManager.setText(AnnotatedString(selected))
-                        inputSession.commitText("")
-                        return@onPreviewKeyEvent true
-                    }
-                    return@onPreviewKeyEvent false
-                }
-
-                val extendSelection = event.isShiftPressed
-
-                when (event.key) {
-                    Key.DirectionLeft -> {
-                        state.applyCommand(
-                            command = MongolEditCommand.MoveCaretLeft,
-                            extendSelection = extendSelection,
-                        )
-                        showCaretHandle = false
-                        true
-                    }
-
-                    Key.DirectionRight -> {
-                        state.applyCommand(
-                            command = MongolEditCommand.MoveCaretRight,
-                            extendSelection = extendSelection,
-                        )
-                        showCaretHandle = false
-                        true
-                    }
-
-                    Key.MoveHome -> {
-                        if (event.isCtrlPressed) {
-                            state.applyCommand(
-                                command = MongolEditCommand.MoveCaretToStart,
-                                extendSelection = extendSelection,
-                            )
-                        } else {
-                            val anchor = state.caret.offset
-                            val lineRange = painter.getLineBoundary(state.caret)
-                            if (extendSelection) {
-                                inputSession.setSelection(anchor, lineRange.start)
-                            } else {
-                                inputSession.setSelection(lineRange.start, lineRange.start)
-                            }
-                        }
-                        showCaretHandle = false
-                        true
-                    }
-
-                    Key.MoveEnd -> {
-                        if (event.isCtrlPressed) {
-                            state.applyCommand(
-                                command = MongolEditCommand.MoveCaretToEnd,
-                                extendSelection = extendSelection,
-                            )
-                        } else {
-                            val anchor = state.caret.offset
-                            val lineRange = painter.getLineBoundary(state.caret)
-                            if (extendSelection) {
-                                inputSession.setSelection(anchor, lineRange.end)
-                            } else {
-                                inputSession.setSelection(lineRange.end, lineRange.end)
-                            }
-                        }
-                        showCaretHandle = false
-                        true
-                    }
-
-                    Key.Escape -> {
-                        state.placeCaret(state.caret)
-                        true
-                    }
-
-                    Key.Backspace -> {
-                        if (readOnly) return@onPreviewKeyEvent false
-                        if (state.hasSelection()) {
-                            inputSession.commitText("")
-                        } else {
-                            inputSession.deleteSurroundingText(beforeLength = 1, afterLength = 0)
-                        }
-                        showCaretHandle = false
-                        true
-                    }
-
-                    Key.Delete -> {
-                        if (readOnly) return@onPreviewKeyEvent false
-                        if (state.hasSelection()) {
-                            inputSession.commitText("")
-                        } else {
-                            inputSession.deleteSurroundingText(beforeLength = 0, afterLength = 1)
-                        }
-                        showCaretHandle = false
-                        true
-                    }
-
-                    Key.Enter -> {
-                        if (readOnly) return@onPreviewKeyEvent false
-                        inputSession.commitText("\n")
-                        showCaretHandle = false
-                        true
-                    }
-
-                    else -> {
-                        if (readOnly) return@onPreviewKeyEvent false
-                        val cp = event.utf16CodePoint
-                        if (cp > 0 && !Character.isISOControl(cp)) {
-                            inputSession.commitText(String(Character.toChars(cp)))
-                            showCaretHandle = false
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                }
-            }.onGloballyPositioned { coords ->
-                canvasWidthPx = coords.size.width.coerceAtLeast(1)
-                canvasHeightPx = coords.size.height.coerceAtLeast(1)
-                painter.layout(maxHeight = canvasHeightPx.toFloat())
-            }.pointerInput(canvasHeightPx, textAlign, enabled, readOnly, painter) {
+                if (!enabled) return@onPreviewKeyEvent false
+                handleMongolKeyEvent(
+                    event = event,
+                    state = state,
+                    painter = painter,
+                    inputSession = inputSession,
+                    clipboardManager = clipboardManager,
+                    readOnly = readOnly,
+                    onTextChange = currentOnTextChange,
+                    onCaretMovement = onCaretMovement,
+                )
+            }
+            .onSizeChanged { size ->
+                canvasWidthPx = size.width.coerceAtLeast(1)
+                canvasHeightPx = size.height.coerceAtLeast(1)
+            }
+            .pointerInput(enabled, readOnly) {
                 if (!enabled) return@pointerInput
                 coroutineScope {
                     launch {
-                        detectTapGestures(onTap = { tapOffset ->
-                            val pos = resolveCaretPositionForOffset(tapOffset)
-                            focusRequester.requestFocus()
-                            if (!readOnly && enabled) {
-                                keyboardController?.show()
-                                imeBridgeView?.showIme()
+                        detectTapGestures(
+                            onTap = { tapOffset ->
+                                val pos = resolveCaretPositionForOffset(tapOffset)
+                                if (!hasFocus) focusRequester.requestFocus()
+                                if (!readOnly && enabled) {
+                                    keyboardController?.show()
+                                    imeBridgeView?.showIme()
+                                }
+                                state.placeCaret(pos)
+                                showCaretHandle = !readOnly
+                                showContextMenu = false
+                            },
+                            onDoubleTap = { tapOffset ->
+                                if (!hasFocus) focusRequester.requestFocus()
+                                val pos = resolveCaretPositionForOffset(tapOffset)
+                                state.setSelection(currentPainter.getWordBoundary(pos))
+                                showCaretHandle = false
+                                showContextMenu = true
+                            },
+                            onLongPress = { tapOffset ->
+                                if (!hasFocus) focusRequester.requestFocus()
+                                val pos = resolveCaretPositionForOffset(tapOffset)
+                                state.setSelection(currentPainter.getWordBoundary(pos))
+                                showCaretHandle = false
+                                showContextMenu = true
                             }
-                            // Force show handle even if pos is same as current caret
-                            state.placeCaret(pos)
-                            showCaretHandle = !readOnly
-                            showContextMenu = false
-                            
-                            // To ensure visual feedback, we can trigger a slight state change if needed,
-                            // but placeCaret already triggers recomposition.
-                        }, onDoubleTap = { tapOffset ->
-                            focusRequester.requestFocus()
-                            val pos = resolveCaretPositionForOffset(tapOffset)
-                            state.setSelection(painter.getWordBoundary(pos))
-                            showCaretHandle = false
-                            showContextMenu = true
-                        }, onLongPress = { tapOffset ->
-                            focusRequester.requestFocus()
-                            val pos = resolveCaretPositionForOffset(tapOffset)
-                            state.setSelection(painter.getWordBoundary(pos))
-                            showCaretHandle = false
-                            showContextMenu = true
-                        })
+                        )
                     }
                     launch {
-                        detectDragGestures(onDragStart = { dragStart ->
-                            selectionGestureInProgress = true
-                            showContextMenu = false
-                            focusRequester.requestFocus()
-                            if (!readOnly) {
-                                keyboardController?.show()
-                                imeBridgeView?.showIme()
+                        detectDragGestures(
+                            onDragStart = { dragStart ->
+                                selectionGestureInProgress = true
+                                showContextMenu = false
+                                if (!hasFocus) focusRequester.requestFocus()
+                                if (!readOnly) {
+                                    keyboardController?.show()
+                                    imeBridgeView?.showIme()
+                                }
+                                val pos = resolveCaretPositionForOffset(dragStart)
+                                val selection = state.selection.normalized()
+                                if (selection.isCollapsed) {
+                                    activeHandleType = MongolSelectionHandleType.CARET
+                                    dragSelectionAnchor = pos.offset
+                                } else {
+                                    val edgeHandle = resolveSelectionDragHandle(dragStart)
+                                    activeHandleType = edgeHandle ?: MongolSelectionHandleType.END
+                                    dragSelectionAnchor = if (activeHandleType == MongolSelectionHandleType.START) 
+                                        selection.end else selection.start
+                                }
+                                state.setSelection(dragSelectionAnchor, pos.offset)
+                            },
+                            onDragEnd = {
+                                selectionGestureInProgress = false
+                                activeHandleType = null
+                                dragSelectionAnchor = -1
+                            },
+                            onDragCancel = {
+                                selectionGestureInProgress = false
+                                activeHandleType = null
+                                dragSelectionAnchor = -1
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                val anchor = if (dragSelectionAnchor >= 0) dragSelectionAnchor else state.caret.offset
+                                val pos = resolveCaretPositionForOffset(change.position)
+                                state.setSelection(anchor, pos.offset)
                             }
-                            val pos = resolveCaretPositionForOffset(dragStart)
-                            val selection = state.selection.normalized()
-                            if (selection.isCollapsed) {
-                                activeHandleType = MongolSelectionHandleType.CARET
-                                dragSelectionAnchor = pos.offset
-                            } else {
-                                val edgeHandle = resolveSelectionDragHandle(dragStart)
-                                activeHandleType = edgeHandle ?: MongolSelectionHandleType.END
-                                dragSelectionAnchor =
-                                    if (activeHandleType == MongolSelectionHandleType.START) selection.end else selection.start
-                            }
-                            state.setSelection(dragSelectionAnchor, pos.offset)
-                        }, onDragEnd = {
-                            selectionGestureInProgress = false
-                            activeHandleType = null
-                            dragSelectionAnchor = -1
-                            // Note: Delayed menu display is handled in LaunchedEffect
-                        }, onDragCancel = {
-                            selectionGestureInProgress = false
-                            activeHandleType = null
-                            dragSelectionAnchor = -1
-                        }, onDrag = { change, _ ->
-                            change.consume()
-                            val anchor =
-                                if (dragSelectionAnchor >= 0) dragSelectionAnchor else state.caret.offset
-                            val pos = resolveCaretPositionForOffset(change.position)
-                            state.setSelection(anchor, pos.offset)
-                        })
+                        )
                     }
                 }
             }) {
@@ -930,10 +787,12 @@ fun MongolBasicTextField(
                         val caretWidth = (directCaretBox?.let { it.right - it.left }
                             ?: prevCaretBox?.let { it.right - it.left }
                             ?: fallbackCaretWidth).coerceAtLeast(1f)
-                        val caretY = caretOffset.y
                         val caretStroke = with(density) { 2.dp.toPx() }
-                        val caretLeft = caretOffset.x - 1.dp.toPx()
-                        val caretRight = caretLeft + caretWidth + 2.dp.toPx()
+                        val halfStroke = caretStroke / 2f
+                        val caretY = caretOffset.y.coerceIn(halfStroke, size.height - halfStroke)
+                        val padding = with(density) { 1.dp.toPx() }
+                        val caretLeft = (caretOffset.x - padding).coerceIn(0f, size.width)
+                        val caretRight = (caretOffset.x + caretWidth + padding).coerceIn(0f, size.width)
                         val visibleCaretColor = caretColor.copy(alpha = caretAlpha)
 
                         // ========== RENDER: Caret (Blinking text insertion point) ==========
