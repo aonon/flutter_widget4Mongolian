@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import mongol.compose.core.MongolTextAlign
 import mongol.compose.editing.MongolBasicTextField
-import mongol.compose.editing.MongolEditableState
 import mongol.compose.editing.MongolOutlinedTextField
 import mongol.compose.editing.MongolTextField
 import mongol.compose.editing.MongolTextFieldLabelPosition
@@ -93,9 +92,8 @@ class MainActivity : ComponentActivity() {
                         }
 
                         Text("Use Compose MongolSelectableText:")
-                        MongolBasicTextField(
+                        MongolSelectableText(
                             text = t,
-                            onValueChange = {},
                             rotateCjk = true,
                             style = TextStyle(fontFamily = font),
                             textAlign = textAlign,
@@ -138,7 +136,7 @@ class MainActivity : ComponentActivity() {
                         val textFieldState = rememberTextFieldState()
                         var mongolTextFieldValue by remember { mutableStateOf("1") }
                         var mongolTextFieldValue2 by remember { mutableStateOf("12") }
-                        var mongolOutlinedFieldValue by remember { mutableStateOf("") }
+                        var mongolOutlinedFieldValue by remember { mutableStateOf("123") }
 
                         Text("Use Compose TextField / MongolTextField / MongolOutlinedTextField:")
                         TextField(
