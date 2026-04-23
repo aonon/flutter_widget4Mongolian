@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import mongol.compose.core.MongolTextAlign
+import mongol.compose.editing.MongolBasicTextField
 import mongol.compose.editing.MongolEditableState
 import mongol.compose.editing.MongolOutlinedTextField
 import mongol.compose.editing.MongolTextField
@@ -68,7 +69,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    //contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                    contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
                 ) { innerPadding ->
                     Column(
                         modifier = Modifier
@@ -77,12 +78,9 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding)
                             .imePadding()
                             .verticalScroll(scrollState)
-
                     ) {
                         val t =
-                            "\u300Aᠨᠢᠭᠡ\u300B\u3008ᠪᠠᠰᠠ ᠨᠢᠭᠡ\u3009 \uFF3Bᠬᠣᠶᠠᠷ\uFF3D ᠭᠣᠷᠪᠠ\uFF1B ᠳᠥᠷᠪᠡ \uFF08ᠲᠠᠪᠤ\uFF09 ᠵᠢᠷᠭᠤᠭ᠎ᠠ\u2048\u2049 ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ\uFF01\uFF0D\uFF1F  ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六C:\\Users\\itegel\\StudioProjects\\compose\\.idea\\misc.xml七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾".repeat(
-                                3
-                            )
+                            "\u300Aᠨᠢᠭᠡ\u300B\u3008ᠪᠠᠰᠠ ᠨᠢᠭᠡ\u3009 \uFF3Bᠬᠣᠶᠠᠷ\uFF3D ᠭᠣᠷᠪᠠ\uFF1B ᠳᠥᠷᠪᠡ \uFF08ᠲᠠᠪᠤ\uFF09 ᠵᠢᠷᠭᠤᠭ᠎ᠠ\u2048\u2049 ᠬᠣᠷᠢᠨ ᠬᠣᠶᠠᠷ\uFF01\uFF0D\uFF1F  ᠬᠣᠷᠢᠨ ᠭᠣᠷᠪᠠ one two three four five six seven eight nine ten 👨‍👩‍👧👋🏿🇭🇺一二三四五六C:\\Users\\itegel\\StudioProjects\\compose\\.idea\\misc.xml七八九十\uD83D\uDE03\uD83D\uDE0A\uD83D\uDE1C\uD83D\uDE01\uD83D\uDE2C\uD83D\uDE2E\uD83D\uDC34\uD83D\uDC02\uD83D\uDC2B\uD83D\uDC11\uD83D\uDC10①②③㉑㊿〖汉字〗한국어モンゴル語English? ︽ᠮᠣᠩᠭᠣᠯ︖︾".repeat(2)
                         var textAlign by remember { mutableStateOf(MongolTextAlign.TOP) }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             MongolTextAlign.entries.forEach { align ->
@@ -95,6 +93,17 @@ class MainActivity : ComponentActivity() {
                         }
 
                         Text("Use Compose MongolSelectableText:")
+                        MongolBasicTextField(
+                            text = t,
+                            onValueChange = {},
+                            rotateCjk = true,
+                            style = TextStyle(fontFamily = font),
+                            textAlign = textAlign,
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .height(200.dp)
+                                .border(1.dp, Color.Red)
+                        )
                         /*MongolText(
                             text = t,
                             rotateCjk = true,
@@ -116,7 +125,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(10.dp)
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
-                        )*/
+                        )
                         MongolSelectableText(
                             text = t,
                             style = TextStyle(fontFamily = font),
@@ -124,10 +133,11 @@ class MainActivity : ComponentActivity() {
                                 .padding(10.dp)
                                 .height(200.dp)
                                 .border(1.dp, Color.Red)
-                        )
+                        )*/
 
                         val textFieldState = rememberTextFieldState()
-                        var mongolTextFieldValue by remember { mutableStateOf("") }
+                        var mongolTextFieldValue by remember { mutableStateOf("1") }
+                        var mongolTextFieldValue2 by remember { mutableStateOf("12") }
                         var mongolOutlinedFieldValue by remember { mutableStateOf("") }
 
                         Text("Use Compose TextField / MongolTextField / MongolOutlinedTextField:")
@@ -171,6 +181,17 @@ class MainActivity : ComponentActivity() {
                                 .horizontalScroll(rememberScrollState())
                                 .border(1.dp, Color.Red)
                         ) {
+                            MongolBasicTextField(
+                                text = "ABCD",
+                                onValueChange = {},
+                                rotateCjk = true,
+                                style = TextStyle(fontFamily = font),
+                                textAlign = textAlign,
+                                modifier = Modifier
+                                    .padding(10.dp)
+                                    .height(200.dp)
+                                    .border(1.dp, Color.Red)
+                            )
                             MongolTextField(
                                 value = mongolTextFieldValue,
                                 leadingIcon = {
@@ -225,8 +246,8 @@ class MainActivity : ComponentActivity() {
                             )
                             //
                             MongolTextField(
-                                value = mongolTextFieldValue,
-                                onValueChange = { mongolTextFieldValue = it },
+                                value = mongolTextFieldValue2,
+                                onValueChange = { mongolTextFieldValue2 = it },
                                 inputTransformation = InputTransformation.maxLength(180),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number,
                                     imeAction = ImeAction.Next),

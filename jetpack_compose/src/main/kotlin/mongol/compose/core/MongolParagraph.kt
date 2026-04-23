@@ -785,25 +785,37 @@ class MongolParagraph(
             }
         } ?: return TextPosition(offset = 0)
 
-        // 2. Find the glyph in this column that is vertically closest.
-        var bestIndexInColumn = 0
-        var bestDistanceY = Float.POSITIVE_INFINITY
+        // 2. Find the glyph in this column that contains offset.y or is vertically closest.
+        var bestIndexInColumn = -1
+        var minDistanceY = Float.POSITIVE_INFINITY
+
         for (index in bestColumn.glyphIndices) {
             val rect = glyphBoxesByIndex[index] ?: continue
-            val cy = (rect.top + rect.bottom) / 2f
-            val dy = abs(offset.y - cy)
-            if (dy < bestDistanceY) {
-                bestDistanceY = dy
+            if (offset.y >= rect.top && offset.y <= rect.bottom) {
+                bestIndexInColumn = index
+                break
+            }
+            val dist = minOf(abs(offset.y - rect.top), abs(offset.y - rect.bottom))
+            if (dist < minDistanceY) {
+                minDistanceY = dist
                 bestIndexInColumn = index
             }
         }
 
-        val normalized = if (bestIndexInColumn in 0 until text.length) {
-            MongolTextTools.getGraphemeRangeAt(text, bestIndexInColumn).start
+        if (bestIndexInColumn == -1) return TextPosition(0)
+
+        val rect = glyphBoxesByIndex[bestIndexInColumn]!!
+        val graphemeRange = MongolTextTools.getGraphemeRangeAt(text, bestIndexInColumn)
+        
+        // Midpoint logic: if tap is in the lower half of the grapheme, move to its end.
+        val midY = (rect.top + rect.bottom) / 2f
+        val resolvedOffset = if (offset.y > midY) {
+            graphemeRange.end
         } else {
-            bestIndexInColumn
+            graphemeRange.start
         }
-        return TextPosition(offset = normalized)
+
+        return TextPosition(offset = resolvedOffset)
     }
 
     fun getOffsetForCaret(position: TextPosition): Offset {

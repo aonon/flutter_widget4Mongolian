@@ -11,13 +11,19 @@ import java.util.Locale
  */
 object MongolTextTools {
 
-    private const val REGIONAL_INDICATOR_START = 0x1F1E6
-    private const val REGIONAL_INDICATOR_END = 0x1F1FF
-
-    private fun isMongolianContinuationCodePoint(codePoint: Int): Boolean {
+    private fun isGraphemeContinuation(codePoint: Int): Boolean {
         if (codePoint in 0x180B..0x180D) return true // Mongolian free variation selectors
         if (codePoint == 0x180F) return true // Mongolian variation selector four
+        if (codePoint == 0x180E) return true // Mongolian vowel separator
         if (codePoint == 0x200C || codePoint == 0x200D) return true // ZWNJ / ZWJ
+
+        // Emoji skin tone modifiers (Fitzpatrick)
+        if (codePoint in 0x1F3FB..0x1F3FF) return true
+
+        // Variation selectors (Unicode)
+        if (codePoint in 0xFE00..0xFE0F) return true
+        if (codePoint in 0xE0100..0xE01EF) return true
+
         return when (Character.getType(codePoint)) {
             Character.NON_SPACING_MARK.toInt(),
             Character.COMBINING_SPACING_MARK.toInt(),
@@ -32,8 +38,14 @@ object MongolTextTools {
         var end = endExclusive.coerceIn((start + 1).coerceAtMost(hardEnd), hardEnd)
         while (end < hardEnd) {
             val cp = Character.codePointAt(text, end)
-            if (!isMongolianContinuationCodePoint(cp)) break
-            end += Character.charCount(cp)
+            val prevIdx = text.offsetByCodePoints(end, -1)
+            val prevCp = Character.codePointAt(text, prevIdx)
+
+            if (prevCp == 0x200D || isGraphemeContinuation(cp)) {
+                end += Character.charCount(cp)
+            } else {
+                break
+            }
         }
         return end.coerceAtMost(hardEnd)
     }
@@ -77,17 +89,25 @@ object MongolTextTools {
 
     fun getGraphemeRangeAt(text: String, offset: Int): TextRange {
         if (text.isEmpty()) return TextRange.EMPTY
-        val safeOffset = offset.coerceIn(0, text.length - 1)
-        val iterator = createCharacterBreakIterator(text)
+        val safeOffset = offset.coerceIn(0, (text.length - 1).coerceAtLeast(0))
 
-        val end = iterator.following(safeOffset).let {
-            if (it == BreakIterator.DONE) text.length else it
-        }
-        val start = iterator.preceding(end).let {
-            if (it == BreakIterator.DONE) safeOffset else it
+        var startOfSearch = 0
+        for (i in safeOffset downTo 0) {
+            if (text[i] == '\n') {
+                startOfSearch = i + 1
+                break
+            }
         }
 
-        return TextRange(start = start, end = end)
+        var result = TextRange(safeOffset, (safeOffset + 1).coerceAtMost(text.length))
+        forEachGraphemeCluster(text, start = startOfSearch) { start, end ->
+            if (safeOffset in start until end) {
+                result = TextRange(start, end)
+                return@forEachGraphemeCluster
+            }
+            if (start > safeOffset) return@forEachGraphemeCluster
+        }
+        return result
     }
 
     fun isUtf16(value: Int): Boolean {
@@ -113,75 +133,23 @@ object MongolTextTools {
     }
 
     /**
-     * Returns the next caret position, respecting surrogate pairs.
+     * Returns the next caret position, treating each grapheme cluster as one unit.
+     * Consistent with forEachGraphemeCluster (covers ZWJ sequences, skin tone modifiers, etc.).
      */
     fun getOffsetAfter(offset: Int, text: String): Int? {
         if (offset < 0 || offset >= text.length) return null
-        val iterator = createCharacterBreakIterator(text)
-        val next = iterator.following(offset)
-        if (next == BreakIterator.DONE) return null
-
-        // Treat flag emoji (RI pairs) as one unit: advance by exactly one flag.
-        val cp = Character.codePointAt(text, offset)
-        if (isRegionalIndicator(cp)) {
-            val runEnd = findRegionalIndicatorRunEnd(text, offset)
-            val runCount = codePointDistance(text, offset, runEnd)
-            val advance = if (runCount >= 2) 2 else 1
-            return text.offsetByCodePoints(offset, advance).coerceAtMost(text.length)
-        }
-
-        return next
+        val range = getGraphemeRangeAt(text, offset)
+        return if (range.end > offset) range.end else null
     }
 
     /**
-     * Returns the previous caret position, respecting surrogate pairs.
+     * Returns the previous caret position, treating each grapheme cluster as one unit.
+     * Consistent with forEachGraphemeCluster (covers ZWJ sequences, skin tone modifiers, etc.).
      */
     fun getOffsetBefore(offset: Int, text: String): Int? {
         if (offset <= 0 || offset > text.length) return null
-        val iterator = createCharacterBreakIterator(text)
-        val prev = iterator.preceding(offset)
-        if (prev == BreakIterator.DONE) return null
-
-        // Treat flag emoji (RI pairs) as one unit: retreat by exactly one flag.
-        val cpStart = text.offsetByCodePoints(offset, -1)
-        val cp = Character.codePointAt(text, cpStart)
-        if (isRegionalIndicator(cp)) {
-            val runStart = findRegionalIndicatorRunStart(text, cpStart)
-            val runCount = codePointDistance(text, runStart, offset)
-            val retreat = if (runCount >= 2) 2 else 1
-            return text.offsetByCodePoints(offset, -retreat).coerceAtLeast(0)
-        }
-
-        return prev
+        val range = getGraphemeRangeAt(text, offset - 1)
+        return if (range.start < offset) range.start else null
     }
 
-    private fun isRegionalIndicator(codePoint: Int): Boolean {
-        return codePoint in REGIONAL_INDICATOR_START..REGIONAL_INDICATOR_END
-    }
-
-    private fun findRegionalIndicatorRunStart(text: String, index: Int): Int {
-        var cursor = index
-        while (cursor > 0) {
-            val prev = text.offsetByCodePoints(cursor, -1)
-            val cp = Character.codePointAt(text, prev)
-            if (!isRegionalIndicator(cp)) break
-            cursor = prev
-        }
-        return cursor
-    }
-
-    private fun findRegionalIndicatorRunEnd(text: String, index: Int): Int {
-        var cursor = index
-        while (cursor < text.length) {
-            val cp = Character.codePointAt(text, cursor)
-            if (!isRegionalIndicator(cp)) break
-            cursor += Character.charCount(cp)
-        }
-        return cursor
-    }
-
-    private fun codePointDistance(text: String, start: Int, end: Int): Int {
-        if (start >= end) return 0
-        return Character.codePointCount(text, start, end)
-    }
 }

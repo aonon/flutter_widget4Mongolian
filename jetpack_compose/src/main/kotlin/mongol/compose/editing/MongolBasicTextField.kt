@@ -1,6 +1,7 @@
 package mongol.compose.editing
 
 import android.text.InputType
+import android.util.Log
 import android.view.inputmethod.EditorInfo
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -218,33 +219,13 @@ fun MongolBasicTextField(
             return mongol.compose.core.TextPosition(0)
         }
 
-        // Clip tapOffset to the actual field bounds to prevent selecting text
-        // outside the painter's layout area if the Canvas is larger.
-        val clippedX = tapOffset.x.coerceIn(0f, painter.width.coerceAtLeast(1f))
-        val clippedY = tapOffset.y.coerceIn(0f, painter.height.coerceAtLeast(1f))
-        val clippedOffset = mongol.compose.core.Offset(clippedX, clippedY)
+        // Clip to the canvas bounds to ensure edge taps resolve correctly.
+        val x = tapOffset.x.coerceIn(0f, canvasWidthPx.toFloat().coerceAtLeast(1f))
+        val y = tapOffset.y.coerceIn(0f, canvasHeightPx.toFloat().coerceAtLeast(1f))
+        val coreOffset = mongol.compose.core.Offset(x, y)
 
-        val nearest = painter.getPositionForOffset(clippedOffset)
-        val normalizedNearest = nearest.offset
-
-        val glyphIndex = normalizedNearest.coerceIn(0, (state.text.length - 1).coerceAtLeast(0))
-        val glyphBox =
-            painter.getBoxesForRange(glyphIndex, (glyphIndex + 1).coerceAtMost(state.text.length))
-                .firstOrNull() ?: return mongol.compose.core.TextPosition(normalizedNearest)
-
-        // For vertical Mongolian:
-        // If tap is in the upper half of the glyph, place caret at the start of the glyph.
-        // If tap is in the lower half of the glyph, place caret at the end of the glyph.
-        val insertAfter = clippedY >= (glyphBox.top + glyphBox.bottom) / 2f
-        val resolved = if (insertAfter) {
-            val range = MongolTextTools.getGraphemeRangeAt(
-                state.text, normalizedNearest
-            )
-            range.end.coerceAtMost(state.text.length)
-        } else {
-            normalizedNearest
-        }
-        return mongol.compose.core.TextPosition(resolved)
+        // Delegate to painter. getPositionForOffset now handles midpoint logic internally.
+        return painter.getPositionForOffset(coreOffset)
     }
 
     fun distanceToPoint(from: Offset, to: Offset): Float {
@@ -633,7 +614,7 @@ fun MongolBasicTextField(
                 canvasWidthPx = coords.size.width.coerceAtLeast(1)
                 canvasHeightPx = coords.size.height.coerceAtLeast(1)
                 painter.layout(maxHeight = canvasHeightPx.toFloat())
-            }.pointerInput(canvasHeightPx, textAlign, enabled, readOnly) {
+            }.pointerInput(canvasHeightPx, textAlign, enabled, readOnly, painter) {
                 if (!enabled) return@pointerInput
                 coroutineScope {
                     launch {
@@ -644,10 +625,13 @@ fun MongolBasicTextField(
                                 keyboardController?.show()
                                 imeBridgeView?.showIme()
                             }
-                            // M3-like: any caret tap shows caret handle; keyboard actions will hide it.
+                            // Force show handle even if pos is same as current caret
                             state.placeCaret(pos)
                             showCaretHandle = !readOnly
                             showContextMenu = false
+                            
+                            // To ensure visual feedback, we can trigger a slight state change if needed,
+                            // but placeCaret already triggers recomposition.
                         }, onDoubleTap = { tapOffset ->
                             focusRequester.requestFocus()
                             val pos = resolveCaretPositionForOffset(tapOffset)
@@ -1011,6 +995,31 @@ fun MongolBasicTextField(
                                 }
                             }
                         },
+                        onTap = { tapOffset ->
+                            val pos = resolveCaretPositionForOffset(tapOffset)
+                            focusRequester.requestFocus()
+                            if (!readOnly && enabled) {
+                                keyboardController?.show()
+                                imeBridgeView?.showIme()
+                            }
+                            state.placeCaret(pos)
+                            showCaretHandle = !readOnly
+                            showContextMenu = false
+                        },
+                        onDoubleTap = { tapOffset ->
+                            focusRequester.requestFocus()
+                            val pos = resolveCaretPositionForOffset(tapOffset)
+                            state.setSelection(painter.getWordBoundary(pos))
+                            showCaretHandle = false
+                            showContextMenu = true
+                        },
+                        onLongPress = { tapOffset ->
+                            focusRequester.requestFocus()
+                            val pos = resolveCaretPositionForOffset(tapOffset)
+                            state.setSelection(painter.getWordBoundary(pos))
+                            showCaretHandle = false
+                            showContextMenu = true
+                        }
                     )
                 }
 

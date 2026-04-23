@@ -2,6 +2,7 @@ package mongol.compose.editing
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -27,6 +28,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import mongol.compose.core.MongolTextPainter
 import mongol.compose.core.TextPosition
 import kotlin.math.roundToInt
@@ -122,6 +125,9 @@ fun MongolSelectionHandles(
     onHandleDrag: (MongolSelectionHandleType, Offset) -> Unit,
     onHandleDragStart: (MongolSelectionHandleType) -> Unit = {},
     onHandleDragEnd: (MongolSelectionHandleType) -> Unit = {},
+    onTap: (Offset) -> Unit = {},
+    onDoubleTap: (Offset) -> Unit = {},
+    onLongPress: (Offset) -> Unit = {},
     color: Color = Color(0xFF2196F3),
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -134,6 +140,9 @@ fun MongolSelectionHandles(
     val latestOnDrag by rememberUpdatedState(onHandleDrag)
     val latestOnDragStart by rememberUpdatedState(onHandleDragStart)
     val latestOnDragEnd by rememberUpdatedState(onHandleDragEnd)
+    val latestOnTap by rememberUpdatedState(onTap)
+    val latestOnDoubleTap by rememberUpdatedState(onDoubleTap)
+    val latestOnLongPress by rememberUpdatedState(onLongPress)
 
     state.handles.forEach { handle ->
         key(handle.type) {
@@ -165,6 +174,31 @@ fun MongolSelectionHandles(
                     modifier = Modifier
                         .size(touchSizeDp)
                         .pointerInput(handle.type) {
+                            detectTapGestures(
+                                onTap = { localOffset ->
+                                    val globalX =
+                                        currentOffset.x + (localOffset.x - anchorInTouchArea.x)
+                                    val globalY =
+                                        currentOffset.y + (localOffset.y - anchorInTouchArea.y)
+                                    latestOnTap(Offset(globalX, globalY))
+                                },
+                                onDoubleTap = { localOffset ->
+                                    val globalX =
+                                        currentOffset.x + (localOffset.x - anchorInTouchArea.x)
+                                    val globalY =
+                                        currentOffset.y + (localOffset.y - anchorInTouchArea.y)
+                                    latestOnDoubleTap(Offset(globalX, globalY))
+                                },
+                                onLongPress = { localOffset ->
+                                    val globalX =
+                                        currentOffset.x + (localOffset.x - anchorInTouchArea.x)
+                                    val globalY =
+                                        currentOffset.y + (localOffset.y - anchorInTouchArea.y)
+                                    latestOnLongPress(Offset(globalX, globalY))
+                                }
+                            )
+                        }
+                        .pointerInput(handle.type) {
                             detectDragGestures(
                                 onDragStart = { offset ->
                                     dragOffset = Offset(currentOffset.x, currentOffset.y)
@@ -180,7 +214,8 @@ fun MongolSelectionHandles(
                                 },
                             ) { change, dragAmount ->
                                 change.consume()
-                                val current = dragOffset ?: Offset(currentOffset.x, currentOffset.y)
+                                val current =
+                                    dragOffset ?: Offset(currentOffset.x, currentOffset.y)
                                 val next = current + dragAmount
                                 dragOffset = next
                                 latestOnDrag(handle.type, next)
