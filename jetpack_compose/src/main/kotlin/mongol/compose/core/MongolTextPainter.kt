@@ -145,9 +145,15 @@ class MongolTextPainter(
         }
 
         fun isBreakCluster(start: Int, end: Int): Boolean {
-            if (start >= end || end - start > 1) return false
-            val ch = text[start]
-            return ch == ' ' || ch == '\n'
+            if (start >= end) return false
+            val codePoint = Character.codePointAt(text, start)
+            return MongolTextTools.isBreakOpportunity(codePoint)
+        }
+
+        fun isCursiveCluster(start: Int, end: Int): Boolean {
+            if (start >= end) return false
+            val codePoint = Character.codePointAt(text, start)
+            return MongolTextTools.isMongolian(codePoint)
         }
 
         // True if ANY code point in this cluster is inherently ideographic/emoji,

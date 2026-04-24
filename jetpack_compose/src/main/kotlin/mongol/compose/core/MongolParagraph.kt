@@ -107,10 +107,34 @@ class MongolParagraph(
         didExceedMaxLines = false
     }
 
+    private fun fallbackRunMetrics(startIndex: Int, endIndex: Int): RunMetrics {
+        val clusterAdvances = mutableListOf<Float>()
+        MongolTextTools.forEachGraphemeCluster(text, startIndex, endIndex) { _, _ ->
+            clusterAdvances += glyphAdvancePx
+        }
+        if (clusterAdvances.isEmpty()) {
+            clusterAdvances += glyphAdvancePx
+        }
+        return RunMetrics(
+            advance = clusterAdvances.sum().coerceAtLeast(glyphAdvancePx),
+            crossAxis = columnWidthPx,
+            ascent = glyphAdvancePx * 0.8f,
+            descent = glyphAdvancePx * 0.2f,
+            clusterAdvances = clusterAdvances,
+        )
+    }
+
     private fun computeStagedLayout(availableHeight: Float) {
         if (text.isEmpty()) {
             height = availableHeight
             maxIntrinsicHeight = availableHeight
+            // Provide a default width (column cross-axis) even for empty text
+            // so that empty text fields have a visible width.
+            val emptyRunMetrics = runMeasurer?.measureRun("", false)
+                ?: fallbackRunMetrics(0, 0)
+            width = emptyRunMetrics.crossAxis.coerceAtLeast(columnWidthPx)
+            minIntrinsicHeight = emptyRunMetrics.advance.coerceAtLeast(glyphAdvancePx)
+            longestLine = 0f
             return
         }
 
@@ -149,23 +173,6 @@ class MongolParagraph(
             columns += currentColumn
             consumedAdvance = 0f
             return true
-        }
-
-        fun fallbackRunMetrics(startIndex: Int, endIndex: Int): RunMetrics {
-            val clusterAdvances = mutableListOf<Float>()
-            MongolTextTools.forEachGraphemeCluster(text, startIndex, endIndex) { _, _ ->
-                clusterAdvances += glyphAdvancePx
-            }
-            if (clusterAdvances.isEmpty()) {
-                clusterAdvances += glyphAdvancePx
-            }
-            return RunMetrics(
-                advance = clusterAdvances.sum().coerceAtLeast(glyphAdvancePx),
-                crossAxis = columnWidthPx,
-                ascent = glyphAdvancePx * 0.8f,
-                descent = glyphAdvancePx * 0.2f,
-                clusterAdvances = clusterAdvances,
-            )
         }
 
         fun placeCluster(startIndex: Int, endIndex: Int, metrics: RunMetrics) {
@@ -820,40 +827,43 @@ class MongolParagraph(
 
     fun getOffsetForCaret(position: TextPosition): Offset {
         check(!disposed) { "MongolParagraph is disposed." }
-        if (text.isEmpty() || glyphBoxesByIndex.isEmpty()) {
-            return Offset(0f, 0f)
-        }
-
         val clamped = position.offset.coerceIn(0, text.length)
-        val normalized = when {
-            clamped == text.length -> clamped
-            clamped in 0 until text.length -> MongolTextTools.getGraphemeRangeAt(
-                text,
-                clamped
-            ).start
-
-            else -> 0
+        
+        // Handle empty text
+        if (text.isEmpty()) {
+            return Offset(columns.firstOrNull()?.left ?: 0f, 0f)
         }
 
-        if (normalized == text.length) {
-            for (index in (text.length - 1) downTo 0) {
-                val rect = glyphBoxesByIndex[index] ?: continue
-                return Offset(rect.left, rect.bottom)
+        // Special case: Caret at the very end of the text
+        if (clamped == text.length) {
+            val lastChar = text.last()
+            val lastColumn = columns.lastOrNull()
+            
+            // If the last character is a newline, or the very last column is empty (wrapped)
+            if (lastChar == '\n' || (lastColumn != null && lastColumn.glyphIndices.isEmpty())) {
+                return Offset(lastColumn?.left ?: 0f, 0f)
             }
-            return Offset(0f, 0f)
+            
+            // Otherwise, position it at the bottom of the last character
+            val lastIdx = lastColumn?.glyphIndices?.lastOrNull() ?: (text.length - 1)
+            val rect = glyphBoxesByIndex[lastIdx]
+            return if (rect != null) Offset(rect.left, rect.bottom) else Offset(0f, 0f)
         }
 
+        // Normal case: get the left-top of the grapheme at the caret position
+        val graphemeRange = MongolTextTools.getGraphemeRangeAt(text, clamped.coerceAtMost(text.length - 1))
+        val normalized = graphemeRange.start
         val exact = glyphBoxesByIndex[normalized]
         if (exact != null) {
             return Offset(exact.left, exact.top)
         }
 
-        val prev = glyphBoxesByIndex[(normalized - 1).coerceAtLeast(0)]
-        return if (prev != null) {
-            Offset(prev.left, prev.bottom)
-        } else {
-            Offset(0f, 0f)
+        // Fallback search
+        for (i in normalized downTo 0) {
+            val rect = glyphBoxesByIndex[i] ?: continue
+            return Offset(rect.left, rect.bottom)
         }
+        return Offset(columns.firstOrNull()?.left ?: 0f, 0f)
     }
 
     fun getWordBoundary(position: TextPosition): TextRange {
@@ -916,7 +926,6 @@ class MongolParagraph(
         if (columns.isEmpty()) return emptyList()
 
         val metrics = ArrayList<MongolLineMetrics>(columns.size)
-        var baseline = 0f
 
         for ((lineNumber, column) in columns.withIndex()) {
             val visualHeight = column.usedAdvance
@@ -938,11 +947,10 @@ class MongolParagraph(
                 height = visualHeight,
                 width = if (column.maxCrossAxis > 0f) column.maxCrossAxis else columnWidthPx,
                 top = top,
-                baseline = baseline,
+                baseline = column.left, // Use the actual left X-coordinate
                 lineNumber = lineNumber,
             )
             metrics += lineMetric
-            baseline += column.maxAscent + column.maxDescent
         }
 
         return metrics

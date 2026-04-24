@@ -7,7 +7,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.SpanStyle
-import mongol.compose.core.MongolTextTools
 import mongol.compose.core.TextPosition
 import mongol.compose.core.TextRange
 
@@ -310,7 +309,12 @@ class MongolEditableState(initialText: String) {
         }
         if (caret.offset <= 0) return
         pushUndoSnapshot()
-        val start = MongolTextTools.getOffsetBefore(caret.offset, text) ?: return
+        // Use code point offset instead of grapheme cluster to allow deleting FVS individually
+        val start = try {
+            text.offsetByCodePoints(caret.offset, -1)
+        } catch (e: Exception) {
+            caret.offset - 1
+        }.coerceAtLeast(0)
         spans = spans.adjustForDelete(start, caret.offset)
         text = text.removeRange(start, caret.offset)
         caret = TextPosition(start)
@@ -328,7 +332,12 @@ class MongolEditableState(initialText: String) {
         }
         if (caret.offset >= text.length) return
         pushUndoSnapshot()
-        val end = MongolTextTools.getOffsetAfter(caret.offset, text) ?: return
+        // Use code point offset instead of grapheme cluster to allow deleting FVS individually
+        val end = try {
+            text.offsetByCodePoints(caret.offset, 1)
+        } catch (e: Exception) {
+            caret.offset + 1
+        }.coerceAtMost(text.length)
         spans = spans.adjustForDelete(caret.offset, end)
         text = text.removeRange(caret.offset, end)
         selection = MongolSelection(caret.offset, caret.offset)

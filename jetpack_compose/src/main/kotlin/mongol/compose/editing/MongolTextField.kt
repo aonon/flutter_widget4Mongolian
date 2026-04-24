@@ -1,9 +1,6 @@
 package mongol.compose.editing
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +10,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.InputTransformation
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
@@ -33,324 +31,66 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import mongol.compose.core.MongolTextAlign
 import mongol.compose.core.TextRun
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 @Immutable
 data class MongolTextFieldColors(
-    val focusedContainerColor: Color,
-    val unfocusedContainerColor: Color,
-    val disabledContainerColor: Color,
-    val errorContainerColor: Color,
-    val focusedBorderColor: Color,
-    val unfocusedBorderColor: Color,
-    val disabledBorderColor: Color,
-    val errorBorderColor: Color,
-    val focusedTextColor: Color,
-    val unfocusedTextColor: Color,
-    val disabledTextColor: Color,
-    val errorTextColor: Color,
-    val focusedPlaceholderColor: Color,
-    val unfocusedPlaceholderColor: Color,
-    val disabledPlaceholderColor: Color,
-    val errorPlaceholderColor: Color,
-    val focusedLabelColor: Color,
-    val unfocusedLabelColor: Color,
-    val disabledLabelColor: Color,
-    val errorLabelColor: Color,
-    val focusedSupportingTextColor: Color,
-    val unfocusedSupportingTextColor: Color,
-    val disabledSupportingTextColor: Color,
-    val errorSupportingTextColor: Color,
-    val caretColor: Color,
-    val errorCaretColor: Color,
-    val selectionColor: Color,
+    val focusedContainerColor: Color, val unfocusedContainerColor: Color, val disabledContainerColor: Color, val errorContainerColor: Color,
+    val focusedBorderColor: Color, val unfocusedBorderColor: Color, val disabledBorderColor: Color, val errorBorderColor: Color,
+    val focusedTextColor: Color, val unfocusedTextColor: Color, val disabledTextColor: Color, val errorTextColor: Color,
+    val focusedPlaceholderColor: Color, val unfocusedPlaceholderColor: Color, val disabledPlaceholderColor: Color, val errorPlaceholderColor: Color,
+    val focusedLabelColor: Color, val unfocusedLabelColor: Color, val disabledLabelColor: Color, val errorLabelColor: Color,
+    val focusedSupportingTextColor: Color, val unfocusedSupportingTextColor: Color, val disabledSupportingTextColor: Color, val errorSupportingTextColor: Color,
+    val caretColor: Color, val errorCaretColor: Color, val selectionColor: Color,
 ) {
-    fun containerColor(enabled: Boolean, focused: Boolean, isError: Boolean): Color {
-        if (!enabled) return disabledContainerColor
-        if (isError) return errorContainerColor
-        return if (focused) focusedContainerColor else unfocusedContainerColor
-    }
-
-    fun borderColor(enabled: Boolean, focused: Boolean, isError: Boolean): Color {
-        if (isError) return errorBorderColor
-        if (!enabled) return disabledBorderColor
-        return if (focused) focusedBorderColor else unfocusedBorderColor
-    }
-
-    fun textColor(enabled: Boolean, focused: Boolean, isError: Boolean): Color {
-        if (!enabled) return disabledTextColor
-        if (isError) return errorTextColor
-        return if (focused) focusedTextColor else unfocusedTextColor
-    }
-
-    fun placeholderColor(enabled: Boolean, focused: Boolean, isError: Boolean): Color {
-        if (!enabled) return disabledPlaceholderColor
-        if (isError) return errorPlaceholderColor
-        return if (focused) focusedPlaceholderColor else unfocusedPlaceholderColor
-    }
-
-    fun labelColor(enabled: Boolean, focused: Boolean, isError: Boolean): Color {
-        if (isError) return errorLabelColor
-        if (!enabled) return disabledLabelColor
-        return if (focused) focusedLabelColor else unfocusedLabelColor
-    }
-
-    fun supportingColor(enabled: Boolean, focused: Boolean, isError: Boolean): Color {
-        if (isError) return errorSupportingTextColor
-        if (!enabled) return disabledSupportingTextColor
-        return if (focused) focusedSupportingTextColor else unfocusedSupportingTextColor
-    }
-
-    fun caretColor(isError: Boolean): Color {
-        return if (isError) errorCaretColor else caretColor
-    }
+    fun containerColor(e: Boolean, f: Boolean, r: Boolean): Color = if (!e) disabledContainerColor else if (r) errorContainerColor else if (f) focusedContainerColor else unfocusedContainerColor
+    fun borderColor(e: Boolean, f: Boolean, r: Boolean): Color = if (r) errorBorderColor else if (!e) disabledBorderColor else if (f) focusedBorderColor else unfocusedBorderColor
+    fun textColor(e: Boolean, f: Boolean, r: Boolean): Color = if (!e) disabledTextColor else if (r) errorTextColor else if (f) focusedTextColor else unfocusedTextColor
+    fun placeholderColor(e: Boolean, f: Boolean, r: Boolean): Color = if (!e) disabledPlaceholderColor else if (r) errorPlaceholderColor else if (f) focusedPlaceholderColor else unfocusedPlaceholderColor
+    fun labelColor(e: Boolean, f: Boolean, r: Boolean): Color = if (r) errorLabelColor else if (!e) disabledLabelColor else if (f) focusedLabelColor else unfocusedLabelColor
+    fun supportingColor(e: Boolean, f: Boolean, r: Boolean): Color = if (r) errorSupportingTextColor else if (!e) disabledSupportingTextColor else if (f) focusedSupportingTextColor else unfocusedSupportingTextColor
+    fun caretColor(r: Boolean): Color = if (r) errorCaretColor else caretColor
 }
 
 @Immutable
 data class MongolTextFieldDecorationState(
-    val text: String,
-    val isEmpty: Boolean,
-    val focused: Boolean,
-    val enabled: Boolean,
-    val readOnly: Boolean,
-    val style: TextStyle,
-    val textAlign: MongolTextAlign,
-    val textRuns: List<TextRun>?,
-    val rotateCjk: Boolean,
-    val isError: Boolean,
+    val text: String, val isEmpty: Boolean, val focused: Boolean, val enabled: Boolean, val readOnly: Boolean,
+    val style: TextStyle, val textAlign: MongolTextAlign, val textRuns: List<TextRun>?, val rotateCjk: Boolean, val isError: Boolean,
 )
 
-enum class MongolTextFieldLabelPosition {
-    Attached,
-    Above,
-}
+enum class MongolTextFieldLabelPosition { Attached, Above }
 
-private fun applyInputTransformation(
-    current: String,
-    proposed: String,
-    inputTransformation: InputTransformation?,
-): String {
-    if (inputTransformation == null || current == proposed) return proposed
-
-    val prefixLength = current.commonPrefixWith(proposed).length
-    var currentSuffixLength = 0
-    var proposedSuffixLength = 0
-    val maxSuffixLength = minOf(current.length - prefixLength, proposed.length - prefixLength)
-    while (
-        currentSuffixLength < maxSuffixLength &&
-        current[current.length - currentSuffixLength - 1] ==
-        proposed[proposed.length - proposedSuffixLength - 1]
-    ) {
-        currentSuffixLength += 1
-        proposedSuffixLength += 1
-    }
-
-    val currentReplaceEnd = current.length - currentSuffixLength
-    val proposedReplaceEnd = proposed.length - proposedSuffixLength
-    val replacement = proposed.substring(prefixLength, proposedReplaceEnd)
-
-    val transformedState = TextFieldState(
-        initialText = current,
-        initialSelection = TextRange(current.length),
-    )
-    transformedState.edit {
-        replace(prefixLength, currentReplaceEnd, replacement)
-        selection = TextRange(prefixLength + replacement.length)
-        with(inputTransformation) {
-            transformInput()
-        }
-    }
-    return transformedState.text.toString()
+private fun applyInputTransformation(c: String, p: String, t: InputTransformation?): String {
+    if (t == null || c == p) return p
+    val s = TextFieldState(c, TextRange(c.length))
+    s.edit { val pl = c.commonPrefixWith(p).length; val sl = c.substring(pl).commonSuffixWith(p.substring(pl)).length; replace(pl, c.length - sl, p.substring(pl, p.length - sl)); with(t) { transformInput() } }
+    return s.text.toString()
 }
 
 object MongolTextFieldDefaults {
-    val FocusedBorderThickness: Dp = 2.dp
-    val UnfocusedBorderThickness: Dp = 1.dp
-    val FocusedIndicatorThickness: Dp = 2.dp
-    val UnfocusedIndicatorThickness: Dp = 1.dp
-
-    @Composable
-    fun filledColors(): MongolTextFieldColors = colors(TextFieldDefaults.colors())
-
-    @Composable
-    fun colors(): MongolTextFieldColors = filledColors()
-
-    fun colors(material3Colors: TextFieldColors): MongolTextFieldColors {
-        return MongolTextFieldColors(
-            focusedContainerColor = material3Colors.focusedContainerColor,
-            unfocusedContainerColor = material3Colors.unfocusedContainerColor,
-            disabledContainerColor = material3Colors.disabledContainerColor,
-            errorContainerColor = material3Colors.errorContainerColor,
-            focusedBorderColor = material3Colors.focusedIndicatorColor,
-            unfocusedBorderColor = material3Colors.unfocusedIndicatorColor,
-            disabledBorderColor = material3Colors.disabledIndicatorColor,
-            errorBorderColor = material3Colors.errorIndicatorColor,
-            focusedTextColor = material3Colors.focusedTextColor,
-            unfocusedTextColor = material3Colors.unfocusedTextColor,
-            disabledTextColor = material3Colors.disabledTextColor,
-            errorTextColor = material3Colors.errorTextColor,
-            focusedPlaceholderColor = material3Colors.focusedPlaceholderColor,
-            unfocusedPlaceholderColor = material3Colors.unfocusedPlaceholderColor,
-            disabledPlaceholderColor = material3Colors.disabledPlaceholderColor,
-            errorPlaceholderColor = material3Colors.errorPlaceholderColor,
-            focusedLabelColor = material3Colors.focusedLabelColor,
-            unfocusedLabelColor = material3Colors.unfocusedLabelColor,
-            disabledLabelColor = material3Colors.disabledLabelColor,
-            errorLabelColor = material3Colors.errorLabelColor,
-            focusedSupportingTextColor = material3Colors.focusedSupportingTextColor,
-            unfocusedSupportingTextColor = material3Colors.unfocusedSupportingTextColor,
-            disabledSupportingTextColor = material3Colors.disabledSupportingTextColor,
-            errorSupportingTextColor = material3Colors.errorSupportingTextColor,
-            caretColor = material3Colors.cursorColor,
-            errorCaretColor = material3Colors.errorCursorColor,
-            selectionColor = material3Colors.textSelectionColors.backgroundColor,
-        )
-    }
-
-    @Composable
-    fun OutlinedDecorationBox(
-        decorationState: MongolTextFieldDecorationState,
-        innerTextField: @Composable () -> Unit,
-        modifier: Modifier = Modifier,
-        label: (@Composable () -> Unit)? = null,
-        labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
-        placeholder: (@Composable () -> Unit)? = null,
-        leadingIcon: (@Composable () -> Unit)? = null,
-        trailingIcon: (@Composable () -> Unit)? = null,
-        prefix: (@Composable () -> Unit)? = null,
-        suffix: (@Composable () -> Unit)? = null,
-        colors: MongolTextFieldColors = colors(),
-        contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        shape: Shape = RoundedCornerShape(12.dp),
-        focusedBorderWidth: Dp = FocusedBorderThickness,
-        unfocusedBorderWidth: Dp = UnfocusedBorderThickness,
-        placeholderStyle: TextStyle = decorationState.style,
-    ) {
-        val effectiveBorderWidth =
-            if (decorationState.focused) focusedBorderWidth else unfocusedBorderWidth
-        val container: @Composable (Modifier) -> Unit = { containerModifier ->
-            Row(
-                modifier = containerModifier
-                    .background(
-                        color = colors.containerColor(
-                            enabled = decorationState.enabled,
-                            focused = decorationState.focused,
-                            isError = decorationState.isError,
-                        ),
-                        shape = shape,
-                    )
-                    .border(
-                        width = effectiveBorderWidth,
-                        color = colors.borderColor(
-                            enabled = decorationState.enabled,
-                            focused = decorationState.focused,
-                            isError = decorationState.isError,
-                        ),
-                        shape = shape,
-                    )
-                    .padding(contentPadding),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (label != null && labelPosition == MongolTextFieldLabelPosition.Attached) {
-                    CompositionLocalProvider(
-                        LocalContentColor provides colors.labelColor(
-                            enabled = decorationState.enabled,
-                            focused = decorationState.focused,
-                            isError = decorationState.isError,
-                        ),
-                    ) {
-                        label()
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.Start,
-                ) {
-                    leadingIcon?.invoke()
-                    prefix?.invoke()
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f),
-                    ) {
-                        if (decorationState.isEmpty && placeholder != null) {
-                            androidx.compose.material3.ProvideTextStyle(placeholderStyle) {
-                                CompositionLocalProvider(
-                                    LocalContentColor provides colors.placeholderColor(
-                                        enabled = decorationState.enabled,
-                                        focused = decorationState.focused,
-                                        isError = decorationState.isError,
-                                    ),
-                                ) {
-                                    placeholder()
-                                }
-                            }
-                        }
-                        innerTextField()
-                    }
-
-                    suffix?.invoke()
-                    trailingIcon?.invoke()
-                }
-            }
-        }
-
-        container(modifier)
-    }
-
-    @Composable
-    fun DecorationBox(
-        decorationState: MongolTextFieldDecorationState,
-        innerTextField: @Composable () -> Unit,
-        modifier: Modifier = Modifier,
-        label: (@Composable () -> Unit)? = null,
-        labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
-        placeholder: (@Composable () -> Unit)? = null,
-        leadingIcon: (@Composable () -> Unit)? = null,
-        trailingIcon: (@Composable () -> Unit)? = null,
-        prefix: (@Composable () -> Unit)? = null,
-        suffix: (@Composable () -> Unit)? = null,
-        colors: MongolTextFieldColors = colors(),
-        contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        shape: Shape = RoundedCornerShape(12.dp),
-        focusedBorderWidth: Dp = FocusedBorderThickness,
-        unfocusedBorderWidth: Dp = UnfocusedBorderThickness,
-        placeholderStyle: TextStyle = decorationState.style,
-    ) {
-        OutlinedDecorationBox(
-            decorationState = decorationState,
-            innerTextField = innerTextField,
-            modifier = modifier,
-            label = label,
-            labelPosition = labelPosition,
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            colors = colors,
-            contentPadding = contentPadding,
-            shape = shape,
-            focusedBorderWidth = focusedBorderWidth,
-            unfocusedBorderWidth = unfocusedBorderWidth,
-            placeholderStyle = placeholderStyle,
-        )
-    }
+    @Composable fun colors(): MongolTextFieldColors = colors(TextFieldDefaults.colors())
+    fun colors(m: TextFieldColors): MongolTextFieldColors = MongolTextFieldColors(
+        focusedContainerColor = m.focusedContainerColor, unfocusedContainerColor = m.unfocusedContainerColor, disabledContainerColor = m.disabledContainerColor, errorContainerColor = m.errorContainerColor,
+        focusedBorderColor = m.focusedIndicatorColor, unfocusedBorderColor = m.unfocusedIndicatorColor, disabledBorderColor = m.disabledIndicatorColor, errorBorderColor = m.errorIndicatorColor,
+        focusedTextColor = m.focusedTextColor, unfocusedTextColor = m.unfocusedTextColor, disabledTextColor = m.disabledTextColor, errorTextColor = m.errorTextColor,
+        focusedPlaceholderColor = m.focusedPlaceholderColor, unfocusedPlaceholderColor = m.unfocusedPlaceholderColor, disabledPlaceholderColor = m.disabledPlaceholderColor, errorPlaceholderColor = m.errorPlaceholderColor,
+        focusedLabelColor = m.focusedLabelColor, unfocusedLabelColor = m.unfocusedLabelColor, disabledLabelColor = m.disabledLabelColor, errorLabelColor = m.errorLabelColor,
+        focusedSupportingTextColor = m.focusedSupportingTextColor, unfocusedSupportingTextColor = m.unfocusedSupportingTextColor, disabledSupportingTextColor = m.disabledSupportingTextColor, errorSupportingTextColor = m.errorSupportingTextColor,
+        caretColor = m.cursorColor, errorCaretColor = m.errorCursorColor, selectionColor = m.textSelectionColors.backgroundColor,
+    )
 
     @Composable
     fun FilledDecorationBox(
@@ -365,690 +105,95 @@ object MongolTextFieldDefaults {
         prefix: (@Composable () -> Unit)? = null,
         suffix: (@Composable () -> Unit)? = null,
         colors: MongolTextFieldColors = colors(),
-        contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+        contentPadding: PaddingValues = PaddingValues(12.dp, 10.dp),
         shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-        focusedIndicatorWidth: Dp = FocusedIndicatorThickness,
-        unfocusedIndicatorWidth: Dp = UnfocusedIndicatorThickness,
+        focusedIndicatorWidth: Dp = 2.dp,
+        unfocusedIndicatorWidth: Dp = 1.dp,
         placeholderStyle: TextStyle = decorationState.style,
     ) {
-        val effectiveIndicatorWidth =
-            if (decorationState.focused) focusedIndicatorWidth else unfocusedIndicatorWidth
-        val container: @Composable (Modifier) -> Unit = { containerModifier ->
-            Row(
-                modifier = containerModifier
-                    .background(
-                        color = colors.containerColor(
-                            enabled = decorationState.enabled,
-                            focused = decorationState.focused,
-                            isError = decorationState.isError,
-                        ),
-                        shape = shape,
-                    ),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(contentPadding),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (label != null && labelPosition == MongolTextFieldLabelPosition.Attached) {
-                        CompositionLocalProvider(
-                            LocalContentColor provides colors.labelColor(
-                                enabled = decorationState.enabled,
-                                focused = decorationState.focused,
-                                isError = decorationState.isError,
-                            ),
-                        ) {
-                            label()
-                        }
+        val iw = if (decorationState.focused) focusedIndicatorWidth else unfocusedIndicatorWidth
+        Row(modifier.background(colors.containerColor(decorationState.enabled, decorationState.focused, decorationState.isError), shape)) {
+            Row(Modifier.weight(1f).fillMaxHeight().padding(contentPadding), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
+                if (label != null && labelPosition == MongolTextFieldLabelPosition.Attached) { CompositionLocalProvider(LocalContentColor provides colors.labelColor(decorationState.enabled, decorationState.focused, decorationState.isError)) { label() } }
+                Column(Modifier.weight(1f).fillMaxHeight(), Arrangement.spacedBy(8.dp), Alignment.CenterHorizontally) {
+                    leadingIcon?.invoke(); prefix?.invoke()
+                    Box(Modifier.weight(1f), Alignment.TopCenter) {
+                        if (decorationState.isEmpty && placeholder != null) { CompositionLocalProvider(LocalContentColor provides colors.placeholderColor(decorationState.enabled, decorationState.focused, decorationState.isError)) { androidx.compose.material3.ProvideTextStyle(placeholderStyle) { placeholder() } } }
+                        innerTextField()
                     }
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalAlignment = Alignment.Start,
-                    ) {
-                        leadingIcon?.invoke()
-                        prefix?.invoke()
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f),
-                        ) {
-                            if (decorationState.isEmpty && placeholder != null) {
-                                androidx.compose.material3.ProvideTextStyle(placeholderStyle) {
-                                    CompositionLocalProvider(
-                                        LocalContentColor provides colors.placeholderColor(
-                                            enabled = decorationState.enabled,
-                                            focused = decorationState.focused,
-                                            isError = decorationState.isError,
-                                        ),
-                                    ) {
-                                        placeholder()
-                                    }
-                                }
-                            }
-                            innerTextField()
-                        }
-
-                        suffix?.invoke()
-                        trailingIcon?.invoke()
-                    }
+                    suffix?.invoke(); trailingIcon?.invoke()
                 }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(effectiveIndicatorWidth)
-                        .background(
-                            color = colors.borderColor(
-                                enabled = decorationState.enabled,
-                                focused = decorationState.focused,
-                                isError = decorationState.isError,
-                            ),
-                        ),
-                )
             }
+            Box(Modifier.fillMaxHeight().width(iw).background(colors.borderColor(decorationState.enabled, decorationState.focused, decorationState.isError)))
         }
-
-        container(modifier)
     }
 }
 
-/**
- * High-level editable entry point for a filled text field.
- */
 @Composable
 fun MongolTextField(
-    state: MongolEditableState,
-    modifier: Modifier = Modifier,
-    style: TextStyle = TextStyle.Default,
-    textAlign: MongolTextAlign = MongolTextAlign.TOP,
-    textRuns: List<TextRun>? = null,
-    rotateCjk: Boolean = true,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    caretColor: Color = Color.Unspecified,
-    selectionColor: Color = Color.Unspecified,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    onTextChange: (String) -> Unit = {},
-    value: String? = null,
-    onValueChange: ((String) -> Unit)? = null,
-    onInputSessionReady: (MongolInputSession) -> Unit = {},
-    onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
-    inputTransformation: InputTransformation? = null,
-    singleLine: Boolean = false,
-    label: (@Composable () -> Unit)? = null,
-    labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
-    isError: Boolean = false,
-    placeholder: (@Composable () -> Unit)? = null,
-    placeholderStyle: TextStyle = style,
-    supportingText: (@Composable () -> Unit)? = null,
-    leadingIcon: (@Composable () -> Unit)? = null,
-    trailingIcon: (@Composable () -> Unit)? = null,
-    prefix: (@Composable () -> Unit)? = null,
-    suffix: (@Composable () -> Unit)? = null,
-    colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
-    shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-    focusedIndicatorWidth: Dp = MongolTextFieldDefaults.FocusedIndicatorThickness,
-    unfocusedIndicatorWidth: Dp = MongolTextFieldDefaults.UnfocusedIndicatorThickness,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-    decorationBox: @Composable (
-        innerTextField: @Composable () -> Unit,
-        decorationState: MongolTextFieldDecorationState,
-    ) -> Unit = { innerTextField, decorationState ->
-        MongolTextFieldDefaults.FilledDecorationBox(
-            decorationState = decorationState,
-            innerTextField = innerTextField,
-            label = label,
-            labelPosition = labelPosition,
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            colors = colors,
-            contentPadding = contentPadding,
-            shape = shape,
-            focusedIndicatorWidth = focusedIndicatorWidth,
-            unfocusedIndicatorWidth = unfocusedIndicatorWidth,
-            placeholderStyle = placeholderStyle,
-        )
-    },
+    state: MongolEditableState, modifier: Modifier = Modifier, style: TextStyle = TextStyle.Default, textAlign: MongolTextAlign = MongolTextAlign.TOP,
+    textRuns: List<TextRun>? = null, rotateCjk: Boolean = true, enabled: Boolean = true, readOnly: Boolean = false,
+    caretColor: Color = Color.Unspecified, selectionColor: Color = Color.Unspecified, keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onTextChange: (String) -> Unit = {}, value: String? = null, onValueChange: ((String) -> Unit)? = null,
+    onInputSessionReady: (MongolInputSession) -> Unit = {}, onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
+    inputTransformation: InputTransformation? = null, lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
+    label: (@Composable () -> Unit)? = null, labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
+    isError: Boolean = false, placeholder: (@Composable () -> Unit)? = null, placeholderStyle: TextStyle = style,
+    supportingText: (@Composable () -> Unit)? = null, leadingIcon: (@Composable () -> Unit)? = null, trailingIcon: (@Composable () -> Unit)? = null,
+    prefix: (@Composable () -> Unit)? = null, suffix: (@Composable () -> Unit)? = null, colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
     autoWidthByContent: Boolean = true,
 ) {
-    MongolOutlinedTextField(
-        state = state,
-        modifier = modifier,
-        style = style,
-        textAlign = textAlign,
-        textRuns = textRuns,
-        rotateCjk = rotateCjk,
-        enabled = enabled,
-        readOnly = readOnly,
-        caretColor = caretColor,
-        selectionColor = selectionColor,
-        keyboardOptions = keyboardOptions,
-        onTextChange = onTextChange,
-        value = value,
-        onValueChange = onValueChange,
-        onInputSessionReady = onInputSessionReady,
-        onSelectionHandlesChanged = onSelectionHandlesChanged,
-        inputTransformation = inputTransformation,
-        singleLine = singleLine,
-        label = label,
-        labelPosition = labelPosition,
-        isError = isError,
-        placeholder = placeholder,
-        placeholderStyle = placeholderStyle,
-        supportingText = supportingText,
-        leadingIcon = leadingIcon,
-        trailingIcon = trailingIcon,
-        prefix = prefix,
-        suffix = suffix,
-        colors = colors,
-        shape = shape,
-        focusedBorderWidth = focusedIndicatorWidth,
-        unfocusedBorderWidth = unfocusedIndicatorWidth,
-        contentPadding = contentPadding,
-        decorationBox = decorationBox,
-        autoWidthByContent = autoWidthByContent,
-    )
-}
-
-/**
- * Value-based overload for Compose-style call sites.
- */
-@Composable
-fun MongolOutlinedTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    style: TextStyle = TextStyle.Default,
-    textAlign: MongolTextAlign = MongolTextAlign.TOP,
-    textRuns: List<TextRun>? = null,
-    rotateCjk: Boolean = true,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    caretColor: Color = Color.Unspecified,
-    selectionColor: Color = Color.Unspecified,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    onInputSessionReady: (MongolInputSession) -> Unit = {},
-    onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
-    inputTransformation: InputTransformation? = null,
-    singleLine: Boolean = false,
-    label: (@Composable () -> Unit)? = null,
-    labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
-    isError: Boolean = false,
-    placeholder: (@Composable () -> Unit)? = null,
-    placeholderStyle: TextStyle = style,
-    supportingText: (@Composable () -> Unit)? = null,
-    leadingIcon: (@Composable () -> Unit)? = null,
-    trailingIcon: (@Composable () -> Unit)? = null,
-    prefix: (@Composable () -> Unit)? = null,
-    suffix: (@Composable () -> Unit)? = null,
-    colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
-    shape: Shape = RoundedCornerShape(12.dp),
-    focusedBorderWidth: Dp = MongolTextFieldDefaults.FocusedBorderThickness,
-    unfocusedBorderWidth: Dp = MongolTextFieldDefaults.UnfocusedBorderThickness,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-    decorationBox: @Composable (
-        innerTextField: @Composable () -> Unit,
-        decorationState: MongolTextFieldDecorationState,
-    ) -> Unit = { innerTextField, decorationState ->
-        MongolTextFieldDefaults.OutlinedDecorationBox(
-            decorationState = decorationState,
-            innerTextField = innerTextField,
-            label = label,
-            labelPosition = labelPosition,
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            colors = colors,
-            contentPadding = contentPadding,
-            shape = shape,
-            focusedBorderWidth = focusedBorderWidth,
-            unfocusedBorderWidth = unfocusedBorderWidth,
-            placeholderStyle = placeholderStyle,
-        )
-    },
-    autoWidthByContent: Boolean = true,
-) {
-    val state = rememberMongolEditableState(initialText = value)
-
-    MongolOutlinedTextField(
-        state = state,
-        modifier = modifier,
-        style = style,
-        textAlign = textAlign,
-        textRuns = textRuns,
-        rotateCjk = rotateCjk,
-        enabled = enabled,
-        readOnly = readOnly,
-        caretColor = caretColor,
-        selectionColor = selectionColor,
-        keyboardOptions = keyboardOptions,
-        onValueChange = onValueChange,
-        value = value,
-        onInputSessionReady = onInputSessionReady,
-        onSelectionHandlesChanged = onSelectionHandlesChanged,
-        inputTransformation = inputTransformation,
-        singleLine = singleLine,
-        label = label,
-        labelPosition = labelPosition,
-        isError = isError,
-        placeholder = placeholder,
-        placeholderStyle = placeholderStyle,
-        supportingText = supportingText,
-        leadingIcon = leadingIcon,
-        trailingIcon = trailingIcon,
-        prefix = prefix,
-        suffix = suffix,
-        colors = colors,
-        shape = shape,
-        focusedBorderWidth = focusedBorderWidth,
-        unfocusedBorderWidth = unfocusedBorderWidth,
-        contentPadding = contentPadding,
-        decorationBox = decorationBox,
-        autoWidthByContent = autoWidthByContent,
-    )
-}
-
-/**
- * High-level editable entry point for an outlined text field.
- */
-@Composable
-fun MongolOutlinedTextField(
-    state: MongolEditableState,
-    modifier: Modifier = Modifier,
-    style: TextStyle = TextStyle.Default,
-    textAlign: MongolTextAlign = MongolTextAlign.TOP,
-    textRuns: List<TextRun>? = null,
-    rotateCjk: Boolean = true,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    caretColor: Color = Color.Unspecified,
-    selectionColor: Color = Color.Unspecified,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    onTextChange: (String) -> Unit = {},
-    value: String? = null,
-    onValueChange: ((String) -> Unit)? = null,
-    onInputSessionReady: (MongolInputSession) -> Unit = {},
-    onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
-    inputTransformation: InputTransformation? = null,
-    singleLine: Boolean = false,
-    label: (@Composable () -> Unit)? = null,
-    labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
-    isError: Boolean = false,
-    placeholder: (@Composable () -> Unit)? = null,
-    placeholderStyle: TextStyle = style,
-    supportingText: (@Composable () -> Unit)? = null,
-    leadingIcon: (@Composable () -> Unit)? = null,
-    trailingIcon: (@Composable () -> Unit)? = null,
-    prefix: (@Composable () -> Unit)? = null,
-    suffix: (@Composable () -> Unit)? = null,
-    colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
-    shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-    focusedBorderWidth: Dp = MongolTextFieldDefaults.FocusedBorderThickness,
-    unfocusedBorderWidth: Dp = MongolTextFieldDefaults.UnfocusedBorderThickness,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-    decorationBox: @Composable (
-        innerTextField: @Composable () -> Unit,
-        decorationState: MongolTextFieldDecorationState,
-    ) -> Unit = { innerTextField, decorationState ->
-        MongolTextFieldDefaults.OutlinedDecorationBox(
-            decorationState = decorationState,
-            innerTextField = innerTextField,
-            label = label,
-            labelPosition = labelPosition,
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            colors = colors,
-            contentPadding = contentPadding,
-            shape = shape,
-            focusedBorderWidth = focusedBorderWidth,
-            unfocusedBorderWidth = unfocusedBorderWidth,
-            placeholderStyle = placeholderStyle,
-        )
-    },
-    autoWidthByContent: Boolean = true,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(value, state) {
-        if (value != null && value != state.text) {
-            state.replaceText(value)
-        }
-    }
-
-    fun normalizeText(next: String): String {
-        var normalized = applyInputTransformation(state.text, next, inputTransformation)
-        normalized = if (singleLine) {
-            normalized.replace('\n', ' ')
-        } else {
-            normalized
-        }
-        return normalized
-    }
-
-    val effectiveOnTextChange: (String) -> Unit = onValueChange ?: onTextChange
-
-    val decorationState = MongolTextFieldDecorationState(
-        text = state.text,
-        isEmpty = state.text.isEmpty(),
-        focused = focused,
-        enabled = enabled,
-        readOnly = readOnly,
-        style = style.copy(color = colors.textColor(enabled, focused, isError)),
-        textAlign = textAlign,
-        textRuns = textRuns,
-        rotateCjk = rotateCjk,
-        isError = isError,
-    )
-
-    val effectiveCaretColor =
-        if (caretColor != Color.Unspecified) caretColor else colors.caretColor(isError)
-    val effectiveSelectionColor =
-        if (selectionColor != Color.Unspecified) selectionColor else colors.selectionColor
-
-    val innerTextField: @Composable () -> Unit = {
-        MongolBasicTextField(
-            state = state,
-            modifier = Modifier
-                .fillMaxHeight()
-                .focusRequester(focusRequester),
-            style = style.copy(color = colors.textColor(enabled, focused, isError)),
-            textAlign = textAlign,
-            textRuns = textRuns,
-            rotateCjk = rotateCjk,
-            enabled = enabled,
-            readOnly = readOnly,
-            caretColor = effectiveCaretColor,
-            selectionColor = effectiveSelectionColor,
-            keyboardOptions = keyboardOptions,
-            singleLine = singleLine,
-            normalizeTextChange = { current, proposed ->
-                var normalized = applyInputTransformation(current, proposed, inputTransformation)
-                if (singleLine) {
-                    normalized = normalized.replace('\n', ' ')
-                }
-                normalized
-            },
-            onTextChange = { next ->
-                val normalized = normalizeText(next)
-                if (normalized != next) {
-                    state.replaceText(normalized)
-                }
-                effectiveOnTextChange(normalized)
-            },
-            onInputSessionReady = onInputSessionReady,
-            onSelectionHandlesChanged = onSelectionHandlesChanged,
-            onFocusChanged = { focused = it },
-        )
-    }
-
+    val density = LocalDensity.current; var focused by remember { mutableStateOf(false) }; val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(value, state) { if (value != null && value != state.text) state.replaceText(value) }
+    val isSingleLine = lineLimits == TextFieldLineLimits.SingleLine
+    val minL = if (isSingleLine) 1 else (lineLimits as? TextFieldLineLimits.MultiLine)?.minHeightInLines ?: 1
+    val maxL = if (isSingleLine) 1 else (lineLimits as? TextFieldLineLimits.MultiLine)?.maxHeightInLines ?: Int.MAX_VALUE
+    val fs = with(density) { if (style.fontSize.isSp) style.fontSize.toPx() else 16.sp.toPx() }; val ls = (fs * 1.5f).roundToInt()
+    val ds = MongolTextFieldDecorationState(state.text, state.text.isEmpty(), focused, enabled, readOnly, style.copy(colors.textColor(enabled, focused, isError)), textAlign, textRuns, rotateCjk, isError)
+    val inner: @Composable () -> Unit = { MongolBasicTextField(state, Modifier.fillMaxHeight().focusRequester(focusRequester), style.copy(colors.textColor(enabled, focused, isError)), textAlign, textRuns, rotateCjk, enabled, readOnly, if (caretColor != Color.Unspecified) caretColor else colors.caretColor(isError), if (selectionColor != Color.Unspecified) selectionColor else colors.selectionColor, keyboardOptions, lineLimits, { c, p -> val n = applyInputTransformation(c, p, inputTransformation); if (isSingleLine) n.replace('\n', ' ') else n }, { n -> val f = if (isSingleLine) n.replace('\n', ' ') else n; if (f != n) state.replaceText(f); (onValueChange ?: onTextChange)(f) }, onInputSessionReady, onSelectionHandlesChanged, { focused = it }) }
     val showAboveLabel = label != null && labelPosition == MongolTextFieldLabelPosition.Above
-
+    
     Layout(
-        modifier = modifier
-            .pointerInput(enabled, readOnly) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.changes.any { it.changedToDown() } && enabled && !readOnly) {
-                            focusRequester.requestFocus()
-                        }
-                    }
-                }
-            },
-        content = {
-            if (showAboveLabel) {
-                CompositionLocalProvider(
-                    LocalContentColor provides colors.labelColor(
-                        enabled = enabled,
-                        focused = focused,
-                        isError = isError,
-                    ),
-                ) {
-                    label.invoke()
-                }
-            }
-            Box {
-                decorationBox(
-                    innerTextField,
-                    decorationState.copy(),
-                )
-            }
-            if (supportingText != null) {
-                CompositionLocalProvider(
-                    LocalContentColor provides colors.supportingColor(
-                        enabled = enabled,
-                        focused = focused,
-                        isError = isError,
-                    ),
-                ) {
-                    supportingText()
-                }
-            }
+        modifier = modifier.pointerInput(enabled, readOnly) { 
+            awaitPointerEventScope { 
+                while (true) { 
+                    val e = awaitPointerEvent(PointerEventPass.Initial)
+                    if (e.changes.any { it.changedToDown() } && enabled && !readOnly) focusRequester.requestFocus() 
+                } 
+            } 
         },
+        content = {
+            if (showAboveLabel) { CompositionLocalProvider(LocalContentColor provides colors.labelColor(enabled, focused, isError)) { label() } }
+            Box { MongolTextFieldDefaults.FilledDecorationBox(ds, inner, label = label, labelPosition = labelPosition, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon, prefix = prefix, suffix = suffix, colors = colors, placeholderStyle = placeholderStyle) }
+            if (supportingText != null) { CompositionLocalProvider(LocalContentColor provides colors.supportingColor(enabled, focused, isError)) { supportingText() } }
+        }
     ) { measurables, constraints ->
-        val spacing = 6.dp.roundToPx()
-        val fieldMinWidth = 20.dp.roundToPx()
-        val unconstrainedWidthFallback = 300.dp.roundToPx()
-        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
-        var index = 0
-        val labelPlaceable = if (showAboveLabel) {
-            measurables[index++].measure(looseConstraints)
-        } else {
-            null
-        }
-
-        val labelSpacing = if (labelPlaceable != null) spacing else 0
-        val availableAfterLabel = if (constraints.maxWidth == Int.MAX_VALUE) {
-            Int.MAX_VALUE
-        } else {
-            max(0, constraints.maxWidth - (labelPlaceable?.width ?: 0) - labelSpacing)
-        }
-
-        val fieldMeasurable = measurables[index++]
-        val supportingTextMeasurable =
-            measurables.getOrNull(index)?.takeIf { supportingText != null }
-        if (supportingText != null) {
-            index += 1
-        }
-
-        if (supportingTextMeasurable != null) spacing else 0
-
-        val supportingTextPlaceable = supportingTextMeasurable?.measure(looseConstraints)
-        val supportingWidth = supportingTextPlaceable?.width ?: 0
-
-        val fieldMaxWidth = if (constraints.maxWidth == Int.MAX_VALUE) {
-            Int.MAX_VALUE
-        } else {
-            max(0, availableAfterLabel - supportingWidth - if (supportingWidth > 0) spacing else 0)
-        }
-        val effectiveFieldMaxWidth = if (fieldMaxWidth == Int.MAX_VALUE) {
-            unconstrainedWidthFallback
-        } else {
-            fieldMaxWidth
-        }
-
-        val fontSizePx =
-            if (style.fontSize.type == TextUnitType.Sp) style.fontSize.toPx() else 16.sp.toPx()
-        val lineSpan = max((fontSizePx * 1.5f).toInt(), 1)
-        val intrinsicHeightHint = if (constraints.hasBoundedHeight) {
-            // High enough hint to prevent wrapping during startup, but match parent if possible.
-            max(constraints.maxHeight, 1500)
-        } else {
-            10_000
-        }
-
-        val intrinsicFieldWidth = fieldMeasurable
-            .minIntrinsicWidth(intrinsicHeightHint)
-            .coerceAtLeast(0)
-
-        val targetFieldWidth = if (autoWidthByContent) {
-            // Add a small safety margin for floating point rounding in painter
-            (intrinsicFieldWidth + 1).coerceIn(
-                minimumValue = fieldMinWidth,
-                maximumValue = max(fieldMinWidth, effectiveFieldMaxWidth),
-            )
-        } else {
-            intrinsicFieldWidth
-                .coerceAtLeast(fieldMinWidth)
-                .coerceAtMost(max(fieldMinWidth, effectiveFieldMaxWidth))
-        }
-
-        val fieldPlaceable = fieldMeasurable.measure(
-            looseConstraints.copy(
-                minWidth = targetFieldWidth,
-                maxWidth = targetFieldWidth,
-            ),
-        )
-
-        val totalWidth =
-            (labelPlaceable?.width ?: 0) +
-                    labelSpacing +
-                    fieldPlaceable.width +
-                    (if (supportingWidth > 0) spacing + supportingWidth else 0)
-        val supportingHeight =
-            if (supportingTextPlaceable != null) {
-                max(
-                    fieldPlaceable.height,
-                    supportingTextPlaceable.height,
-                )
-            } else {
-                0
-            }
-        val totalHeight =
-            max(max(labelPlaceable?.height ?: 0, fieldPlaceable.height), supportingHeight)
-
-        layout(
-            width = totalWidth.coerceIn(constraints.minWidth, constraints.maxWidth),
-            height = totalHeight.coerceIn(constraints.minHeight, constraints.maxHeight),
-        ) {
-            var x = 0
-            labelPlaceable?.let {
-                it.placeRelative(x, 0)
-                x += it.width + spacing
-            }
-            fieldPlaceable.placeRelative(x, 0)
-            x += fieldPlaceable.width
-            if (supportingWidth > 0) {
-                val supportingX = x + spacing
-                supportingTextPlaceable?.placeRelative(supportingX, 0)
-            }
+        val sp = 6.dp.roundToPx(); var idx = 0
+        val lp = if (showAboveLabel) measurables[idx++].measure(constraints.copy(0, Int.MAX_VALUE, 0, Int.MAX_VALUE)) else null
+        val fm = measurables[idx++]
+        val sp_p = if (supportingText != null) measurables[idx++].measure(constraints.copy(0, Int.MAX_VALUE, 0, Int.MAX_VALUE)) else null
+        val nw = (lp?.width ?: 0) + (if (lp != null) sp else 0) + (sp_p?.width ?: 0) + (if (sp_p != null) sp else 0)
+        val amw = if (constraints.maxWidth == Int.MAX_VALUE) Int.MAX_VALUE else max(0, constraints.maxWidth - nw)
+        val iw = fm.minIntrinsicWidth(constraints.maxHeight); val minW = minL * ls + 32.dp.roundToPx(); val maxW = if (maxL == Int.MAX_VALUE) amw else maxL * ls + 32.dp.roundToPx()
+        val tw = if (autoWidthByContent) { val st = if (iw <= 0) minW else ((iw + ls - 1) / ls) * ls; st.coerceIn(minW, max(minW, maxW)) } else amw
+        val fp = fm.measure(constraints.copy(tw.coerceAtMost(amw), tw.coerceAtMost(amw), 0))
+        val th = max(max(lp?.height ?: 0, fp.height), sp_p?.height ?: 0)
+        val totalW = (lp?.width ?: 0) + (if (lp != null) sp else 0) + fp.width + (if (sp_p != null) sp + sp_p.width else 0)
+        layout(totalW.coerceIn(constraints.minWidth, constraints.maxWidth), th.coerceIn(constraints.minHeight, constraints.maxHeight)) {
+            var x = 0; lp?.let { it.placeRelative(x, (th - it.height)/2); x += it.width + sp }; fp.placeRelative(x, (th - fp.height)/2); x += fp.width
+            sp_p?.let { it.placeRelative(x + sp, (th - it.height)/2) }
         }
     }
 }
 
-/**
- * Value-based overload for a filled text field.
- */
 @Composable
-fun MongolTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    style: TextStyle = TextStyle.Default,
-    textAlign: MongolTextAlign = MongolTextAlign.TOP,
-    textRuns: List<TextRun>? = null,
-    rotateCjk: Boolean = true,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    caretColor: Color = Color.Unspecified,
-    selectionColor: Color = Color.Unspecified,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    onInputSessionReady: (MongolInputSession) -> Unit = {},
-    onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {},
-    inputTransformation: InputTransformation? = null,
-    singleLine: Boolean = false,
-    label: (@Composable () -> Unit)? = null,
-    labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached,
-    isError: Boolean = false,
-    placeholder: (@Composable () -> Unit)? = null,
-    placeholderStyle: TextStyle = style,
-    supportingText: (@Composable () -> Unit)? = null,
-    leadingIcon: (@Composable () -> Unit)? = null,
-    trailingIcon: (@Composable () -> Unit)? = null,
-    prefix: (@Composable () -> Unit)? = null,
-    suffix: (@Composable () -> Unit)? = null,
-    colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(),
-    shape: Shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-    focusedIndicatorWidth: Dp = MongolTextFieldDefaults.FocusedIndicatorThickness,
-    unfocusedIndicatorWidth: Dp = MongolTextFieldDefaults.UnfocusedIndicatorThickness,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-    decorationBox: @Composable (
-        innerTextField: @Composable () -> Unit,
-        decorationState: MongolTextFieldDecorationState,
-    ) -> Unit = { innerTextField, decorationState ->
-        MongolTextFieldDefaults.FilledDecorationBox(
-            decorationState = decorationState,
-            innerTextField = innerTextField,
-            label = label,
-            labelPosition = labelPosition,
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            colors = colors,
-            contentPadding = contentPadding,
-            shape = shape,
-            focusedIndicatorWidth = focusedIndicatorWidth,
-            unfocusedIndicatorWidth = unfocusedIndicatorWidth,
-            placeholderStyle = placeholderStyle,
-        )
-    },
-    autoWidthByContent: Boolean = true,
-) {
+fun MongolTextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier, style: TextStyle = TextStyle.Default, textAlign: MongolTextAlign = MongolTextAlign.TOP, textRuns: List<TextRun>? = null, rotateCjk: Boolean = true, enabled: Boolean = true, readOnly: Boolean = false, caretColor: Color = Color.Unspecified, selectionColor: Color = Color(0x552196F3), keyboardOptions: KeyboardOptions = KeyboardOptions.Default, onInputSessionReady: (MongolInputSession) -> Unit = {}, onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {}, inputTransformation: InputTransformation? = null, lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default, label: (@Composable () -> Unit)? = null, labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached, isError: Boolean = false, placeholder: (@Composable () -> Unit)? = null, placeholderStyle: TextStyle = style, supportingText: (@Composable () -> Unit)? = null, leadingIcon: (@Composable () -> Unit)? = null, trailingIcon: (@Composable () -> Unit)? = null, prefix: (@Composable () -> Unit)? = null, suffix: (@Composable () -> Unit)? = null, colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(), autoWidthByContent: Boolean = true) {
     val state = rememberMongolEditableState(initialText = value)
+    MongolTextField(state, modifier, style, textAlign, textRuns, rotateCjk, enabled, readOnly, caretColor, selectionColor, keyboardOptions, {}, value, onValueChange, onInputSessionReady, onSelectionHandlesChanged, inputTransformation, lineLimits, label, labelPosition, isError, placeholder, placeholderStyle, supportingText, leadingIcon, trailingIcon, prefix, suffix, colors, autoWidthByContent)
+}
 
-    MongolTextField(
-        state = state,
-        modifier = modifier,
-        style = style,
-        textAlign = textAlign,
-        textRuns = textRuns,
-        rotateCjk = rotateCjk,
-        enabled = enabled,
-        readOnly = readOnly,
-        caretColor = caretColor,
-        selectionColor = selectionColor,
-        keyboardOptions = keyboardOptions,
-        onValueChange = onValueChange,
-        value = value,
-        onInputSessionReady = onInputSessionReady,
-        onSelectionHandlesChanged = onSelectionHandlesChanged,
-        inputTransformation = inputTransformation,
-        singleLine = singleLine,
-        label = label,
-        labelPosition = labelPosition,
-        isError = isError,
-        placeholder = placeholder,
-        placeholderStyle = placeholderStyle,
-        supportingText = supportingText,
-        leadingIcon = leadingIcon,
-        trailingIcon = trailingIcon,
-        prefix = prefix,
-        suffix = suffix,
-        colors = colors,
-        shape = shape,
-        focusedIndicatorWidth = focusedIndicatorWidth,
-        unfocusedIndicatorWidth = unfocusedIndicatorWidth,
-        contentPadding = contentPadding,
-        decorationBox = decorationBox,
-        autoWidthByContent = autoWidthByContent,
-    )
+@Composable
+fun MongolOutlinedTextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier, style: TextStyle = TextStyle.Default, textAlign: MongolTextAlign = MongolTextAlign.TOP, textRuns: List<TextRun>? = null, rotateCjk: Boolean = true, enabled: Boolean = true, readOnly: Boolean = false, caretColor: Color = Color.Unspecified, selectionColor: Color = Color(0x552196F3), keyboardOptions: KeyboardOptions = KeyboardOptions.Default, onInputSessionReady: (MongolInputSession) -> Unit = {}, onSelectionHandlesChanged: (MongolSelectionHandlesState) -> Unit = {}, inputTransformation: InputTransformation? = null, lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default, label: (@Composable () -> Unit)? = null, labelPosition: MongolTextFieldLabelPosition = MongolTextFieldLabelPosition.Attached, isError: Boolean = false, placeholder: (@Composable () -> Unit)? = null, placeholderStyle: TextStyle = style, supportingText: (@Composable () -> Unit)? = null, leadingIcon: (@Composable () -> Unit)? = null, trailingIcon: (@Composable () -> Unit)? = null, prefix: (@Composable () -> Unit)? = null, suffix: (@Composable () -> Unit)? = null, colors: MongolTextFieldColors = MongolTextFieldDefaults.colors(), autoWidthByContent: Boolean = true) {
+    val state = rememberMongolEditableState(initialText = value)
+    MongolTextField(state, modifier, style, textAlign, textRuns, rotateCjk, enabled, readOnly, caretColor, selectionColor, keyboardOptions, {}, value, onValueChange, onInputSessionReady, onSelectionHandlesChanged, inputTransformation, lineLimits, label, labelPosition, isError, placeholder, placeholderStyle, supportingText, leadingIcon, trailingIcon, prefix, suffix, colors, autoWidthByContent)
 }

@@ -1,6 +1,7 @@
 package mongol.compose
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,15 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
-import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -51,9 +48,10 @@ import mongol.compose.editing.MongolBasicTextField
 import mongol.compose.editing.MongolOutlinedTextField
 import mongol.compose.editing.MongolTextField
 import mongol.compose.editing.MongolTextFieldLabelPosition
+import mongol.compose.editing.rememberMongolEditableState
 import mongol.compose.selectable.MongolSelectableText
 import mongol.compose.text.MongolText
-import mongol.compose.ui.theme.Test_composeTheme
+import mongol.compose.ui.theme.Mongol_composeTheme
 
 class MainActivity : ComponentActivity() {
     val font = FontFamily(Font(R.font.moskwa))
@@ -63,12 +61,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            Test_composeTheme {
+            Mongol_composeTheme {
                 val scrollState = rememberScrollState()
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+                    topBar = {
+                        Text("Mongol Compose Demo", modifier = Modifier.padding(20.dp))
+                    },
+                    contentWindowInsets = WindowInsets(0, 20, 0, 0)
                 ) { innerPadding ->
                     Column(
                         modifier = Modifier
@@ -133,18 +134,19 @@ class MainActivity : ComponentActivity() {
                                 .border(1.dp, Color.Red)
                         )*/
 
+                        val basicState = rememberMongolEditableState("")
                         val textFieldState = rememberTextFieldState()
-                        var mongolTextFieldValue by remember { mutableStateOf("1") }
-                        var mongolTextFieldValue2 by remember { mutableStateOf("12") }
+                        val mongolTextFieldValue = rememberMongolEditableState("")
+                        val mongolTextFieldValue2 = rememberMongolEditableState("12")
                         var mongolOutlinedFieldValue by remember { mutableStateOf("123") }
 
                         Text("Use Compose TextField / MongolTextField / MongolOutlinedTextField:")
                         TextField(
                             state = textFieldState,
                             inputTransformation = InputTransformation { }.maxLength(280),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             labelPosition = TextFieldLabelPosition.Above(),
                             label = { Text("金额") },
+                            lineLimits = TextFieldLineLimits.MultiLine(2),
                             placeholder = { Text("Placeholder") },
                             prefix = {
                                 Text(
@@ -166,8 +168,8 @@ class MainActivity : ComponentActivity() {
                         )
                         OutlinedTextField(
                             state = textFieldState,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             labelPosition = TextFieldLabelPosition.Above(),
+                            lineLimits = TextFieldLineLimits.MultiLine(2,3),
                             label = { Text("电话号码：") },
                             placeholder = { Text("Standard Outlined Placeholder") },
                             modifier = Modifier
@@ -180,35 +182,43 @@ class MainActivity : ComponentActivity() {
                                 .border(1.dp, Color.Red)
                         ) {
                             MongolBasicTextField(
+                                state = basicState,
+                                rotateCjk = true,
+                                style = TextStyle(fontFamily = font),
+                                textAlign = textAlign,
+                                lineLimits = TextFieldLineLimits.MultiLine(3),
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxHeight()
+                                    .border(1.dp, Color.Green)
+                                    .padding(1.dp),
+                                enabled =true,
+                                readOnly = false,
+                                caretColor = Color.Black,
+                                selectionColor = Color.LightGray,
+                                keyboardOptions = KeyboardOptions.Default,
+                                onFocusChanged = {}
+                            )
+                            MongolBasicTextField(
                                 text = "ABCD",
                                 onValueChange = {},
                                 rotateCjk = true,
                                 style = TextStyle(fontFamily = font),
                                 textAlign = textAlign,
+                                lineLimits = TextFieldLineLimits.MultiLine(2,3),
                                 modifier = Modifier
+                                    .padding(8.dp)
                                     .height(200.dp)
                                     .border(1.dp, Color.Red)
-                                    .padding(10.dp)
                             )
                             MongolTextField(
-                                value = mongolTextFieldValue,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Info,
-                                        contentDescription = null
-                                    )
+                                state = mongolTextFieldValue,
+                                lineLimits = TextFieldLineLimits.SingleLine,
+                                isError = true,
+                                onValueChange = {
+
+                                    Log.d("TAG", "onCreate: ${mongolTextFieldValue.text}")
                                 },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Add,
-                                        contentDescription = null
-                                    )
-                                },
-                                singleLine = true,
-                                onValueChange = { mongolTextFieldValue = it },
-                                inputTransformation = InputTransformation.maxLength(180),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text,
-                                    imeAction = ImeAction.Next),
                                 style = TextStyle(fontFamily = font),
                                 label = {
                                     MongolText(
@@ -240,15 +250,12 @@ class MainActivity : ComponentActivity() {
                                     MongolText("Supports text")
                                 },
                                 modifier = Modifier
-                                    .padding(8.dp).fillMaxHeight()
+                                    .padding(8.dp)
+                                    .fillMaxHeight()
                             )
                             //
                             MongolTextField(
-                                value = mongolTextFieldValue2,
-                                onValueChange = { mongolTextFieldValue2 = it },
-                                inputTransformation = InputTransformation.maxLength(180),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number,
-                                    imeAction = ImeAction.Next),
+                                state = mongolTextFieldValue2,
                                 style = TextStyle(fontFamily = font),
                                 label = {
                                     MongolText(
@@ -280,7 +287,8 @@ class MainActivity : ComponentActivity() {
                                     MongolText("Supports text")
                                 },
                                 modifier = Modifier
-                                    .padding(8.dp).fillMaxHeight()
+                                    .padding(8.dp)
+                                    .fillMaxHeight()
                             )
                             /*class DigitOnlyTransformation : InputTransformation {
                                 override fun TextFieldBuffer.transformInput() {
@@ -292,9 +300,10 @@ class MainActivity : ComponentActivity() {
                             MongolOutlinedTextField(
                                 value = mongolOutlinedFieldValue,
                                 onValueChange = { mongolOutlinedFieldValue = it },
-//                                inputTransformation = DigitOnlyTransformation().maxLength(195),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone,
-                                    imeAction = ImeAction.Search),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Phone,
+                                    imeAction = ImeAction.Done
+                                ),
                                 style = TextStyle(fontFamily = font),
                                 label = {
                                     MongolText(
@@ -330,8 +339,6 @@ class MainActivity : ComponentActivity() {
                             MongolOutlinedTextField(
                                 value = mongolOutlinedFieldValue,
                                 onValueChange = { mongolOutlinedFieldValue = it },
-//                                inputTransformation = DigitOnlyTransformation().maxLength(195),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                                 style = TextStyle(fontFamily = font),
                                 label = {
                                     MongolText(

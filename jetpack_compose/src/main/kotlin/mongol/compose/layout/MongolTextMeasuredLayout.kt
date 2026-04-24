@@ -3,112 +3,77 @@ package mongol.compose.layout
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Measurable
-import androidx.compose.ui.layout.MeasurePolicy
-import androidx.compose.ui.layout.MeasureResult
-import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.layout.IntrinsicMeasurable
-import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.unit.Constraints
 import mongol.compose.core.MongolTextPainter
 import kotlin.math.ceil
 
 /**
  * Shared measured container for Mongol text composables.
- *
- * This keeps modifier behavior consistent by exposing a stable measured size
- * from MongolTextPainter before any drawing content is placed.
- *
- * Efficiency note: This layout minimizes redundant layout passes by probing
- * constraints and implementing intrinsic measurement hooks.
  */
 @Composable
 internal fun MongolTextMeasuredLayout(
     painter: MongolTextPainter,
     modifier: Modifier = Modifier,
-    minWidth: Int = 0,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+    lineSpan: Int = 0,
     content: @Composable () -> Unit,
 ) {
     Layout(
         modifier = modifier,
         content = content,
-        measurePolicy = object : MeasurePolicy {
-            override fun MeasureScope.measure(
-                measurables: List<Measurable>,
-                constraints: Constraints
-            ): MeasureResult {
-                // 1. Initial height selection.
-                // If we have a bounded height, use it as the probe to avoid double layout.
-                val probeHeight = if (constraints.hasBoundedHeight) {
-                    // Avoid 0-height probes during startup which cause width explosion.
-                    // 1500px (~450dp) is a safe middle ground for measurement.
-                    constraints.maxHeight.toFloat().coerceAtLeast(1500f)
-                } else {
-                    100_000f
-                }
+    ) { measurables, constraints ->
+        val measurable = measurables.single()
+        val isSingleLine = painter.maxLines == 1
 
-                painter.layout(maxHeight = probeHeight)
-
-                // 2. Resolve final dimensions.
-                val intrinsicHeight = if (painter.longestLine.isFinite()) {
-                    ceil(painter.longestLine.toDouble()).toInt().coerceAtLeast(1)
-                } else {
-                    probeHeight.toInt()
-                }
-
-                val resolvedHeight = intrinsicHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
-
-                // Ensure painter layout matches the final resolved height.
-                // If resolvedHeight is too small (startup noise), stick to probeHeight for measurement.
-                val measurementHeight = if (resolvedHeight < 50 && constraints.hasBoundedHeight) {
-                    probeHeight
-                } else {
-                    resolvedHeight.toFloat()
-                }
-                painter.layout(maxHeight = measurementHeight)
-
-                val intrinsicWidthVal = if (painter.width.isFinite() && painter.width > 0) {
-                    ceil(painter.width.toDouble()).toInt().coerceAtLeast(1)
-                } else {
-                    minWidth.coerceAtLeast(1)
-                }
-                val resolvedWidth = intrinsicWidthVal.coerceIn(constraints.minWidth, constraints.maxWidth)
-
-                // 3. Measure and place children.
-                val childConstraints = Constraints.fixed(resolvedWidth, resolvedHeight)
-                val placeables = measurables.map { it.measure(childConstraints) }
-
-                return layout(resolvedWidth, resolvedHeight) {
-                    placeables.forEach { it.place(0, 0) }
-                }
-            }
-
-            override fun IntrinsicMeasureScope.minIntrinsicHeight(
-                measurables: List<IntrinsicMeasurable>,
-                width: Int
-            ): Int = ceil(painter.minIntrinsicLineExtent.toDouble()).toInt().coerceAtLeast(1)
-
-            override fun IntrinsicMeasureScope.maxIntrinsicHeight(
-                measurables: List<IntrinsicMeasurable>,
-                width: Int
-            ): Int = ceil(painter.maxIntrinsicLineExtent.toDouble()).toInt().coerceAtLeast(1)
-
-            override fun IntrinsicMeasureScope.minIntrinsicWidth(
-                measurables: List<IntrinsicMeasurable>,
-                height: Int
-            ): Int {
-                // If height is 0 or very small (startup noise), use a reasonable fallback
-                // to prevent column explosion.
-                val layoutHeight = if (height < 100) 2000f else height.toFloat()
-                painter.layout(maxHeight = layoutHeight)
-                val w = ceil(painter.width.toDouble()).toInt()
-                return if (w > 0) w else minWidth.coerceAtLeast(1)
-            }
-
-            override fun IntrinsicMeasureScope.maxIntrinsicWidth(
-                measurables: List<IntrinsicMeasurable>,
-                height: Int
-            ): Int = minIntrinsicWidth(measurables, height)
+        // 1. Layout painter to find natural text size
+        val layoutHeightPx = if (isSingleLine) 100_000f else {
+            if (constraints.hasBoundedHeight) constraints.maxHeight.toFloat().coerceAtLeast(1f) else 100_000f
         }
-    )
+        painter.layout(maxHeight = layoutHeightPx)
+
+        val metrics = painter.computeLineMetrics()
+        val textHeight = if (painter.longestLine.isFinite()) ceil(painter.longestLine).toInt() else 0
+        val textWidth = if (painter.width.isFinite()) ceil(painter.width).toInt() else 0
+
+        // 2. Resolve the component's VISIBLE size
+        // Use actual measured width of lines if available, otherwise fallback to estimated span
+        val fallbackSpan = if (lineSpan > 0) lineSpan.toFloat() else 40f
+
+        val minWidthPx = if (metrics.size >= minLines) {
+            metrics.take(minLines).sumOf { it.width.toDouble() }.toFloat()
+        } else {
+            val existingWidth = metrics.sumOf { it.width.toDouble() }.toFloat()
+            existingWidth + (minLines - metrics.size) * fallbackSpan
+        }
+
+        val maxWidthLimit = if (maxLines == Int.MAX_VALUE) {
+            constraints.maxWidth.toFloat()
+        } else if (metrics.size >= maxLines) {
+            metrics.take(maxLines).sumOf { it.width.toDouble() }.toFloat()
+        } else {
+            val existingWidth = metrics.sumOf { it.width.toDouble() }.toFloat()
+            existingWidth + (maxLines - metrics.size) * fallbackSpan
+        }
+
+        val resolvedWidthPx = textWidth.toFloat()
+            .coerceIn(minWidthPx, maxWidthLimit)
+            .coerceIn(constraints.minWidth.toFloat(), constraints.maxWidth.toFloat())
+            .toInt()
+
+        val resolvedHeightPx = if (isSingleLine && constraints.hasBoundedHeight) {
+            constraints.maxHeight
+        } else {
+            textHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
+        }
+
+        // 3. Measure child with resolved size
+        val placeable = measurable.measure(
+            Constraints.fixed(resolvedWidthPx, resolvedHeightPx)
+        )
+
+        layout(resolvedWidthPx, resolvedHeightPx) {
+            placeable.place(0, 0)
+        }
+    }
 }

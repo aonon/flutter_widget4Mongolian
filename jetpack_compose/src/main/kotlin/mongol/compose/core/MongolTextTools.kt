@@ -114,6 +114,21 @@ object MongolTextTools {
         return value in 0x0000..0xFFFF
     }
 
+    fun isMongolian(codePoint: Int): Boolean {
+        return codePoint in 0x1800..0x18AF
+    }
+
+    fun isBreakOpportunity(codePoint: Int): Boolean {
+        // Space and Newline are always break opportunities
+        if (codePoint == ' '.code || codePoint == '\n'.code) return true
+        
+        // Path separators and common URL/Filename punctuation are break opportunities 
+        // for non-Mongolian text.
+        return codePoint == '\\'.code || codePoint == '/'.code || 
+               codePoint == '.'.code || codePoint == ':'.code || 
+               codePoint == '-'.code || codePoint == '_'.code
+    }
+
     fun isHighSurrogate(value: Int): Boolean {
         require(isUtf16(value)) {
             "U+${value.toString(16).uppercase().padStart(4, '0')} is not a valid UTF-16 code unit."
