@@ -146,7 +146,7 @@ class MainActivity : ComponentActivity() {
                             inputTransformation = InputTransformation { }.maxLength(280),
                             labelPosition = TextFieldLabelPosition.Above(),
                             label = { Text("金额") },
-                            lineLimits = TextFieldLineLimits.MultiLine(2),
+                            lineLimits = TextFieldLineLimits.MultiLine(2,3),
                             placeholder = { Text("Placeholder") },
                             prefix = {
                                 Text(

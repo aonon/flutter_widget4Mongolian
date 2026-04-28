@@ -284,54 +284,51 @@ fun MongolBasicTextField(
         
         // 1. 同步布局测量
         painter.layout(maxHeight = canvasHeightPx.toFloat())
-        
-        // 模仿 TextField: 等待测量完成并提供足够的重试，确保滚动条 maxValue 已更新
-        var retry = 0
+
+        // 2. 获取光标位置及当前行指标
         val co = painter.getOffsetForCaret(state.caret)
         val metrics = painter.computeLineMetrics()
         val metric = metrics.find { co.x >= it.baseline - 0.5f && co.x < it.baseline + it.width + 0.5f } ?: metrics.lastOrNull()
-        val targetX = metric?.baseline ?: co.x
-        val targetWidth = metric?.width ?: lineSpanPx.toFloat()
         
-        while (horizontalScrollState.maxValue < (targetX + targetWidth - fieldSize.width) && retry < 10) {
-            kotlinx.coroutines.delay(16)
-            retry++
-        }
+        val lineLeft = metric?.baseline ?: co.x
+        val lineThickness = metric?.width ?: lineSpanPx.toFloat()
+        val padding = with(density) { 20.dp.toPx() }
 
-        // 2. 内部滚动：直接驱动 ScrollState 以实现最稳定的跟随
-        if (!isSingleLine && fieldSize.width > 0) {
-            val vw = fieldSize.width.toFloat()
-            val padding = with(density) { 20.dp.toPx() }
-            val currentScroll = horizontalScrollState.value.toFloat()
-            
-            if (targetX < currentScroll) {
-                horizontalScrollState.animateScrollTo((targetX - padding).toInt().coerceAtLeast(0))
-            } else if (targetX + targetWidth > currentScroll + vw) {
-                horizontalScrollState.animateScrollTo((targetX + targetWidth - vw + padding).toInt().coerceAtLeast(0))
-            }
-        } else if (isSingleLine && fieldSize.height > 0) {
-            val vh = fieldSize.height.toFloat()
-            val padding = with(density) { 20.dp.toPx() }
-            if (co.y < verticalScrollState.value) {
-                verticalScrollState.animateScrollTo(max(0, (co.y - padding).toInt()))
-            } else if (co.y > verticalScrollState.value + vh) {
-                verticalScrollState.animateScrollTo((co.y - vh + padding).toInt())
+        // 3. 定义“感兴区域”（Area of Interest）
+        val caretRect = with(density) {
+            if (!isSingleLine) {
+                val aheadContext = (max(0, minLines - 1) * lineSpanPx).toFloat()
+                androidx.compose.ui.geometry.Rect(
+                    left = lineLeft - padding,
+                    top = co.y,
+                    right = lineLeft + lineThickness + aheadContext + padding,
+                    bottom = co.y + 40.dp.toPx()
+                )
+            } else {
+                androidx.compose.ui.geometry.Rect(
+                    left = co.x,
+                    top = co.y - padding,
+                    right = co.x + lineThickness,
+                    bottom = co.y + 40.dp.toPx() + padding
+                )
             }
         }
 
-        // 3. 外部避让：模仿 TextField，仅向上传递垂直方向的可见性请求
-        // 通过将 left 锁定在当前滚动位置，父容器会认为水平方向“已完全可见”，从而不会发生界面漂移
+        // 4. 触发滚动。
+        bringIntoViewRequester.bringIntoView(caretRect)
+
+        // 5. 外部避让逻辑：仅通知垂直方向的变化
         val scrollX = horizontalScrollState.value.toFloat()
         val scrollY = verticalScrollState.value.toFloat()
-        val caretRectExternal = with(density) {
+        val externalRect = with(density) {
             androidx.compose.ui.geometry.Rect(
-                left = scrollX, 
+                left = scrollX,
                 top = co.y - scrollY,
                 right = scrollX + 1f,
-                bottom = (co.y - scrollY) + 40.dp.toPx()
+                bottom = co.y - scrollY + 40.dp.toPx()
             )
         }
-        bringIntoViewRequester.bringIntoView(caretRectExternal)
+        bringIntoViewRequester.bringIntoView(externalRect)
     }
 
     MongolTextMeasuredLayout(
