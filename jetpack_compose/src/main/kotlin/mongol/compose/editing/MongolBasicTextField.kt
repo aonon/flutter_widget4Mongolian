@@ -57,7 +57,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -96,7 +95,6 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 /**
  * Editable-stage text canvas backed by MongolTextPainter APIs.
@@ -162,9 +160,6 @@ fun MongolBasicTextField(
             text = state.text,
             textRuns = textRuns,
             textAlign = textAlign,
-            // For an editable field, maxLines in painter causes truncation.
-            // We only use it for SingleLine to prevent wrapping.
-            // For MultiLine, we let the painter measure everything and limit the viewport in the layout.
             maxLines = if (isSingleLine) 1 else null,
             rotateCjk = rotateCjk,
             runMeasurer = runMeasurer
@@ -256,7 +251,7 @@ fun MongolBasicTextField(
         return IntOffset(localX, localY)
     }
 
-    val selectionHandlesState = remember(state.selection, painter, activeHandleType, density, textAlign, canvasHeightPx, showCaretHandle) {
+    val selectionHandlesState = remember(state.selection, painter, activeHandleType, density, textAlign, canvasWidthPx, canvasHeightPx, showCaretHandle) {
         if (canvasHeightPx > 0) painter.layout(maxHeight = canvasHeightPx.toFloat())
         MongolSelectionHandlesCalculator.calculate(painter, state.selection, density.density, activeHandleType, showCaretHandle)
     }
@@ -406,7 +401,51 @@ fun MongolBasicTextField(
                         }
                     }
                     if (enabled && (hasFocus || imeBridgeHasFocus) && selectionHandlesState.isVisible) {
-                        MongolSelectionHandles(state = selectionHandlesState, color = selectionColor.copy(alpha = 1f), onHandleDragStart = { h -> selectionGestureInProgress = true; showContextMenu = false; activeHandleType = h; if (h == MongolSelectionHandleType.CARET) showCaretHandle = !readOnly; handleDragAnchor = if (h == MongolSelectionHandleType.START) state.selection.normalized().end else if (h == MongolSelectionHandleType.END) state.selection.normalized().start else -1 }, onHandleDragEnd = { selectionGestureInProgress = false; activeHandleType = null }, onHandleDrag = { h, offset -> val pos = resolveCaretPositionForOffset(offset); if (h == MongolSelectionHandleType.CARET) state.placeCaret(pos) else if (h == MongolSelectionHandleType.START) state.setSelection(pos.offset, handleDragAnchor) else state.setSelection(handleDragAnchor, pos.offset) }, onTap = { state.placeCaret(resolveCaretPositionForOffset(it)); showCaretHandle = !readOnly; showContextMenu = false })
+                        val scrollX = horizontalScrollState.value.toFloat()
+                        val scrollY = verticalScrollState.value.toFloat()
+                        val vw = canvasWidthPx.toFloat()
+                        val vh = canvasHeightPx.toFloat()
+                        val isScrollableX = horizontalScrollState.maxValue > 0
+                        val isScrollableY = verticalScrollState.maxValue > 0
+
+                        val visibleHandles = selectionHandlesState.handles.filter { handle ->
+                            if (handle.type == activeHandleType) return@filter true
+                            
+                            val xRel = handle.offset.x - scrollX
+                            val yRel = handle.offset.y - scrollY
+
+                            if (isScrollableX && (xRel < -0.5f || xRel > vw + 0.5f)) return@filter false
+                            if (isScrollableY && (yRel < -0.5f || yRel > vh + 0.5f)) return@filter false
+                            true
+                        }
+                        if (visibleHandles.isNotEmpty()) {
+                            MongolSelectionHandles(
+                                state = selectionHandlesState.copy(handles = visibleHandles),
+                                color = selectionColor.copy(alpha = 1f),
+                                onHandleDragStart = { h ->
+                                    selectionGestureInProgress = true
+                                    showContextMenu = false
+                                    activeHandleType = h
+                                    if (h == MongolSelectionHandleType.CARET) showCaretHandle = !readOnly
+                                    handleDragAnchor = if (h == MongolSelectionHandleType.START) state.selection.normalized().end else if (h == MongolSelectionHandleType.END) state.selection.normalized().start else -1
+                                },
+                                onHandleDragEnd = {
+                                    selectionGestureInProgress = false
+                                    activeHandleType = null
+                                },
+                                onHandleDrag = { h, offset ->
+                                    val pos = resolveCaretPositionForOffset(offset)
+                                    if (h == MongolSelectionHandleType.CARET) state.placeCaret(pos)
+                                    else if (h == MongolSelectionHandleType.START) state.setSelection(pos.offset, handleDragAnchor)
+                                    else state.setSelection(handleDragAnchor, pos.offset)
+                                },
+                                onTap = {
+                                    state.placeCaret(resolveCaretPositionForOffset(it))
+                                    showCaretHandle = !readOnly
+                                    showContextMenu = false
+                                }
+                            )
+                        }
                     }
                     if (enabled && showContextMenu) {
                         val anchor = resolveContextMenuAnchor(); val popupOffset = resolveContextMenuWindowOffset(anchor)
